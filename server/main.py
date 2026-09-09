@@ -15,13 +15,45 @@ from database import get_db, init_db
 from seed_data import hash_password, seed
 import pdf_service
 import fitz
+import jwt as pyjwt
+import bcrypt as bcrypt_lib
+
+JWT_SECRET = os.environ.get("JWT_SECRET", "tg-bharatpur-jwt-secret-2026-change-in-production")
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRY_HOURS = 24
+
+def create_jwt_token(user_id: int, email: str, role: str) -> str:
+    payload = {
+        "sub": str(user_id),
+        "email": email,
+        "role": role,
+        "exp": datetime.utcnow() + timedelta(hours=JWT_EXPIRY_HOURS)
+    }
+    return pyjwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+def get_current_user(authorization: str = Header(None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    token = authorization.split(" ", 1)[1]
+    try:
+        payload = pyjwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        return payload
+    except pyjwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except pyjwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 app = FastAPI(title="TechnoGlobe Internship & Certificate Management System API", version="1.0.0")
 
 # Enable CORS for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost:3000",
+        "https://technoglobe-certificates.onrender.com",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -63,32 +95,33 @@ class LoginRequest(BaseModel):
 def login(req: LoginRequest):
     conn = get_db()
     cursor = conn.cursor()
-    hashed = hash_password(req.password)
-    cursor.execute("SELECT id, name, email, role FROM users WHERE email = ? AND password_hash = ?", (req.email, hashed))
+    cursor.execute("SELECT id, name, email, role, password_hash FROM users WHERE email = ?", (req.email,))
     user = cursor.fetchone()
     conn.close()
     if not user:
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-    
+        raise HTTPException(status_code=401, detail="Invalid credentials")
     user_dict = dict(user)
-    # Return user with pseudo-token
+    # Try SHA-256 (legacy) match
+    sha256_hash = hash_password(req.password)
+    if user_dict["password_hash"] != sha256_hash:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    token = create_jwt_token(user_dict["id"], user_dict["email"], user_dict["role"])
     return {
         "success": True,
-        "token": f"tg-auth-{user_dict['id']}-{hash_password(user_dict['email'])[:16]}",
-        "user": user_dict
+        "token": token,
+        "user": {"id": user_dict["id"], "name": user_dict["name"], "email": user_dict["email"], "role": user_dict["role"]}
     }
 
 @app.get("/api/auth/me")
-def get_current_user():
-    # Return default admin for simplified frictionless local session
+def get_current_user_info(user = Depends(get_current_user)):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, name, email, role FROM users WHERE role = 'CENTRE_ADMIN' LIMIT 1")
-    row = cursor.fetchone()
+    cursor.execute("SELECT id, name, email, role FROM users WHERE id = ?", (user["sub"],))
+    u = cursor.fetchone()
     conn.close()
-    if row:
-        return dict(row)
-    return {"id": 1, "name": "Centre Administrator", "email": "admin@technoglobe.co.in", "role": "CENTRE_ADMIN"}
+    if not u:
+        raise HTTPException(status_code=401, detail="User not found")
+    return dict(u)
 
 # -------------------------------------------------------------
 # 2. Dashboard Stats
@@ -250,7 +283,7 @@ def get_student(id: int):
     return student
 
 @app.post("/api/students")
-def create_student(req: StudentCreate):
+def create_student(req: StudentCreate, user = Depends(get_current_user)): 
     conn = get_db()
     cursor = conn.cursor()
 
@@ -343,7 +376,7 @@ class CourseModuleUpdate(BaseModel):
     hours: int
 
 @app.put("/api/modules/{id}")
-def update_module(id: int, req: CourseModuleUpdate):
+def update_module(id: int, req: CourseModuleUpdate, user = Depends(get_current_user)): 
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
@@ -425,7 +458,7 @@ class ComplianceUpdate(BaseModel):
     checklist_json: Optional[Dict[str, Any]] = {}
 
 @app.put("/api/internships/{id}/compliance")
-def update_compliance(id: int, req: ComplianceUpdate):
+def update_compliance(id: int, req: ComplianceUpdate, user = Depends(get_current_user)): 
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
@@ -522,7 +555,7 @@ def run_compliance_check(id: int):
 # 8. Certificate Finalization
 # -------------------------------------------------------------
 @app.post("/api/internships/{id}/finalize-certificate")
-def finalize_certificate(id: int):
+def finalize_certificate(id: int, user = Depends(get_current_user)): 
     check = run_compliance_check(id)
     if not check["is_ready_for_finalization"]:
         raise HTTPException(
@@ -635,7 +668,7 @@ def get_attendance(id: int):
     return records
 
 @app.post("/api/internships/{id}/attendance")
-def save_attendance(id: int, item: AttendanceItem):
+def save_attendance(id: int, item: AttendanceItem, user = Depends(get_current_user)): 
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
@@ -674,7 +707,7 @@ def get_daily_logs(id: int):
     return records
 
 @app.post("/api/internships/{id}/logs")
-def save_daily_log(id: int, item: DailyLogItem):
+def save_daily_log(id: int, item: DailyLogItem, user = Depends(get_current_user)): 
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
@@ -711,7 +744,7 @@ def get_project(id: int):
     return res
 
 @app.put("/api/internships/{id}/project")
-def save_project(id: int, req: ProjectSaveRequest):
+def save_project(id: int, req: ProjectSaveRequest, user = Depends(get_current_user)): 
     conn = get_db()
     cursor = conn.cursor()
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -751,7 +784,7 @@ def get_evaluation(id: int):
     return res
 
 @app.post("/api/internships/{id}/evaluation")
-def save_evaluation(id: int, req: EvaluationSaveRequest):
+def save_evaluation(id: int, req: EvaluationSaveRequest, user = Depends(get_current_user)): 
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
@@ -892,7 +925,7 @@ def verify_signature_endpoint(cert: str, name: str, course: str, date: str, sig:
 
 @app.get("/api/certificates/batch-print")
 @app.post("/api/certificates/batch-print")
-def batch_print_certificates(ids: Optional[str] = None):
+def batch_print_certificates(ids: Optional[str] = None, user = Depends(get_current_user)): 
     conn = get_db()
     cursor = conn.cursor()
     if ids and ids.strip():
@@ -949,7 +982,7 @@ def batch_print_certificates(ids: Optional[str] = None):
 DB_PATH = os.path.join(os.path.dirname(__file__), "technoglobe.db")
 
 @app.get("/api/backup/database")
-def download_database_backup():
+def download_database_backup(user = Depends(get_current_user)): 
     if not os.path.exists(DB_PATH):
         raise HTTPException(status_code=404, detail="Database file not found")
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -960,7 +993,7 @@ def download_database_backup():
     )
 
 @app.post("/api/backup/restore")
-async def restore_database(file: UploadFile = File(...)):
+async def restore_database(file: UploadFile = File(...), user = Depends(get_current_user)): 
     temp_path = os.path.join(UPLOAD_DIR, f"temp_restore_{datetime.now().strftime('%Y%m%d%H%M%S')}.db")
     try:
         content = await file.read()
@@ -1002,7 +1035,7 @@ async def restore_database(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"Failed to restore database: {str(e)}")
 
 @app.get("/api/backup/export-json")
-def export_all_data_json():
+def export_all_data_json(user = Depends(get_current_user)): 
     conn = get_db()
     cursor = conn.cursor()
     tables = [
@@ -1023,7 +1056,7 @@ def export_all_data_json():
     return export_data
 
 @app.post("/api/admin/demo/reset")
-def reset_demo_data_endpoint():
+def reset_demo_data_endpoint(user = Depends(get_current_user)): 
     try:
         from seed_data import reset_demo_data
         reset_demo_data()
@@ -1033,7 +1066,7 @@ def reset_demo_data_endpoint():
         raise HTTPException(status_code=500, detail=f"Failed to reset demo data: {str(e)}")
 
 @app.post("/api/admin/demo/delete")
-def delete_demo_data_endpoint():
+def delete_demo_data_endpoint(user = Depends(get_current_user)): 
     try:
         from seed_data import delete_demo_data
         delete_demo_data()
@@ -1074,7 +1107,7 @@ class TemplateUpdateRequest(BaseModel):
     blocks: List[Dict[str, Any]]
 
 @app.put("/api/templates/{template_key}")
-def update_document_template(template_key: str, req: TemplateUpdateRequest):
+def update_document_template(template_key: str, req: TemplateUpdateRequest, user = Depends(get_current_user)): 
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
@@ -1099,7 +1132,7 @@ class BulkAttendanceRequest(BaseModel):
     total_hours: float = 3.5
 
 @app.post("/api/internships/{id}/attendance/bulk")
-def bulk_update_attendance(id: int, req: BulkAttendanceRequest):
+def bulk_update_attendance(id: int, req: BulkAttendanceRequest, user = Depends(get_current_user)): 
     conn = get_db()
     cursor = conn.cursor()
     for d_str in req.dates:
@@ -1123,7 +1156,7 @@ def bulk_update_attendance(id: int, req: BulkAttendanceRequest):
     return {"success": True, "updated_count": len(req.dates)}
 
 @app.post("/api/internships/{id}/attendance/clear")
-def clear_attendance(id: int):
+def clear_attendance(id: int, user = Depends(get_current_user)): 
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("DELETE FROM attendance WHERE internship_id = ?", (id,))
@@ -1165,7 +1198,7 @@ class QuickGenerateRequest(BaseModel):
     mentor_remarks: str = "Demonstrated exemplary technical aptitude, consistency, and professional work ethic throughout the 6-week internship."
 
 @app.post("/api/wizard/quick-generate")
-def quick_generate_internship(req: QuickGenerateRequest):
+def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_current_user)): 
     conn = get_db()
     cursor = conn.cursor()
 
@@ -1443,7 +1476,7 @@ class SettingsUpdate(BaseModel):
     verification_base_url: Optional[str] = "http://192.168.0.103:8000"
 
 @app.get("/api/settings")
-def get_settings():
+def get_settings(user = Depends(get_current_user)): 
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM centre_settings WHERE id = 1")
@@ -1452,7 +1485,7 @@ def get_settings():
     return s
 
 @app.put("/api/settings")
-def update_settings(req: SettingsUpdate):
+def update_settings(req: SettingsUpdate, user = Depends(get_current_user)): 
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
@@ -1474,11 +1507,18 @@ def update_settings(req: SettingsUpdate):
     return {"success": True}
 
 @app.post("/api/settings/upload-asset")
-async def upload_asset(asset_type: str = Form(...), file: UploadFile = File(...)):
-    filename = f"{asset_type}_{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}"
+async def upload_asset(asset_type: str = Form(...), file: UploadFile = File(...), user = Depends(get_current_user)):
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in [".png", ".jpg", ".jpeg"]:
+        raise HTTPException(status_code=400, detail="Invalid file type")
+    content = await file.read()
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large")
+    clean_name = os.path.basename(file.filename)
+    import uuid
+    filename = f"{uuid.uuid4()}_{clean_name}"
     filepath = os.path.join(UPLOAD_DIR, filename)
     with open(filepath, "wb") as f:
-        content = await file.read()
         f.write(content)
 
     url_path = f"/uploads/{filename}"
@@ -1500,7 +1540,7 @@ async def upload_asset(asset_type: str = Form(...), file: UploadFile = File(...)
 # 16. Audit Logs
 # -------------------------------------------------------------
 @app.get("/api/audit-logs")
-def get_audit_logs():
+def get_audit_logs(user = Depends(get_current_user)): 
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM audit_logs ORDER BY id DESC LIMIT 50")

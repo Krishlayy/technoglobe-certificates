@@ -359,6 +359,18 @@ def init_db():
     );
     """)
 
+    # Performance indexes
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_internships_student_id ON internships(student_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_internships_course_id ON internships(course_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_internships_mentor_id ON internships(mentor_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_internships_status ON internships(status)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_certificates_internship_id ON certificates(internship_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_course_modules_course_id ON course_modules(course_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_attendance_internship_id ON attendance(internship_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_daily_logs_internship_id ON daily_logs(internship_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_students_email ON students(email)")
+
     conn.commit()
     conn.close()
 

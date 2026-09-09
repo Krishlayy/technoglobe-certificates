@@ -18,9 +18,7 @@ from reportlab.graphics.shapes import Drawing
 from reportlab.graphics.barcode.qr import QrCodeWidget
 from reportlab.graphics import renderPDF
 from database import get_db
-
-CERT_SECRET_KEY = b"TG_BHARATPUR_SECURITY_SECRET_2026"
-
+CERT_SECRET_KEY = os.environ.get("CERT_SECRET_KEY", "TG_BHARATPUR_SECURITY_SECRET_2026").encode()
 def compute_certificate_signature(cert_num: str, student_name: str, course_name: str, issue_date: str) -> str:
     msg = f"{str(cert_num).strip()}:{str(student_name).strip().lower()}:{str(course_name).strip().lower()}:{str(issue_date).strip()}".encode()
     return hmac.new(CERT_SECRET_KEY, msg, hashlib.sha256).hexdigest()[:16]

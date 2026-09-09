@@ -65,6 +65,32 @@ export const StepByStepWizardPage: React.FC = () => {
       return;
     }
 
+    const mobileDigits = formData.mobile.replace(/\D/g, '');
+    if (mobileDigits.length < 10) {
+      setError('Mobile number must be at least 10 digits.');
+      setCurrentStep(1);
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (formData.email && !emailRegex.test(formData.email)) {
+      setError('Please enter a valid email address.');
+      setCurrentStep(1);
+      return;
+    }
+
+    if (new Date(formData.start_date) >= new Date(formData.end_date)) {
+      setError('Start date must be before end date.');
+      setCurrentStep(2);
+      return;
+    }
+
+    if (formData.evaluation_score < 0 || formData.evaluation_score > 100) {
+      setError('Evaluation score must be between 0 and 100.');
+      setCurrentStep(4);
+      return;
+    }
+
     setGenerating(true);
     setError('');
     try {
@@ -607,7 +633,12 @@ export const StepByStepWizardPage: React.FC = () => {
                   className={inputStyle}
                 />
                 <span className="text-sm font-bold text-emerald-700 bg-emerald-50 px-3 py-3 rounded-lg border border-emerald-200 whitespace-nowrap">
-                  Grade A+ (Exemplary)
+                  {formData.evaluation_score >= 90 ? 'Grade A+ (Exemplary)' :
+                   formData.evaluation_score >= 80 ? 'Grade A (Excellent)' :
+                   formData.evaluation_score >= 70 ? 'Grade B+ (Very Good)' :
+                   formData.evaluation_score >= 60 ? 'Grade B (Good)' :
+                   formData.evaluation_score >= 50 ? 'Grade C (Satisfactory)' :
+                   'Grade D (Needs Improvement)'}
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">

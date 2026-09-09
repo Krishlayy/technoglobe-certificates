@@ -249,7 +249,7 @@ export const DashboardPage: React.FC = () => {
           <table className="w-full text-left text-xs text-slate-600">
             <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider text-[10px] border-b border-slate-200">
               <tr>
-                <th className="py-3 px-4">Student & Roll No</th>
+                <th className="py-3 px-4">Student</th>
                 <th className="py-3 px-4">College / University</th>
                 <th className="py-3 px-4">Internship Track</th>
                 <th className="py-3 px-4">Duration & Hours</th>
@@ -297,7 +297,7 @@ export const DashboardPage: React.FC = () => {
 
                     <td className="py-3 px-4">
                       <div>{st.start_date} to {st.end_date}</div>
-                      <div className="text-[11px] text-slate-400">120 Hours (6 Weeks)</div>
+                      <div className="text-[11px] text-slate-400">{st.total_training_hours || 120} Hours</div>
                     </td>
 
                     <td className="py-3 px-4 font-medium text-slate-700">

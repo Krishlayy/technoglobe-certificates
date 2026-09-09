@@ -52,6 +52,7 @@ export interface Student {
   mentor_name?: string;
   start_date?: string;
   end_date?: string;
+  total_training_hours?: number;
 }
 
 export interface Course {

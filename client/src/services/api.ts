@@ -6,12 +6,20 @@ import {
 
 const API_BASE = '/api';
 
+function authHeaders(): HeadersInit {
+  const token = localStorage.getItem('tg_token');
+  const headers: HeadersInit = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return headers;
+}
+
+
 export const api = {
   // Auth
   login: async (email: string, password: string) => {
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify({ email, password }),
     });
     if (!res.ok) throw new Error((await res.json()).detail || 'Login failed');
@@ -19,7 +27,7 @@ export const api = {
   },
 
   getCurrentUser: async () => {
-    const res = await fetch(`${API_BASE}/auth/me`);
+    const res = await fetch(`${API_BASE}/auth/me`, { headers: authHeaders() });
     return res.json();
   },
 
@@ -48,7 +56,7 @@ export const api = {
   createStudent: async (data: any) => {
     const res = await fetch(`${API_BASE}/students`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify(data),
     });
     if (!res.ok) throw new Error((await res.json()).detail || 'Failed to create student');
@@ -69,7 +77,7 @@ export const api = {
   updateModule: async (id: number, data: any) => {
     const res = await fetch(`${API_BASE}/modules/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify(data),
     });
     return res.json();
@@ -97,7 +105,7 @@ export const api = {
   updateCompliance: async (internshipId: number, data: ComplianceRecord) => {
     const res = await fetch(`${API_BASE}/internships/${internshipId}/compliance`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify(data),
     });
     return res.json();
@@ -125,7 +133,7 @@ export const api = {
   saveAttendance: async (internshipId: number, item: AttendanceRecord) => {
     const res = await fetch(`${API_BASE}/internships/${internshipId}/attendance`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify(item),
     });
     return res.json();
@@ -140,7 +148,7 @@ export const api = {
   saveDailyLog: async (internshipId: number, item: DailyLogRecord) => {
     const res = await fetch(`${API_BASE}/internships/${internshipId}/logs`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify(item),
     });
     return res.json();
@@ -155,7 +163,7 @@ export const api = {
   saveProject: async (internshipId: number, data: { project_title: string; fields: Record<string, any>; status?: string }) => {
     const res = await fetch(`${API_BASE}/internships/${internshipId}/project`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify(data),
     });
     return res.json();
@@ -170,7 +178,7 @@ export const api = {
   saveEvaluation: async (internshipId: number, data: { mentor_id: number; criteria_scores: Record<string, any>; overall_score: number; final_remark: string }) => {
     const res = await fetch(`${API_BASE}/internships/${internshipId}/evaluation`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify(data),
     });
     return res.json();
@@ -178,14 +186,14 @@ export const api = {
 
   // Settings
   getSettings: async (): Promise<CentreSettings> => {
-    const res = await fetch(`${API_BASE}/settings`);
+    const res = await fetch(`${API_BASE}/settings`, { headers: authHeaders() });
     return res.json();
   },
 
   updateSettings: async (data: Partial<CentreSettings>) => {
     const res = await fetch(`${API_BASE}/settings`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify(data),
     });
     return res.json();
@@ -200,7 +208,7 @@ export const api = {
 
   // Audit logs
   getAuditLogs: async () => {
-    const res = await fetch(`${API_BASE}/audit-logs`);
+    const res = await fetch(`${API_BASE}/audit-logs`, { headers: authHeaders() });
     return res.json();
   },
 
@@ -268,7 +276,7 @@ export const api = {
   updateTemplate: async (key: string, title: string, blocks: any[]) => {
     const res = await fetch(`${API_BASE}/templates/${key}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify({ title, blocks }),
     });
     return res.json();
@@ -278,7 +286,7 @@ export const api = {
   bulkUpdateAttendance: async (internshipId: number, data: { dates: string[]; status: string; topic_covered?: string; start_time?: string; end_time?: string; total_hours?: number }) => {
     const res = await fetch(`${API_BASE}/internships/${internshipId}/attendance/bulk`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify(data),
     });
     return res.json();
@@ -317,7 +325,7 @@ export const api = {
   }) => {
     const res = await fetch(`${API_BASE}/wizard/quick-generate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify(data),
     });
     if (!res.ok) {
