@@ -24,11 +24,11 @@ def _seed_base_data(cursor, conn):
 
     # 1. Users
     users = [
+        ("Nitin Sir (Head)", "nitin@pctm", hash_password("nitin321"), "SUPER_ADMIN"),
+        ("Prof. Krishlay Sharma", "krishlay@pctm", hash_password("krishlay321"), "SUPER_ADMIN"),
+        ("Prof. Rahul Bhatnagar", "rahul@pctm", hash_password("rahul321"), "SUPER_ADMIN"),
         ("Centre Administrator", "admin@technoglobe.co.in", hash_password("admin123"), "CENTRE_ADMIN"),
         ("System Super Admin", "superadmin@technoglobe.co.in", hash_password("super123"), "SUPER_ADMIN"),
-        ("Er. Vikas Agrawal (Mentor)", "vikas@technoglobe.co.in", hash_password("mentor123"), "MENTOR"),
-        ("Staff Viewer", "viewer@technoglobe.co.in", hash_password("viewer123"), "VIEWER"),
-        ("Nitin (Faculty Admin)", "nitin@pctm", hash_password("nitin321"), "SUPER_ADMIN"),
     ]
     cursor.executemany("INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)", users)
 
@@ -50,8 +50,8 @@ def _seed_base_data(cursor, conn):
         'bharatpur@technoglobe.co.in',
         'https://www.technoglobe.co.in',
         'TG/FRAN/RAJ/BPT/2024-001',
-        'Er. Rajesh Sharma',
-        'Centre Director & Authorized Signatory',
+        'Nitin Sir',
+        'Centre Head & Authorized Signatory',
         '', '', '',
         0, 0,
         'TG-BPT', 'TG/BPT',
@@ -204,10 +204,10 @@ def _seed_base_data(cursor, conn):
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     """, dm_modules)
 
-    # 6. Mentors
+    # 6. Mentors (Faculties & Professors)
     mentors = [
-        ("Er. Vikas Agrawal", "Senior Data Analyst & Technical Lead", "vikas.agrawal@technoglobe.co.in", "+91 98290 88771", "Over 8 years experience in Business Intelligence, SQL, Python, and enterprise Power BI reporting.", 1),
-        ("Ms. Neha Singhal", "Digital Marketing Strategist & Campaign Lead", "neha.singhal@technoglobe.co.in", "+91 94140 33221", "Google Ads certified professional with 7 years expertise in Performance Marketing, SEO, and Brand Growth.", 1)
+        ("Prof. Krishlay Sharma", "Professor", "krishlay@pctm", "+91 98290 12345", "Professor & Supervising Faculty for Data Analytics, Computing & Emerging Technologies.", 1),
+        ("Prof. Rahul Bhatnagar", "Professor", "rahul@pctm", "+91 94140 33221", "Professor & Supervising Faculty for Digital Marketing, Information Technology & Digital Media.", 1)
     ]
     cursor.executemany("INSERT INTO mentors (name, designation, email, phone, bio, is_active) VALUES (?, ?, ?, ?, ?, ?)", mentors)
 
@@ -492,6 +492,64 @@ Status: Officially Verified & Authentic"""
 
     print("Demo students seeded successfully.")
 
+def apply_faculty_updates(cursor, conn):
+    # 1. Update Head in centre_settings
+    cursor.execute("""
+    UPDATE centre_settings 
+    SET signatory_name = 'Nitin Sir', signatory_designation = 'Centre Head & Authorized Signatory'
+    WHERE id = 1
+    """)
+
+    # 2. Update / Insert Mentors (Prof. Krishlay Sharma & Prof. Rahul Bhatnagar)
+    cursor.execute("""
+    INSERT INTO mentors (id, name, designation, email, phone, bio, is_active)
+    VALUES 
+    (1, 'Prof. Krishlay Sharma', 'Professor', 'krishlay@pctm', '+91 98290 12345', 'Professor & Supervising Faculty for Data Analytics, Computing & Emerging Technologies.', 1),
+    (2, 'Prof. Rahul Bhatnagar', 'Professor', 'rahul@pctm', '+91 94140 33221', 'Professor & Supervising Faculty for Digital Marketing, Information Technology & Digital Media.', 1)
+    ON CONFLICT(id) DO UPDATE SET
+        name = excluded.name,
+        designation = excluded.designation,
+        email = excluded.email,
+        phone = excluded.phone,
+        bio = excluded.bio,
+        is_active = 1
+    """)
+
+    # 3. Clean up and setup Users
+    cursor.execute("DELETE FROM users WHERE email IN ('vikas@technoglobe.co.in', 'viewer@technoglobe.co.in')")
+    
+    # Ensure Nitin Sir (Head)
+    cursor.execute("SELECT id FROM users WHERE email = 'nitin@pctm'")
+    if cursor.fetchone():
+        cursor.execute("UPDATE users SET name = 'Nitin Sir (Head)', role = 'SUPER_ADMIN' WHERE email = 'nitin@pctm'")
+    else:
+        cursor.execute("INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
+                       ('Nitin Sir (Head)', 'nitin@pctm', hash_password('nitin321'), 'SUPER_ADMIN'))
+
+    # Ensure Prof. Krishlay Sharma
+    cursor.execute("SELECT id FROM users WHERE email = 'krishlay@pctm'")
+    if not cursor.fetchone():
+        cursor.execute("INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
+                       ('Prof. Krishlay Sharma', 'krishlay@pctm', hash_password('krishlay321'), 'SUPER_ADMIN'))
+
+    # Ensure Prof. Rahul Bhatnagar
+    cursor.execute("SELECT id FROM users WHERE email = 'rahul@pctm'")
+    if not cursor.fetchone():
+        cursor.execute("INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
+                       ('Prof. Rahul Bhatnagar', 'rahul@pctm', hash_password('rahul321'), 'SUPER_ADMIN'))
+
+    # 4. Remove all demo and test student records
+    cursor.execute("DELETE FROM attendance")
+    cursor.execute("DELETE FROM daily_logs")
+    cursor.execute("DELETE FROM weekly_reports")
+    cursor.execute("DELETE FROM projects")
+    cursor.execute("DELETE FROM evaluations")
+    cursor.execute("DELETE FROM feedback")
+    cursor.execute("DELETE FROM certificates")
+    cursor.execute("DELETE FROM compliance_records")
+    cursor.execute("DELETE FROM internships")
+    cursor.execute("DELETE FROM students")
+
 def seed():
     init_db()
     conn = get_db()
@@ -500,14 +558,12 @@ def seed():
     cursor.execute("SELECT COUNT(*) FROM centre_settings")
     if cursor.fetchone()[0] == 0:
         _seed_base_data(cursor, conn)
-
-    cursor.execute("SELECT COUNT(*) FROM students")
-    if cursor.fetchone()[0] == 0:
-        seed_demo_students(cursor, conn)
+    else:
+        apply_faculty_updates(cursor, conn)
 
     conn.commit()
     conn.close()
-    print("Database seeding check complete.")
+    print("Database seeding and faculty update complete.")
 
 def delete_demo_data():
     conn = get_db()

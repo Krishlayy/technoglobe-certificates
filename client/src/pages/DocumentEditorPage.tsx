@@ -32,10 +32,10 @@ export const DocumentEditorPage: React.FC = () => {
     total_hours: 120,
     duration_weeks: 6,
     project_title: 'Retail Sales Performance & Customer Churn Analytics Dashboard',
-    mentor_name: 'Er. Vikas Agrawal',
-    mentor_designation: 'Senior Data Analyst & Technical Lead',
-    signatory_name: 'Er. Rajesh Sharma',
-    signatory_designation: 'Centre Director & Authorized Signatory',
+    mentor_name: 'Prof. Krishlay Sharma',
+    mentor_designation: 'Professor',
+    signatory_name: 'Nitin Sir',
+    signatory_designation: 'Centre Head & Authorized Signatory',
     issue_date: '2026-07-14',
     certificate_no: 'TG-BPT-DA-2026-0001',
     verification_code: 'VER-TG-DA-98214',
@@ -71,9 +71,9 @@ export const DocumentEditorPage: React.FC = () => {
         end_date: st.end_date || '2026-07-12',
         certificate_no: st.certificate_number || 'TG-BPT-DA-2026-0001',
         verification_code: st.verification_code || 'VER-TG-DA-98214',
-        mentor_name: st.mentor_name || (sett?.signatory_name || 'Er. Vikas Agrawal'),
-        signatory_name: sett?.signatory_name || 'Er. Rajesh Sharma',
-        signatory_designation: sett?.signatory_designation || 'Centre Director & Authorized Signatory',
+        mentor_name: st.mentor_name || (sett?.signatory_name || 'Prof. Krishlay Sharma'),
+        signatory_name: sett?.signatory_name || 'Nitin Sir',
+        signatory_designation: sett?.signatory_designation || 'Centre Head & Authorized Signatory',
       }));
     }
   };

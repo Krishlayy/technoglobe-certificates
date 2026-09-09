@@ -412,7 +412,7 @@ export const StepByStepWizardPage: React.FC = () => {
               </p>
               <div className="space-y-1.5 text-xs text-slate-700 bg-white p-3 rounded-lg border border-slate-200">
                 <div><b>Duration:</b> 6 Weeks (36 Days, 126 Hours)</div>
-                <div><b>Designated Mentor:</b> Er. Vikas Agrawal (Sr. Data Analyst)</div>
+                <div><b>Designated Faculty:</b> Prof. Krishlay Sharma (Professor)</div>
                 <div><b>Capstone Project:</b> Retail Sales & Customer Churn Dashboard</div>
               </div>
             </div>
@@ -445,7 +445,7 @@ export const StepByStepWizardPage: React.FC = () => {
               </p>
               <div className="space-y-1.5 text-xs text-slate-700 bg-white p-3 rounded-lg border border-slate-200">
                 <div><b>Duration:</b> 6 Weeks (36 Days, 126 Hours)</div>
-                <div><b>Designated Mentor:</b> Ms. Pooja Gupta (Marketing Lead)</div>
+                <div><b>Designated Faculty:</b> Prof. Rahul Bhatnagar (Professor)</div>
                 <div><b>Capstone Project:</b> Omnichannel Healthcare Clinic Growth Campaign</div>
               </div>
             </div>
