@@ -538,17 +538,9 @@ def apply_faculty_updates(cursor, conn):
         cursor.execute("INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
                        ('Prof. Rahul Bhatnagar', 'rahul@pctm', hash_password('rahul321'), 'SUPER_ADMIN'))
 
-    # 4. Remove all demo and test student records
-    cursor.execute("DELETE FROM attendance")
-    cursor.execute("DELETE FROM daily_logs")
-    cursor.execute("DELETE FROM weekly_reports")
-    cursor.execute("DELETE FROM projects")
-    cursor.execute("DELETE FROM evaluations")
-    cursor.execute("DELETE FROM feedback")
-    cursor.execute("DELETE FROM certificates")
-    cursor.execute("DELETE FROM compliance_records")
-    cursor.execute("DELETE FROM internships")
-    cursor.execute("DELETE FROM students")
+    # Faculty updates complete — DO NOT delete student/internship data here.
+    # The bulk DELETE statements that were here previously would wipe ALL
+    # real student records, certificates, and attendance on every server restart.
 
 def seed():
     init_db()

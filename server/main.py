@@ -568,6 +568,8 @@ def finalize_certificate(id: int):
     import urllib.parse
     base_url = s.get("verification_base_url") or "http://192.168.0.103:8000"
     base_url = base_url.rstrip("/")
+    deg_text = student.get("degree", "")
+    sem_text = student.get("semester_year", "")
     params = urllib.parse.urlencode({
         "cert": cert_num,
         "name": student['full_name'],
@@ -860,11 +862,10 @@ def verify_certificate_endpoint(query_code: str, sig: Optional[str] = None):
     expected_sig = pdf_service.compute_certificate_signature(
         res["certificate_number"], res["student_name"], res["course_name"], res["issue_date"]
     )
-    sig_valid = (not sig or sig.strip().lower() == expected_sig.lower())
+    sig_valid = bool(sig and sig.strip().lower() == expected_sig.lower())
     return {
         "valid": True,
         "signature_valid": sig_valid,
-        "signature": expected_sig,
         "certificate_number": res["certificate_number"],
         "verification_code": res["verification_code"],
         "issue_date": res["issue_date"],
@@ -886,9 +887,7 @@ def verify_signature_endpoint(cert: str, name: str, course: str, date: str, sig:
     expected_sig = pdf_service.compute_certificate_signature(cert, name, course, date)
     is_valid = (expected_sig.lower() == sig.strip().lower())
     return {
-        "valid": is_valid,
-        "expected_sig": expected_sig,
-        "provided_sig": sig
+        "valid": is_valid
     }
 
 @app.get("/api/certificates/batch-print")
@@ -1368,6 +1367,8 @@ def quick_generate_internship(req: QuickGenerateRequest):
     import urllib.parse
     base_url = s.get("verification_base_url") or "http://192.168.0.103:8000"
     base_url = base_url.rstrip("/")
+    deg_text = req.degree or ""
+    sem_text = req.semester_year or ""
     params = urllib.parse.urlencode({
         "cert": cert_num,
         "name": req.full_name.strip(),
