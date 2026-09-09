@@ -1,6 +1,8 @@
 # TECHNOGLOBE COURSE-BASED INTERNSHIP DOCUMENTATION & CERTIFICATE MANAGEMENT SYSTEM
-**Authorized Franchise Centre — Bharatpur, Rajasthan**
+**Authorized Franchise Centre — Bharatpur, Rajasthan**  
 *Poddar College, Near SP Office, Bharatpur, Rajasthan, India*
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Krishlayy/technoglobe-certificates)
 
 ---
 
@@ -122,8 +124,9 @@ This automatically verifies:
 
 ---
 
-## Default Credentials (Demo Access)
+## Default Credentials (Demo & Faculty Access)
 
+- **Faculty Admin**: `nitin@pctm` / `nitin321` (SUPER_ADMIN full access)
 - **Centre Admin**: `admin@technoglobe.co.in` / `admin123`
 - **Super Admin**: `superadmin@technoglobe.co.in` / `super123`
 - **Industry Mentor**: `vikas@technoglobe.co.in` / `mentor123`
