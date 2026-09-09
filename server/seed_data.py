@@ -28,6 +28,7 @@ def _seed_base_data(cursor, conn):
         ("System Super Admin", "superadmin@technoglobe.co.in", hash_password("super123"), "SUPER_ADMIN"),
         ("Er. Vikas Agrawal (Mentor)", "vikas@technoglobe.co.in", hash_password("mentor123"), "MENTOR"),
         ("Staff Viewer", "viewer@technoglobe.co.in", hash_password("viewer123"), "VIEWER"),
+        ("Nitin (Faculty Admin)", "nitin@pctm", hash_password("nitin321"), "SUPER_ADMIN"),
     ]
     cursor.executemany("INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)", users)
 
