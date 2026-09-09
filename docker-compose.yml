@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  technoglobe-system:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./server/technoglobe.db:/app/server/technoglobe.db
+      - ./server/generated:/app/server/generated
+    environment:
+      - PORT=8000
+    restart: unless-stopped

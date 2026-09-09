@@ -1,0 +1,178 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply antialiased text-slate-800 bg-slate-50;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Universal High-Contrast, Large & Legible Form Controls */
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="date"],
+  input[type="number"],
+  input[type="password"],
+  select,
+  textarea {
+    color: #0f172a !important; /* Pitch dark slate */
+    background-color: #ffffff !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    line-height: 1.5 !important;
+    border: 2px solid #cbd5e1 !important;
+    border-radius: 0.5rem !important;
+  }
+
+  input[type="text"]:focus,
+  input[type="email"]:focus,
+  input[type="tel"]:focus,
+  input[type="date"]:focus,
+  input[type="number"]:focus,
+  input[type="password"]:focus,
+  select:focus,
+  textarea:focus {
+    color: #000000 !important;
+    background-color: #ffffff !important;
+    border-color: #2563eb !important;
+    outline: 3px solid rgba(37, 99, 235, 0.25) !important;
+    outline-offset: 1px !important;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #94a3b8 !important;
+    font-weight: 400 !important;
+  }
+
+  /* Prevent browser dark mode / autofill from darkening text */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover, 
+  input:-webkit-autofill:focus, 
+  textarea:-webkit-autofill,
+  select:-webkit-autofill {
+    -webkit-text-fill-color: #0f172a !important;
+    -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+    transition: background-color 5000s ease-in-out 0s !important;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Print Styles for A4 Documents & Certificates */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .page-break {
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+
+  .page-break-after {
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
+  .avoid-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* A4 Portrait Document Container */
+  .a4-portrait-sheet {
+    width: 210mm !important;
+    min-height: 297mm !important;
+    padding: 18mm 20mm !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* A4 Landscape Certificate Container */
+  .a4-landscape-sheet {
+    width: 297mm !important;
+    height: 210mm !important;
+    padding: 12mm 15mm !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    border: none !important;
+    page-break-inside: avoid !important;
+  }
+}
+
+/* Screen preview styling for printable documents */
+.document-preview-container {
+  background-color: #525659;
+  padding: 2.5rem 1rem;
+  min-height: calc(100vh - 4rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.a4-portrait-paper {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 18mm 20mm;
+  background: white;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+  margin-bottom: 2rem;
+  box-sizing: border-box;
+  position: relative;
+  color: #1e293b;
+}
+
+.a4-landscape-paper {
+  width: 297mm;
+  height: 210mm;
+  padding: 12mm 15mm;
+  background: white;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+  margin-bottom: 2rem;
+  box-sizing: border-box;
+  position: relative;
+  color: #1e293b;
+}
+
+/* Certificate Guilloche Borders */
+.cert-border-outer {
+  border: 4px double #0B2545;
+  outline: 2px solid #D4AF37;
+  outline-offset: 4px;
+}
+
+.cert-corner-ornament {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-color: #D4AF37;
+}
