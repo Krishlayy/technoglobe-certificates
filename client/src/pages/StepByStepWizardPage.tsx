@@ -228,7 +228,7 @@ export const StepByStepWizardPage: React.FC = () => {
 
   const steps = [
     { num: 1, label: 'Student Info', desc: 'Name & Academics' },
-    { num: 2, label: 'Course Track', desc: 'DA or DM Selection' },
+    { num: 2, label: 'Course Track', desc: '9 Tracks & Faculty' },
     { num: 3, label: 'Attendance', desc: '36-Day Logbook' },
     { num: 4, label: 'Evaluation', desc: 'Rubric & Compliance' },
     { num: 5, label: 'Download', desc: 'ZIP & All 15 PDFs' },
