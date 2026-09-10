@@ -6,3 +6,6 @@ server/__pycache__/
 .env
 cloudflared.exe
 *.log
+server/generated/*.pdf
+server/generated/*.zip
+!server/generated/.gitkeep

@@ -599,8 +599,10 @@ def finalize_certificate(id: int, user = Depends(get_current_user)):
     project = dict(p_row) if p_row else {}
 
     import urllib.parse
-    base_url = s.get("verification_base_url") or "http://192.168.0.103:8000"
-    base_url = base_url.rstrip("/")
+    raw_base = s.get("verification_base_url") or "https://technoglobe-certificates.onrender.com"
+    if "192.168." in raw_base or "localhost" in raw_base:
+        raw_base = os.environ.get("VERIFICATION_BASE_URL", "https://technoglobe-certificates.onrender.com")
+    base_url = raw_base.rstrip("/")
     deg_text = student.get("degree", "")
     sem_text = student.get("semester_year", "")
     params = urllib.parse.urlencode({
@@ -1184,8 +1186,9 @@ class QuickGenerateRequest(BaseModel):
     semester_year: str = "6th Semester"
     academic_session: str = "2025-2026"
 
-    # Step 2: Course & Track Selection
-    course_track: str = "DA"  # "DA" or "DM"
+    # Step 2: Course, Track & Faculty Selection
+    course_track: str = "DA"  # "DA", "DM", "FS", "AI", "CS", "CC", "JV", "BI", "AD"
+    mentor_id: Optional[int] = None  # 1 for Prof. Krishlay Sharma, 2 for Prof. Rahul Bhatnagar
     start_date: str = "2026-06-01"
     end_date: str = "2026-07-12"
     custom_project_title: Optional[str] = None
@@ -1220,9 +1223,10 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
     ))
     student_id = cursor.lastrowid
 
-    # 3. Course Track Resolution
+    # 3. Course Track & Faculty Mentor Resolution
     track = req.course_track.upper()
-    if track not in ("DA", "DM"):
+    valid_tracks = ("DA", "DM", "FS", "AI", "CS", "CC", "JV", "BI", "AD")
+    if track not in valid_tracks:
         track = "DA"
     
     cursor.execute("SELECT * FROM courses WHERE code = ?", (track,))
@@ -1232,7 +1236,12 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
         course = cursor.fetchone()
     course = dict(course)
     course_id = course["id"]
-    mentor_id = 1 if track == "DA" else 2
+    
+    # Faculty supervisor resolution (Prof. Krishlay vs Prof. Rahul)
+    if req.mentor_id and req.mentor_id in (1, 2):
+        mentor_id = req.mentor_id
+    else:
+        mentor_id = 1 if track in ('DA', 'AI', 'FS', 'JV', 'CS', 'CC', 'AD', 'BI') else 2
 
     # 4. Internship Record
     cursor.execute("""
@@ -1297,8 +1306,125 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
         "A/B Testing Methodologies for Paid Campaigns", "Capstone Campaign Blueprint & Budget Allocation", "Digital Marketing Strategy Dossier Finalization"
     ]
 
-    topics_list = da_topics if track == "DA" else dm_topics
-    tools_label = "Python / SQL / Power BI / Excel" if track == "DA" else "Meta Ads / GA4 / SEO Tools / Canva"
+    fs_topics = [
+        "HTML5 Semantic Structure & Modern Accessibility", "CSS Flexbox, CSS Grid & Layout Systems", "Tailwind CSS Utility Design & Responsive UI",
+        "Modern JavaScript (ES6+), Closures & Promises", "Asynchronous JavaScript, Fetch API & Async/Await", "DOM Manipulation & Browser Event Life Cycles",
+        "React.js Component Architecture & JSX", "React Hooks Deep Dive: useState & useEffect", "Custom Hooks & Controlled Form Component States",
+        "React Router v6 Nested Routing & Protected Guards", "Global State Management with React Context / Redux", "Tailwind UI Components & Dynamic Animations",
+        "Node.js Architecture & Asynchronous Event Loop", "Express.js REST API Server & Routing Modules", "Custom Middleware, Logging & Central Error Handling",
+        "JWT Token Authentication & BCrypt Password Hashing", "Role-Based Route Authorization & Security Headers", "MongoDB Atlas Setup & Document Data Modeling",
+        "Mongoose Schemas, Relationships & Validations", "Mongoose Aggregation Pipelines & Query Indexing", "Full Stack Integration: Connecting React with Express",
+        "Axios Interceptors for JWT Bearer Token Handling", "Input Validation (Zod/Joi) & Data Sanitization", "Automated API Unit & Integration Testing in Postman",
+        "Docker Containerization of MERN Applications", "Multi-Stage Dockerfiles & Image Size Optimization", "Environment Variable Management & Cloud Secrets",
+        "Production Deployment on Render / Cloud Platforms", "Continuous Integration Workflows with GitHub Actions", "CORS Configuration, Helmet & Rate Limiting",
+        "Database Backup & Data Restoration Automation", "Performance Profiling & Webpack / Vite Optimization", "Capstone Architecture Blueprint & API Contracts",
+        "Frontend UI & Backend REST API Finalization", "End-to-End System Testing & Bug Remediation", "Capstone Documentation & Technical Viva Voce Defense"
+    ]
+
+    ai_topics = [
+        "Python Advanced Syntax, OOPs & Clean Code Standards", "Functional Python, Lambdas, Decorators & Generators", "NumPy N-Dimensional Arrays & Vectorized Math",
+        "Pandas DataFrames, Series & Advanced Indexing", "Data Ingestion from CSV, Excel, SQL & JSON Sources", "Handling Missing Values, Imputation & Outlier IQR",
+        "Data Transformation, Reshaping & Pivot Tables", "Matplotlib Architecture, Subplots & Aesthetics", "Seaborn Statistical Visualizations & Distribution Plots",
+        "Exploratory Data Analysis (EDA) & Feature Correlation", "Probability Distributions & Statistical Hypotheses", "Feature Engineering: One-Hot, Scaling & Encoding",
+        "Principal Component Analysis (PCA) & Dimensionality", "Supervised Learning: Linear & Logistic Regression", "Decision Trees, Gini Impurity & Entropy Measures",
+        "Ensemble Learning: Random Forest & Bagging Models", "Gradient Boosting Architectures: XGBoost & LightGBM", "Hyperparameter Optimization via GridSearchCV",
+        "Model Evaluation Metrics: Precision, Recall, ROC-AUC", "Stratified K-Fold Cross-Validation Workflows", "Unsupervised Clustering: K-Means & Silhouette Scores",
+        "Hierarchical Clustering & Anomaly Isolation Forests", "Neural Network Foundations & Activation Functions", "TensorFlow & Keras Deep Learning Architectures",
+        "Preventing Overfitting: Dropout & EarlyStopping", "Convolutional Neural Networks (CNN) Foundations", "Natural Language Processing (NLP) & Text Vectorization",
+        "Model Serialization with Joblib & Model Versioning", "FastAPI Microservice Development for Model Serving", "Dockerizing AI Inference Applications",
+        "Responsible AI, Model Explainability & SHAP Analysis", "Cloud AI Model Deployment & Endpoint Testing", "Capstone Problem Definition & Dataset Curation",
+        "Model Training, Validation & Performance Tuning", "Interactive Model Prediction Dashboard UI", "Applied AI Capstone Dissertation & Technical Defense"
+    ]
+
+    cs_topics = [
+        "Cyber Security Fundamentals, CIA Triad & Threat Landscapes", "Computer Networking Protocols: TCP/IP, OSI & Subnetting", "Packet Sniffing & Deep Packet Inspection in Wireshark",
+        "Port Scanning, Service Discovery & Network Mapping (Nmap)", "Man-in-the-Middle (MITM) & ARP Spoofing Mechanics", "Linux System Security Administration & Permissions",
+        "User Management, Sudoers Hardening & SSH Key Security", "Linux Firewalls (UFW, IPTables) & Network Hardening", "System Audit Logging & Bash Automation Scripting",
+        "Open Source Intelligence (OSINT) & Reconnaissance", "Automated Vulnerability Scanning with OpenVAS & Nessus", "CVE / NVD Databases & CVSS Risk Scoring Matrix",
+        "OWASP Top 10 Web Vulnerabilities Deep Dive", "SQL Injection (SQLi) Exploitation & Parameterized Defense", "Cross-Site Scripting (XSS: Stored, Reflected, DOM)",
+        "Broken Authentication, Session Hijacking & CSRF", "Insecure Direct Object References (IDOR) & Access Flaws", "Burp Suite Intercepting Proxy & Repeater Workflows",
+        "Symmetric Encryption: AES-256 & Block Cipher Modes", "Asymmetric Cryptography: RSA, ECC & Diffie-Hellman", "Cryptographic Hash Functions: SHA-256 & Integrity",
+        "Public Key Infrastructure (PKI) & SSL/TLS 1.3 Protocol", "Stateful Firewalls & Next-Gen Network Defense", "Intrusion Detection Systems (Snort / Suricata) Setup",
+        "Writing Custom Snort Signatures for Threat Detection", "SIEM Architecture & Centralized Log Auditing (Wazuh)", "NIST Incident Response Lifecycle (PICERL) Phases",
+        "Digital Forensics, Disk Imaging & Evidence Chain of Custody", "Memory Forensics & Artifact Extraction in Volatility", "Security Auditing & Compliance Standards (ISO 27001)",
+        "Wireless Network Security & WPA2/WPA3 Vulnerabilities", "API Security Testing & Endpoint Hardening", "Capstone VAPT Rules of Engagement & Target Scoping",
+        "Automated & Manual Penetration Testing Execution", "Vulnerability Remediation Matrix & Patch Plan", "Enterprise VAPT Audit Report & Executive Defense"
+    ]
+
+    cc_topics = [
+        "Cloud Computing Models (IaaS, PaaS, SaaS) & Economics", "AWS Global Infrastructure: Regions, AZs & Edge Locations", "AWS Identity & Access Management (IAM) Least Privilege",
+        "Amazon EC2 Instance Types, Lifecycle & Virtualization", "Virtual Private Cloud (VPC) Architecture & Subnetting", "Internet Gateways, NAT Gateways & Custom Route Tables",
+        "Security Groups vs Network ACLs (NACL) Rules", "EC2 User Data Scripts & Automated Server Bootstrapping", "Amazon S3 Storage Classes, Bucket Policies & CORS",
+        "Elastic Block Store (EBS) & Elastic File System (EFS)", "Amazon Relational Database Service (RDS) Multi-AZ Setup", "Amazon DynamoDB NoSQL Architecture & Partition Keys",
+        "Amazon CloudFront Global Content Delivery Network (CDN)", "Amazon Route 53 DNS Routing Policies & Health Checks", "Linux Administration & Shell Scripting for Cloud Engineers",
+        "Git Branching Models (Gitflow) & Remote Collaboration", "Virtual Machines vs Containerization Architecture", "Docker Engine Fundamentals, CLI & Image Layering",
+        "Writing Production Dockerfiles & Multi-Stage Builds", "Docker Compose for Multi-Tier Service Orchestration", "Docker Volume Data Persistence & Container Networking",
+        "Continuous Integration & Continuous Delivery (CI/CD) Concepts", "GitHub Actions Workflow Syntax, Actions & Triggers", "Automating Tests & Docker Image Builds in CI/CD",
+        "Automated Cloud Deployment via SSH & Cloud Secrets", "Kubernetes Architecture: Control Plane & Worker Nodes", "Pods, ReplicaSets & Declarative Deployment YAMLs",
+        "Kubernetes ClusterIP, NodePort & LoadBalancer Services", "Ingress Controllers, Reverse Proxies & SSL Certificates", "ConfigMaps, Secrets & Persistent Volume Claims (PVC)",
+        "Infrastructure as Code (IaC) Principles with Terraform", "Terraform HCL Syntax, State Management & AWS Providers", "AWS CloudWatch Metrics, Alarms & Centralized Logs",
+        "Prometheus & Grafana Infrastructure Observability", "Capstone Cloud Architecture Design & Capacity Planning", "Automated Multi-Tier Cloud Deployment & Defense"
+    ]
+
+    jv_topics = [
+        "Java Architecture, JVM, JRE, JDK & Memory Management", "Primitive Data Types, Operators & Control Flow Logic", "Object-Oriented Programming: Classes, Objects & Methods",
+        "Inheritance, Method Overriding & Dynamic Polymorphism", "Abstract Classes, Interface Design & Multiple Inheritance", "Encapsulation, Access Modifiers & Package Structures",
+        "Exception Handling Hierarchy: Checked vs Unchecked", "Custom Exception Development & Logging Frameworks", "Java Generics & Type-Safe Class Design",
+        "Java Collections: List Implementations (ArrayList, LinkedList)", "Java Collections: Set Implementations (HashSet, TreeSet)", "Java Collections: Map Implementations (HashMap, TreeMap)",
+        "Lambda Expressions, Functional Interfaces & Predicates", "Java 8+ Streams API: Filter, Map, FlatMap & Reduce", "Stream Collectors, GroupingBy & Parallel Stream Processing",
+        "RDBMS Schema Design, Normalization & Relational Constraints", "Complex SQL: Multi-Table JOINs, Subqueries & Aggregates", "ACID Properties & Database Transaction Isolation Levels",
+        "Java Database Connectivity (JDBC) & PreparedStatement", "HikariCP Connection Pooling & DataSource Configuration", "Spring Framework Architecture & Inversion of Control (IoC)",
+        "Dependency Injection (@Autowired, Constructor Injection)", "Spring Boot Starters, Auto-Configuration & Profiles", "Building RESTful Web Services with @RestController",
+        "Request Routing: @GetMapping, @PostMapping, @PathVariable", "DTO Pattern, Request Validation (@Valid) & Error Handling", "Spring Data JPA & Hibernate Object-Relational Mapping",
+        "JPA Entity Mappings: @OneToMany, @ManyToOne, @ManyToMany", "Derived Query Methods & JPQL Custom Queries with @Query", "Spring Data Pagination, Sorting & Auditing Integration",
+        "Spring Security Filter Chain & UserDetailsService Architecture", "JWT Token Generation, Signing & Stateless Auth Filter", "Role-Based Access Control (@PreAuthorize) & CORS Security",
+        "Unit Testing with JUnit 5, AssertJ & Mockito Framework", "Integration Testing with @SpringBootTest & TestContainers", "Dockerizing Spring Boot Applications & Cloud Deployment",
+        "Enterprise Java Capstone Project Architecture & Finalization"
+    ]
+
+    bi_topics = [
+        "Molecular Biology Dogma: DNA, RNA & Protein Synthesis", "Genomics, Transcriptomics & Proteomics Data Paradigms", "Biological Databases: NCBI Entrez, GenBank & EMBL",
+        "UniProt Knowledgebase: Protein Sequences & Functional Metadata", "Protein Data Bank (PDB) 3D Coordinate Structures", "Ensembl Genome Browser & Genomic Annotation Workflows",
+        "Python Programming Fundamentals for Life Scientists", "BioPython Library Architecture & Core Modules Overview", "Parsing FASTA & GenBank Sequence Records via SeqIO",
+        "Calculating GC Content, Reverse Complements & Open Reading Frames", "DNA Transcription, RNA Translation & Codon Usage Tables", "Motif Discovery, Pattern Matching & Regex in Genetic Sequences",
+        "Pairwise Sequence Alignment Theory & Dot Matrix Plots", "Needleman-Wunsch Dynamic Programming Global Alignment", "Smith-Waterman Dynamic Programming Local Alignment",
+        "Amino Acid Substitution Matrices: PAM & BLOSUM62", "BLAST Algorithm (blastn, blastp) & E-Value Statistics", "Automating Remote & Local NCBI BLAST Queries in Python",
+        "Multiple Sequence Alignment (MSA) Principles & Complexity", "Clustal Omega & MUSCLE Multiple Alignment Workflows", "Phylogenetic Tree Construction: Neighbor-Joining & UPGMA",
+        "Visualizing & Bootstrapping Phylogenetic Trees in Bio.Phylo", "Protein Structural Hierarchy & Secondary Structure Predictions", "Parsing PDB Files & Calculating C-Alpha Distances in Bio.PDB",
+        "Ramachandran Plot Analysis for Protein Conformation Quality", "3D Macromolecular Rendering with PyMOL & Active Site Mapping", "Next-Generation Sequencing (NGS) Technologies & FASTQ Format",
+        "Read Quality Assessment (FastQC) & Trimming Protocols", "SAM/BAM Alignment Files & Mutation Variant Calling (VCF)", "Annotating Single Nucleotide Polymorphisms (SNPs) & InDels",
+        "Gene Expression Profiling & RNA-Seq Differential Analysis", "Statistical Normalization (RPKM/TPM) & Volcano Plot Graphics", "Machine Learning Applications in Biological Biomarker Discovery",
+        "Bioinformatics Pipeline Architecture & Capstone Dataset Selection", "Automated Sequence Alignment & Target Structure Modeling", "Computational Biology Capstone Research Dossier & Viva Defense"
+    ]
+
+    ad_topics = [
+        "Android OS Architecture, Linux Kernel & Android Runtime (ART)", "Kotlin Programming Fundamentals, Variables & Immutability", "Kotlin Null Safety (? / !! / ?:) & Safe Calls",
+        "Kotlin OOPs: Classes, Data Classes, Inheritance & Interfaces", "Kotlin Collections, Higher-Order Functions & Lambdas", "Extension Functions, Scope Functions (let, run, apply)",
+        "Android Studio IDE Setup, Gradle Builds & Dependencies", "Android Application Components & AndroidManifest.xml", "Activity Lifecycle Events & Screen State Management",
+        "Intents (Explicit vs Implicit) & Intent Data Transfer", "Android Resources System: Strings, Colors, Dimens & Themes", "Runtime Permissions Request Lifecycle in Android",
+        "Imperative Views vs Declarative Jetpack Compose Paradigm", "@Composable Functions, State Management & Recomposition", "Compose Layout Primitives: Column, Row, Box & Scaffold",
+        "Material Design 3 Theming, Color Palettes & Typography", "Custom Modifiers, Visual Styling & Animated Transitions", "High-Performance Lists: LazyColumn & LazyRow with Keys",
+        "Card Components, Floating Action Buttons & Badges", "Navigation Component in Jetpack Compose with Type-Safe Args", "Bottom Navigation Bar, Navigation Rail & Navigation Drawer",
+        "Local Data Persistence Strategies in Mobile Applications", "Room SQLite Database Architecture: @Entity, @Dao, @Database", "Database Migrations & Reactive Flow Data Observation",
+        "DataStore Preferences for Secure App Settings Storage", "Repository Pattern for Clean Data Abstraction", "Kotlin Coroutines: Dispatchers, Suspend Functions & Scopes",
+        "Retrofit 2 HTTP Client Configuration & Base URL Setup", "JSON Serialization with Kotlinx Serialization / Moshi", "Handling Network Error States & Offline Cache Fallback",
+        "Asynchronous Image Loading with Coil in Jetpack Compose", "Firebase Authentication & Real-Time Cloud Firestore Sync", "Model-View-ViewModel (MVVM) Clean Architecture",
+        "Dependency Injection with Hilt in Modern Android Apps", "Unit Testing ViewModels with MockK and JUnit 5", "ProGuard Code Obfuscation & Signed Android App Bundle (AAB)",
+        "Native Android Mobile Capstone Project Release & Defense"
+    ]
+
+    topics_map = {
+        'DA': (da_topics, "Python / SQL / Power BI / Excel"),
+        'DM': (dm_topics, "Meta Ads / GA4 / SEO Tools / Canva"),
+        'FS': (fs_topics, "React / Node.js / MongoDB / Docker"),
+        'AI': (ai_topics, "Python / Scikit-Learn / TensorFlow / FastAPI"),
+        'CS': (cs_topics, "Wireshark / Nmap / Burp Suite / Kali Linux"),
+        'CC': (cc_topics, "AWS / Docker / Kubernetes / Terraform"),
+        'JV': (jv_topics, "Spring Boot / Java 17 / JPA / React"),
+        'BI': (bi_topics, "BioPython / NCBI BLAST / PyMOL / Pandas"),
+        'AD': (ad_topics, "Kotlin / Jetpack Compose / Room / Retrofit")
+    }
+    topics_list, tools_label = topics_map.get(track, (da_topics, "Python / SQL / Power BI / Excel"))
 
     while day_count < 36:
         if current_dt.weekday() != 6:  # Skip Sundays
@@ -1335,13 +1461,22 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
         VALUES (?, ?, ?, ?, 'Structured Curriculum & Practical Review', 'Hands-on laboratory implementation', 'Milestone deliverables submitted and verified', 'Technical competencies mastered according to syllabus', 21.0, 'Consistent progress and disciplined execution shown.', 1, 1)
         """, (internship_id, w, f"2026-06-0{w}" if w < 10 else f"2026-06-{w}", f"2026-06-{w+5}"))
 
-    # 8. Capstone Project
-    da_title = req.custom_project_title or "Retail Sales Performance & Customer Churn Analytics Dashboard"
-    dm_title = req.custom_project_title or "Omnichannel Lead Generation & SEO Growth Campaign for Local Healthcare Clinic"
-    proj_title = da_title if track == "DA" else dm_title
+    # 8. Capstone Project Configuration (All 9 Tracks)
+    default_titles = {
+        'DA': "Retail Sales Performance & Customer Churn Analytics Dashboard",
+        'DM': "Omnichannel Lead Generation & SEO Growth Campaign for Regional Healthcare Clinic",
+        'FS': "MediConnect: Full Stack MERN Healthcare Appointment & Patient Portal",
+        'AI': "SmartPredict: Machine Learning Predictive Analytics & Disease Risk Classifier",
+        'CS': "Enterprise Network Vulnerability Assessment & Penetration Testing (VAPT) Audit",
+        'CC': "Automated Multi-Tier Cloud Deployment & CI/CD Pipeline on AWS with Docker",
+        'JV': "FinTrack: Enterprise Banking & Financial Services Portal with Spring Boot",
+        'BI': "Genomic Sequence Alignment & Cancer Mutation Biomarker Discovery Pipeline",
+        'AD': "CityPulse: Native Android Mobile Community & Services Portal with Jetpack Compose"
+    }
+    proj_title = req.custom_project_title or default_titles.get(track, "Industrial Capstone Project Implementation")
 
-    if track == "DA":
-        proj_data = {
+    projects_map = {
+        'DA': {
             "project_title": proj_title,
             "problem_statement": "An omnichannel retail chain operating across North India faced a 14% year-over-year dip in customer repeat purchase rate. The management lacked a consolidated real-time dashboard to track store performance and customer churn.",
             "dataset": "Relational retail database comprising 65,000+ orders, 12,000 customer profiles, and 3 years of transactional records.",
@@ -1350,9 +1485,8 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
             "findings": "Top 20% loyal customers drove 64% of total revenue. Customers inactive for 45 days had 82% churn likelihood.",
             "recommendations": "Deploy automated Day-30 SMS/Email re-engagement triggers to recover estimated Rs. 42 Lakhs annually.",
             "conclusion": "Delivered robust BI solution reducing reporting turnaround from 5 days to real-time."
-        }
-    else:
-        proj_data = {
+        },
+        'DM': {
             "project_title": proj_title,
             "brand_business": "Aarogyam Multi-Speciality Clinic & Diagnostic Centre, Bharatpur",
             "campaign_objective": "Increase verified patient appointment bookings by 40% in 90 days and dominate local search results.",
@@ -1364,7 +1498,79 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
             "results": "Simulated media plan projects 220 monthly inquiries at a blended CPL of Rs. 142, yielding 4.8x ROAS.",
             "recommendations": "Implement automated WhatsApp appointment confirmations to eliminate no-shows.",
             "conclusion": "Commercial digital growth roadmap perfectly tailored for regional healthcare businesses."
+        },
+        'FS': {
+            "project_title": proj_title,
+            "problem_statement": "Patients and clinical doctors required a centralized, responsive web platform for managing medical appointments, viewing digital health records, and authenticating consultations securely.",
+            "dataset": "MongoDB document database with User, Doctor, Appointment, MedicalHistory, and AuditLog collections.",
+            "tools": "React.js, Node.js, Express.js, MongoDB Atlas, TypeScript, Tailwind CSS, Docker.",
+            "objectives": "1. Construct responsive React Single Page App.\n2. Build Express REST API with JWT Auth.\n3. Implement Mongoose data models.\n4. Deploy containerized service on cloud.",
+            "findings": "Achieved sub-80ms API response time and seamless mobile booking experience across all tested devices.",
+            "recommendations": "Integrate WebRTC video consultation capabilities and automated SMS appointment reminders.",
+            "conclusion": "Production-grade Full Stack web portal delivering high usability and robust security."
+        },
+        'AI': {
+            "project_title": proj_title,
+            "problem_statement": "Early detection of chronic disease risks required an automated predictive machine learning model capable of evaluating complex clinical biomarkers accurately.",
+            "dataset": "Standardized clinical health record dataset containing 15,000 patient diagnostic records and 28 feature variables.",
+            "tools": "Python 3.11, Scikit-Learn, TensorFlow, Pandas, NumPy, FastAPI, Matplotlib, Docker.",
+            "objectives": "1. Perform automated data cleaning & EDA.\n2. Train ensemble classifiers (Random Forest, XGBoost).\n3. Optimize hyperparameters with GridSearchCV.\n4. Deploy FastAPI inference microservice.",
+            "findings": "The optimized XGBoost model achieved 94.6% ROC-AUC accuracy with balanced sensitivity and specificity.",
+            "recommendations": "Incorporate SHAP explainability visualizations to give clinicians transparent feature importance scores.",
+            "conclusion": "Robust predictive AI system ready for clinical decision support and triage assistance."
+        },
+        'CS': {
+            "project_title": proj_title,
+            "problem_statement": "An enterprise web infrastructure required a formal Vulnerability Assessment and Penetration Testing (VAPT) audit to identify perimeter weaknesses and achieve compliance.",
+            "dataset": "Network packet captures (PCAP), OpenVAS vulnerability scan XMLs, and Burp Suite HTTP proxy logs.",
+            "tools": "Kali Linux, Wireshark, Nmap, Burp Suite, OpenVAS, Metasploit, Snort IDS.",
+            "objectives": "1. Execute network discovery & port scan.\n2. Identify OWASP Top 10 web flaws.\n3. Verify exploits in controlled sandbox.\n4. Provide prioritized remediation matrix.",
+            "findings": "Identified 3 high-severity issues (unpatched SSL/TLS cipher, SQL injection on login API, missing CSRF tokens).",
+            "recommendations": "Apply parameterized queries, enforce TLS 1.3 only, and implement Snort network IDS detection rules.",
+            "conclusion": "Comprehensive cybersecurity audit providing actionable defensive hardening protocols."
+        },
+        'CC': {
+            "project_title": proj_title,
+            "problem_statement": "Manual server provisioning led to configuration drift and prolonged deployment outages during application updates.",
+            "dataset": "Terraform HCL infrastructure state files, Docker multi-stage build artifacts, and AWS CloudWatch log streams.",
+            "tools": "Amazon Web Services (AWS EC2, VPC, S3, RDS), Docker, Kubernetes, GitHub Actions, Terraform.",
+            "objectives": "1. Write Terraform IaC for multi-AZ VPC.\n2. Containerize application with Docker.\n3. Build automated GitHub Actions CI/CD.\n4. Configure CloudWatch monitoring.",
+            "findings": "Deployment cycle reduced from 2.5 hours to 3 minutes with zero-downtime rolling updates.",
+            "recommendations": "Integrate Kubernetes Horizontal Pod Autoscaler to automatically handle traffic spikes.",
+            "conclusion": "Enterprise-grade automated cloud architecture with complete high-availability resilience."
+        },
+        'JV': {
+            "project_title": proj_title,
+            "problem_statement": "A financial services institution needed a secure, high-throughput backend transaction engine to manage customer accounts and ledger entries.",
+            "dataset": "Relational MySQL enterprise banking database with normalized 3NF account, transaction, and audit tables.",
+            "tools": "Java 17, Spring Boot 3, Spring Data JPA, Hibernate, MySQL, Spring Security, JWT, React.js.",
+            "objectives": "1. Design Spring Boot Controller-Service-Repository architecture.\n2. Implement JPA entity relations & ACID transactions.\n3. Secure endpoints with Spring Security JWT.\n4. Write JUnit 5 test suites.",
+            "findings": "Handled 1,200 simulated concurrent transaction requests per second with strict ACID consistency.",
+            "recommendations": "Decompose core ledger modules into isolated Spring Cloud microservices with Eureka discovery.",
+            "conclusion": "Robust enterprise Java banking portal meeting commercial security and compliance standards."
+        },
+        'BI': {
+            "project_title": proj_title,
+            "problem_statement": "Analyzing high-throughput genomic sequence variations required an automated computational pipeline to identify pathogenic cancer biomarkers.",
+            "dataset": "NCBI GenBank FASTA sequence records, UniProt protein profiles, and PDB macromolecular structures.",
+            "tools": "Python 3.11, BioPython, NCBI BLAST+, PyMOL, Pandas, Matplotlib, Scipy.",
+            "objectives": "1. Parse FASTA/GenBank sequence files.\n2. Execute Needleman-Wunsch & BLAST alignments.\n3. Calculate statistical variant frequencies.\n4. Render 3D active site structures in PyMOL.",
+            "findings": "Identified 4 conserved missense mutations in catalytic domains strongly correlated with drug resistance.",
+            "recommendations": "Expand computational pipeline to support next-generation sequencing (NGS) FASTQ read processing.",
+            "conclusion": "High-accuracy bioinformatics research pipeline accelerating biological sequence interpretation."
+        },
+        'AD': {
+            "project_title": proj_title,
+            "problem_statement": "Citizens required an offline-capable, responsive native mobile application to access local municipal alerts, services, and community directories.",
+            "dataset": "Local Room SQLite database synced asynchronously with Cloud Firestore real-time NoSQL storage.",
+            "tools": "Kotlin 1.9, Android Studio, Jetpack Compose, Material Design 3, Room DB, Retrofit 2, Coroutines.",
+            "objectives": "1. Build declarative Compose UI.\n2. Implement MVVM Unidirectional Data Flow.\n3. Design offline-first Room SQLite caching.\n4. Connect to cloud REST API via Retrofit.",
+            "findings": "App maintained 60 FPS smooth scrolling and full functionality during network disconnectivity.",
+            "recommendations": "Implement Firebase Cloud Messaging (FCM) for instant emergency push broadcast alerts.",
+            "conclusion": "Modern native Android application engineered according to Google's official architecture guide."
         }
+    }
+    proj_data = projects_map.get(track, projects_map['DA'])
 
     cursor.execute("""
     INSERT INTO projects (internship_id, project_title, project_type, project_description, objectives, fields_json, status, submitted_at, approved_at)
@@ -1398,8 +1604,10 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     import urllib.parse
-    base_url = s.get("verification_base_url") or "http://192.168.0.103:8000"
-    base_url = base_url.rstrip("/")
+    raw_base = s.get("verification_base_url") or "https://technoglobe-certificates.onrender.com"
+    if "192.168." in raw_base or "localhost" in raw_base:
+        raw_base = os.environ.get("VERIFICATION_BASE_URL", "https://technoglobe-certificates.onrender.com")
+    base_url = raw_base.rstrip("/")
     deg_text = req.degree or ""
     sem_text = req.semester_year or ""
     params = urllib.parse.urlencode({

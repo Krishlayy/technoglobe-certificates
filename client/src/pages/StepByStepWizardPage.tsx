@@ -7,6 +7,109 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 
+const COURSE_TRACKS = [
+  {
+    code: 'DA',
+    title: 'Data Analytics & Business Intelligence',
+    badge: 'Python & Power BI',
+    desc: 'Python, Pandas, NumPy, SQL, Power BI, Advanced Excel, Data Cleaning, and Executive Reporting.',
+    project: 'Retail Sales & Customer Churn Predictive Dashboard',
+    color: 'blue',
+    defaultMentor: 1
+  },
+  {
+    code: 'DM',
+    title: 'Digital Marketing & Growth Strategy',
+    badge: 'SEO, Ads & GA4',
+    desc: 'SEO, Social Media, Google Ads, Meta Ads, GA4 Web Analytics, Copywriting & AI Content Workflows.',
+    project: 'Omnichannel Healthcare Clinic Growth & Lead Generation Campaign',
+    color: 'purple',
+    defaultMentor: 2
+  },
+  {
+    code: 'FS',
+    title: 'Full Stack Web Development (MERN)',
+    badge: 'React & Node.js',
+    desc: 'React.js 18, Node.js, Express.js, MongoDB Atlas, TypeScript, Tailwind CSS, REST APIs & Cloud Deployment.',
+    project: 'Cloud Patient Consultation & Health Records Management Portal',
+    color: 'emerald',
+    defaultMentor: 1
+  },
+  {
+    code: 'AI',
+    title: 'Python AI, ML & Data Science',
+    badge: 'ML & Deep Learning',
+    desc: 'Python 3.11, Scikit-Learn, TensorFlow, XGBoost, Predictive Modeling, EDA & FastAPI Deployment.',
+    project: 'Clinical Disease Risk & Patient Prognosis Prediction System',
+    color: 'indigo',
+    defaultMentor: 2
+  },
+  {
+    code: 'CS',
+    title: 'Cyber Security & Defensive Ops',
+    badge: 'Security & VAPT',
+    desc: 'Kali Linux, Wireshark, Burp Suite, Network Sniffing, Vulnerability Assessment, Cryptography & Defensive Hardening.',
+    project: 'Enterprise Vulnerability Assessment & Defensive Threat Mitigation',
+    color: 'rose',
+    defaultMentor: 1
+  },
+  {
+    code: 'CC',
+    title: 'Cloud Computing & DevOps Architecture',
+    badge: 'AWS, Docker & K8s',
+    desc: 'AWS EC2/VPC/S3, Docker Containerization, Kubernetes Orchestration, GitHub Actions CI/CD & Terraform IaC.',
+    project: 'Multi-Tier Cloud Infrastructure Deployment with Docker & CI/CD',
+    color: 'sky',
+    defaultMentor: 2
+  },
+  {
+    code: 'JV',
+    title: 'Java Enterprise & Spring Boot Development',
+    badge: 'Spring Boot & JPA',
+    desc: 'Java 17/21 LTS, Spring Boot 3, Spring Data JPA, Hibernate, MySQL, Spring Security & Microservice APIs.',
+    project: 'Enterprise Banking & Financial Transaction Microservices Platform',
+    color: 'amber',
+    defaultMentor: 1
+  },
+  {
+    code: 'BI',
+    title: 'Bioinformatics & Computational Biology',
+    badge: 'Genomics & PyMOL',
+    desc: 'BioPython, Pairwise/MSA Alignment, BLAST+, NCBI Entrez APIs, Protein Structure Visualization & Genomic Data.',
+    project: 'Computational Genomic Mutation Profiling & Protein Homology Modeling',
+    color: 'teal',
+    defaultMentor: 1
+  },
+  {
+    code: 'AD',
+    title: 'Android Mobile App Development (Kotlin)',
+    badge: 'Kotlin & Compose',
+    desc: 'Kotlin 1.9, Jetpack Compose, Material 3, Room SQLite Database, Retrofit 2, Coroutines, Flow & MVVM Architecture.',
+    project: 'Modern Telemedicine Consultation & Health Tracking Android App',
+    color: 'violet',
+    defaultMentor: 2
+  }
+];
+
+const FACULTY_MEMBERS = [
+  {
+    id: 1,
+    name: 'Prof. Krishlay Sharma',
+    designation: 'Professor',
+    department: 'Department of Computer Science & Emerging Technologies',
+    avatar: 'KS',
+    color: 'blue'
+  },
+  {
+    id: 2,
+    name: 'Prof. Rahul Bhatnagar',
+    designation: 'Professor',
+    department: 'Department of Advanced Software Engineering & AI',
+    avatar: 'RB',
+    color: 'purple'
+  }
+];
+
 export const StepByStepWizardPage: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [generating, setGenerating] = useState<boolean>(false);
@@ -31,8 +134,9 @@ export const StepByStepWizardPage: React.FC = () => {
     semester_year: '6th Semester',
     academic_session: '2025-2026',
 
-    // Step 2: Course & Track Selection
-    course_track: 'DA', // 'DA' = Data Analytics, 'DM' = Digital Marketing
+    // Step 2: Course & Track Selection & Faculty
+    course_track: 'DA',
+    mentor_id: 1,
     start_date: '2026-06-01',
     end_date: '2026-07-12',
     custom_project_title: '',
@@ -45,11 +149,20 @@ export const StepByStepWizardPage: React.FC = () => {
     mentor_remarks: 'Demonstrated exemplary technical aptitude, consistency, and professional work ethic throughout the 6-week internship.'
   });
 
-  const handleTrackChange = (track: 'DA' | 'DM') => {
+  const handleTrackChange = (trackCode: string) => {
+    const trackObj = COURSE_TRACKS.find(t => t.code === trackCode);
     setFormData((prev) => ({
       ...prev,
-      course_track: track,
+      course_track: trackCode,
+      mentor_id: trackObj ? trackObj.defaultMentor : prev.mentor_id,
       custom_project_title: ''
+    }));
+  };
+
+  const handleMentorChange = (mentorId: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      mentor_id: mentorId
     }));
   };
 
@@ -96,6 +209,7 @@ export const StepByStepWizardPage: React.FC = () => {
     try {
       const res = await api.quickGenerateInternship({
         ...formData,
+        mentor_id: formData.mentor_id,
         full_name: formData.full_name.trim(),
         father_mother_name: formData.father_mother_name.trim()
       });
@@ -400,85 +514,112 @@ export const StepByStepWizardPage: React.FC = () => {
             <div>
               <h2 className="text-lg font-bold text-slate-900 flex items-center space-x-2">
                 <span className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">2</span>
-                <span>Select Course Track (1-Click Autofill)</span>
+                <span>Select Course Track & Supervising Faculty</span>
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Selecting a track automatically links the approved curriculum, duration (6 weeks / 126 hours), mentor, and capstone project.
+                Select from 9 industry tracks. The approved curriculum, duration (6 weeks / 126 hours), daily syllabus, and 28-page capstone dissertation will be dynamically generated.
               </p>
             </div>
           </div>
 
-          {/* Two Visual Cards for Track Selection */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Data Analytics Card */}
-            <div
-              onClick={() => handleTrackChange('DA')}
-              className={`p-5 rounded-2xl border-2 cursor-pointer transition-all ${
-                formData.course_track === 'DA'
-                  ? 'border-blue-600 bg-blue-50/60 shadow-md ring-2 ring-blue-600/30'
-                  : 'border-slate-200 bg-white hover:border-slate-300'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
-                  DA
-                </div>
-                {formData.course_track === 'DA' && (
-                  <span className="px-3 py-1 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center space-x-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Selected Track</span>
-                  </span>
-                )}
-              </div>
-              <h3 className="text-base font-bold text-slate-950 mb-1">
-                Data Analytics & Business Intelligence
-              </h3>
-              <p className="text-xs text-slate-600 mb-3 leading-relaxed">
-                Python, Pandas, NumPy, SQL, Power BI, Advanced Excel, Data Cleaning, and Executive Reporting.
-              </p>
-              <div className="space-y-1.5 text-xs text-slate-700 bg-white p-3 rounded-lg border border-slate-200">
-                <div><b>Duration:</b> 6 Weeks (36 Days, 126 Hours)</div>
-                <div><b>Designated Faculty:</b> Prof. Krishlay Sharma (Professor)</div>
-                <div><b>Capstone Project:</b> Retail Sales & Customer Churn Dashboard</div>
-              </div>
+          {/* 9 Visual Cards for Track Selection */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+              Choose Internship Specialization Track (9 Tracks Available):
+            </label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+              {COURSE_TRACKS.map((track) => {
+                const isSelected = formData.course_track === track.code;
+                return (
+                  <div
+                    key={track.code}
+                    onClick={() => handleTrackChange(track.code)}
+                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                      isSelected
+                        ? 'border-blue-600 bg-blue-50/70 shadow-md ring-2 ring-blue-600/30'
+                        : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`px-2 py-0.5 rounded-md text-xs font-extrabold uppercase ${
+                          isSelected ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-800'
+                        }`}>
+                          {track.code}
+                        </span>
+                        <span className="text-[10px] font-bold text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-full">
+                          {track.badge}
+                        </span>
+                      </div>
+                      <h3 className="text-sm font-bold text-slate-950 mb-1 leading-snug">
+                        {track.title}
+                      </h3>
+                      <p className="text-[11px] text-slate-600 mb-2 leading-relaxed line-clamp-2">
+                        {track.desc}
+                      </p>
+                    </div>
+
+                    <div className="text-[10px] text-slate-700 bg-white/90 p-2 rounded-lg border border-slate-200/80 space-y-0.5 mt-1">
+                      <div className="truncate"><b>Project:</b> {track.project}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Supervising Faculty Mentor Selection */}
+          <div className="pt-2 border-t border-slate-200">
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Supervising Faculty Mentor (Will Sign All 15 Documents & 28-Page Report):
+              </label>
+              <span className="text-[11px] text-slate-500 font-medium">
+                Centre Head: <b>Nitin Sir</b> (Centre Head & Authorized Signatory)
+              </span>
             </div>
 
-            {/* Digital Marketing Card */}
-            <div
-              onClick={() => handleTrackChange('DM')}
-              className={`p-5 rounded-2xl border-2 cursor-pointer transition-all ${
-                formData.course_track === 'DM'
-                  ? 'border-purple-600 bg-purple-50/60 shadow-md ring-2 ring-purple-600/30'
-                  : 'border-slate-200 bg-white hover:border-slate-300'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold text-sm">
-                  DM
-                </div>
-                {formData.course_track === 'DM' && (
-                  <span className="px-3 py-1 rounded-full bg-purple-600 text-white text-xs font-bold flex items-center space-x-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Selected Track</span>
-                  </span>
-                )}
-              </div>
-              <h3 className="text-base font-bold text-slate-950 mb-1">
-                Digital Marketing & Growth Strategy
-              </h3>
-              <p className="text-xs text-slate-600 mb-3 leading-relaxed">
-                SEO, Social Media, Google Ads, Meta Ads, GA4 Web Analytics, Copywriting & AI Content Workflows.
-              </p>
-              <div className="space-y-1.5 text-xs text-slate-700 bg-white p-3 rounded-lg border border-slate-200">
-                <div><b>Duration:</b> 6 Weeks (36 Days, 126 Hours)</div>
-                <div><b>Designated Faculty:</b> Prof. Rahul Bhatnagar (Professor)</div>
-                <div><b>Capstone Project:</b> Omnichannel Healthcare Clinic Growth Campaign</div>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {FACULTY_MEMBERS.map((faculty) => {
+                const isSelected = formData.mentor_id === faculty.id;
+                return (
+                  <div
+                    key={faculty.id}
+                    onClick={() => handleMentorChange(faculty.id)}
+                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-start space-x-3 ${
+                      isSelected
+                        ? 'border-blue-600 bg-blue-50/70 shadow-md ring-2 ring-blue-600/30'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm text-white shrink-0 ${
+                      faculty.id === 1 ? 'bg-blue-600' : 'bg-purple-600'
+                    }`}>
+                      {faculty.avatar}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-bold text-slate-950 truncate">
+                          {faculty.name}
+                        </h4>
+                        {isSelected && (
+                          <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center space-x-1 shrink-0">
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>Assigned</span>
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs font-semibold text-slate-700">{faculty.designation}</p>
+                      <p className="text-[11px] text-slate-500 truncate">{faculty.department}</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
           {/* Dates & Optional Project Title */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2 border-t border-slate-200">
             <div>
               <label className={labelStyle}>Start Date</label>
               <input

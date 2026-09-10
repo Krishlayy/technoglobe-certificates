@@ -834,90 +834,11 @@ def generate_project_assignment(internship_id: int) -> str:
     return filepath
 
 # -------------------------------------------------------------
-# 10. Project Report
+# 10. Project Report (Comprehensive 25-30+ Page Academic Dissertation)
 # -------------------------------------------------------------
 def generate_project_report(internship_id: int) -> str:
-    ctx = get_base_context(internship_id)
-    s = ctx["settings"]
-    it = ctx["internship"]
-    pf = ctx["project_fields"]
-
-    filename = f"10_Project_Report_{it['student_name'].replace(' ', '_')}.pdf"
-    filepath = os.path.join(GENERATED_DIR, filename)
-
-    doc = SimpleDocTemplate(filepath, pagesize=A4, rightMargin=18*mm, leftMargin=18*mm, topMargin=12*mm, bottomMargin=12*mm)
-    story = []
-
-    doc_ref = f"{s['doc_prefix']}/PROJ-REP/{it['course_code']}/{datetime.now().year}/{it['id']:04d}"
-    story.extend(build_official_header(s, doc_ref, it['end_date'], f"CAPSTONE PROJECT REPORT: {pf.get('project_title', 'Final Project').upper()}"))
-
-    styles = getSampleStyleSheet()
-    sec_title = ParagraphStyle('SecTitle', fontName='Helvetica-Bold', fontSize=10, leading=13, textColor=PRIMARY)
-    body_style = ParagraphStyle('Body', fontName='Helvetica', fontSize=8.5, leading=12, textColor=DARK)
-    bold_style = ParagraphStyle('Bold', fontName='Helvetica-Bold', fontSize=8.5, leading=12, textColor=DARK)
-
-    # Student metadata table
-    meta = [
-        [Paragraph("<b>Candidate Name:</b>", bold_style), Paragraph(it['student_name'], body_style), Paragraph("<b>Degree & Branch:</b>", bold_style), Paragraph(f"{it['degree']} ({it['branch']})", body_style)],
-        [Paragraph("<b>College / University:</b>", bold_style), Paragraph(it['college_name'], body_style), Paragraph("<b>Specialization:</b>", bold_style), Paragraph(it['course_name'], body_style)],
-        [Paragraph("<b>Industry Mentor:</b>", bold_style), Paragraph(it['mentor_name'], body_style), Paragraph("<b>Project Status:</b>", bold_style), Paragraph("<b>APPROVED & DEFENDED</b>", bold_style)],
-    ]
-    mt = Table(meta, colWidths=[35 * mm, 52 * mm, 35 * mm, 52 * mm])
-    mt.setStyle(TableStyle([
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('BOX', (0,0), (-1,-1), 0.5, BORDER_COLOR),
-        ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
-        ('BACKGROUND', (0,0), (-1,-1), BG_LIGHT),
-        ('TOPPADDING', (0,0), (-1,-1), 2.5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
-    ]))
-    story.append(mt)
-    story.append(Spacer(1, 4 * mm))
-
-    # Detailed Project Fields
-    # Check if Data Analytics or Digital Marketing
-    if it['course_code'] == 'DA':
-        sections = [
-            ("1. Problem Statement", pf.get("problem_statement", "N/A")),
-            ("2. Enterprise Dataset Architecture", pf.get("dataset", "N/A")),
-            ("3. Technology Stack & Analytical Tools", pf.get("tools", "N/A")),
-            ("4. Core Analytical Objectives", pf.get("objectives", "N/A")),
-            ("5. Methodology & Execution Framework", pf.get("methodology", "N/A")),
-            ("6. Data Cleaning & Sanitization Protocols", pf.get("data_cleaning", "N/A")),
-            ("7. Exploratory Data Analysis & Statistical Findings", pf.get("analysis", "N/A")),
-            ("8. Dashboard Visualization & Reporting", pf.get("visualization", "N/A")),
-            ("9. Executive Findings & Business Insights", pf.get("findings", "N/A")),
-            ("10. Strategic Recommendations & ROI", pf.get("recommendations", "N/A")),
-            ("11. Conclusion & Operational Impact", pf.get("conclusion", "N/A")),
-        ]
-    else:
-        sections = [
-            ("1. Client / Business Overview", pf.get("brand_business", "N/A")),
-            ("2. Campaign Strategic Objective", pf.get("campaign_objective", "N/A")),
-            ("3. Target Audience & Buyer Persona", pf.get("target_audience", "N/A")),
-            ("4. Competitive Intelligence & Market Research", pf.get("market_research", "N/A")),
-            ("5. Search Engine Optimization (SEO) Roadmap", pf.get("seo_strategy", "N/A")),
-            ("6. Content Marketing & Copywriting Framework", pf.get("content_strategy", "N/A")),
-            ("7. Social Media Strategy & Community Plan", pf.get("social_media_strategy", "N/A")),
-            ("8. Paid Search & Social Advertising Plan", pf.get("advertising_strategy", "N/A")),
-            ("9. Web Analytics, Tracking & Funnel Setup", pf.get("analytics", "N/A")),
-            ("10. Target Performance KPIs & Expected ROAS", pf.get("kpis", "N/A")),
-            ("11. Results & Optimization Insights", pf.get("results", "N/A")),
-            ("12. Strategic Recommendations", pf.get("recommendations", "N/A")),
-            ("13. Conclusion", pf.get("conclusion", "N/A")),
-        ]
-
-    for title, content in sections:
-        story.append(Paragraph(f"<b>{title}</b>", sec_title))
-        story.append(Spacer(1, 1 * mm))
-        story.append(Paragraph(content.replace('\n', '<br/>'), body_style))
-        story.append(Spacer(1, 2.5 * mm))
-
-    story.append(Spacer(1, 4 * mm))
-    story.append(build_signature_section(s, it['mentor_name'], it['mentor_designation']))
-
-    doc.build(story, canvasmaker=NumberedCanvas)
-    return filepath
+    from project_report_service import build_25page_academic_project_report
+    return build_25page_academic_project_report(internship_id)
 
 # -------------------------------------------------------------
 # 11. Mentor Evaluation
@@ -1309,8 +1230,10 @@ def generate_completion_certificate(internship_id: int) -> str:
     deg_text = it.get("degree") or "BCA"
     branch_text = it.get("branch") or "Computer Science"
 
-    base_url = s.get("verification_base_url") or "http://192.168.0.103:8000"
-    base_url = base_url.rstrip("/")
+    raw_base = s.get("verification_base_url") or "https://technoglobe-certificates.onrender.com"
+    if "192.168." in raw_base or "localhost" in raw_base:
+        raw_base = os.environ.get("VERIFICATION_BASE_URL", "https://technoglobe-certificates.onrender.com")
+    base_url = raw_base.rstrip("/")
     sig = compute_certificate_signature(cert_num, it['student_name'], it['course_name'], issue_date)
     import urllib.parse
     params = urllib.parse.urlencode({
