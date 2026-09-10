@@ -107,9 +107,34 @@ def get_base_context(internship_id: int):
     cursor.execute("SELECT COUNT(*) as total_days, SUM(CASE WHEN status='PRESENT' THEN 1 ELSE 0 END) as present_days, SUM(CASE WHEN status='ABSENT' THEN 1 ELSE 0 END) as absent_days, SUM(CASE WHEN status='LEAVE' THEN 1 ELSE 0 END) as leave_days, SUM(CASE WHEN status='HOLIDAY' THEN 1 ELSE 0 END) as holiday_days, SUM(total_hours) as total_hours_logged FROM attendance WHERE internship_id = ?", (internship_id,))
     att_stats = dict(cursor.fetchone())
 
+    # Institution profile
+    inst_id = internship.get("institution_id") or 1
+    cursor.execute("SELECT * FROM institutions WHERE id = ?", (inst_id,))
+    inst_row = cursor.fetchone()
+    if not inst_row:
+        cursor.execute("SELECT * FROM institutions ORDER BY id ASC LIMIT 1")
+        inst_row = cursor.fetchone()
+    institution = dict(inst_row) if inst_row else {
+        "id": 1, "code": "TG", "name": "TechnoGlobe", "full_name": "TechnoGlobe IT Solutions Pvt. Ltd.",
+        "logo_path": "technoglobe_logo.png", "primary_color": "#0B2545", "secondary_color": "#134074",
+        "accent_color": "#D4AF37", "signatory_name": "Nitin Sir", "signatory_designation": "Centre Head & Authorized Signatory",
+        "stamp_mode": "DIGITAL_BADGE", "watermark_mode": "SEAL", "address": "Bharatpur, Rajasthan"
+    }
+
+    # Update settings copy to reflect active institution
+    settings["institution"] = institution
+    if institution.get("code") == "PODDAR":
+        settings["org_name"] = "PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT"
+        settings["centre_name"] = "PODDAR COLLEGE"
+        settings["address"] = institution.get("address", "Bharatpur, Rajasthan")
+        settings["logo_url"] = "poddar_logo.png"
+        settings["cert_prefix"] = "PCTM"
+        settings["doc_prefix"] = "PCTM/BPT"
+
     conn.close()
     return {
         "settings": settings,
+        "institution": institution,
         "internship": internship,
         "compliance": compliance,
         "project": project,
@@ -142,35 +167,54 @@ class NumberedCanvas(canvas.Canvas):
         self.saveState()
         self.setFont("Helvetica", 8)
         self.setFillColor(colors.HexColor("#64748B"))
-        # Footer text
-        footer_text = f"TechnoGlobe Course-Based Internship Documentation — Page {self._pageNumber} of {page_count}"
+        footer_text = f"Course-Based Internship Documentation — Page {self._pageNumber} of {page_count}"
         self.drawCentredString(A4[0] / 2.0, 10 * mm, footer_text)
         self.restoreState()
 
-def build_official_header(settings, doc_ref, doc_date, doc_title):
+def build_official_header(settings, doc_ref, doc_date, doc_title, institution=None):
+    inst = institution or settings.get("institution") or {}
+    is_poddar = (inst.get("code") == "PODDAR" or settings.get("code") == "PODDAR" or "Poddar" in settings.get("centre_name", ""))
+    
+    inst_primary = colors.HexColor(inst.get("primary_color", "#0A2540") if is_poddar else "#0B2545")
+    inst_secondary = colors.HexColor(inst.get("secondary_color", "#EAA824") if is_poddar else "#134074")
+    inst_accent = colors.HexColor(inst.get("accent_color", "#EAA824") if is_poddar else "#D4AF37")
+
     styles = getSampleStyleSheet()
     header_elements = []
 
-    org_style = ParagraphStyle('OrgHeader', fontName='Helvetica-Bold', fontSize=15, leading=18, textColor=PRIMARY, alignment=1)
-    centre_style = ParagraphStyle('CentreHeader', fontName='Helvetica-Bold', fontSize=11, leading=14, textColor=SECONDARY, alignment=1)
-    addr_style = ParagraphStyle('AddrHeader', fontName='Helvetica', fontSize=8.5, leading=11, textColor=MUTED, alignment=1)
+    org_style = ParagraphStyle('OrgHeader', fontName='Helvetica-Bold', fontSize=14, leading=17, textColor=inst_primary, alignment=1)
+    centre_style = ParagraphStyle('CentreHeader', fontName='Helvetica-Bold', fontSize=10.5, leading=13.5, textColor=inst_secondary, alignment=1)
+    addr_style = ParagraphStyle('AddrHeader', fontName='Helvetica', fontSize=8, leading=10.5, textColor=MUTED, alignment=1)
     ref_style = ParagraphStyle('RefStyle', fontName='Helvetica-Bold', fontSize=8.5, leading=11, textColor=DARK)
     date_style = ParagraphStyle('DateStyle', fontName='Helvetica-Bold', fontSize=8.5, leading=11, textColor=DARK, alignment=2)
-    title_style = ParagraphStyle('TitleStyle', fontName='Helvetica-Bold', fontSize=13, leading=16, textColor=PRIMARY, alignment=1)
+    title_style = ParagraphStyle('TitleStyle', fontName='Helvetica-Bold', fontSize=12.5, leading=15.5, textColor=inst_primary, alignment=1)
 
-    if os.path.exists(LOGO_PATH):
-        header_elements.append(RLImage(LOGO_PATH, width=38 * mm, height=13.8 * mm, hAlign='CENTER'))
-        header_elements.append(Spacer(1, 1 * mm))
-        header_elements.append(Paragraph(settings["centre_name"], centre_style))
+    logo_filename = inst.get("logo_path", "poddar_logo.png" if is_poddar else "technoglobe_logo.png")
+    logo_full_path = os.path.join(os.path.dirname(__file__), logo_filename)
+
+    if os.path.exists(logo_full_path):
+        if is_poddar:
+            header_elements.append(RLImage(logo_full_path, width=22 * mm, height=22 * mm, hAlign='CENTER'))
+            header_elements.append(Spacer(1, 1 * mm))
+            header_elements.append(Paragraph("PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT", org_style))
+            header_elements.append(Paragraph("Bharatpur, Rajasthan", centre_style))
+            header_elements.append(Spacer(1, 1 * mm))
+            addr_line = "Bharatpur, Rajasthan | Phone: +91 94140 12345 | Web: https://poddarcollege.org"
+            header_elements.append(Paragraph(addr_line, addr_style))
+        else:
+            header_elements.append(RLImage(logo_full_path, width=38 * mm, height=13.8 * mm, hAlign='CENTER'))
+            header_elements.append(Spacer(1, 1 * mm))
+            header_elements.append(Paragraph(settings.get("centre_name", "TECHNOGLOBE – BHARATPUR CENTRE"), centre_style))
+            header_elements.append(Spacer(1, 1 * mm))
+            addr_line = f"{settings.get('address')} | Phone: {settings.get('phone')} | Email: {settings.get('email')} | Web: {settings.get('website')}"
+            header_elements.append(Paragraph(addr_line, addr_style))
     else:
-        header_elements.append(Paragraph(settings["org_name"], org_style))
+        header_elements.append(Paragraph(inst.get("full_name") or settings.get("org_name"), org_style))
         header_elements.append(Spacer(1, 1 * mm))
-        header_elements.append(Paragraph(settings["centre_name"], centre_style))
-    header_elements.append(Spacer(1, 1 * mm))
-    addr_line = f"{settings['address']} | Phone: {settings['phone']} | Email: {settings['email']} | Web: {settings['website']}"
-    header_elements.append(Paragraph(addr_line, addr_style))
+        header_elements.append(Paragraph(inst.get("address") or settings.get("centre_name"), centre_style))
+
     header_elements.append(Spacer(1, 2 * mm))
-    header_elements.append(HRFlowable(width="100%", thickness=1.5, color=PRIMARY, spaceAfter=8, spaceBefore=2))
+    header_elements.append(HRFlowable(width="100%", thickness=1.5, color=inst_primary, spaceAfter=8, spaceBefore=2))
 
     # Ref & Date table
     ref_data = [[
@@ -191,7 +235,7 @@ def build_official_header(settings, doc_ref, doc_date, doc_title):
     # Document Banner Title
     header_elements.append(Paragraph(doc_title.upper(), title_style))
     header_elements.append(Spacer(1, 1 * mm))
-    header_elements.append(HRFlowable(width="30%", thickness=1, color=ACCENT, spaceAfter=10, spaceBefore=2))
+    header_elements.append(HRFlowable(width="30%", thickness=1, color=inst_accent, spaceAfter=10, spaceBefore=2))
 
     return header_elements
 
@@ -1090,11 +1134,20 @@ def generate_student_feedback(internship_id: int) -> str:
 def generate_completion_certificate(internship_id: int) -> str:
     ctx = get_base_context(internship_id)
     s = ctx["settings"]
+    inst = ctx.get("institution", {})
     it = ctx["internship"]
     pf = ctx["project_fields"]
 
-    cert_num = it["certificate_number"] or f"TG-BPT-{it['course_code']}-2026-{it['id']:04d}"
-    ver_code = it["verification_code"] or f"VER-TG-{it['course_code']}-{it['id']:05d}"
+    is_poddar = (inst.get("code") == "PODDAR" or it.get("institution_id") == 2)
+    c_primary = colors.HexColor("#0A2540") if is_poddar else PRIMARY
+    c_secondary = colors.HexColor("#0F3A66") if is_poddar else SECONDARY
+    c_accent = colors.HexColor("#EAA824") if is_poddar else ACCENT
+
+    cert_prefix = inst.get("cert_prefix") or ("PCTM" if is_poddar else "TG-BPT")
+    doc_prefix = inst.get("doc_prefix") or ("PCTM/BPT" if is_poddar else "TG/BPT")
+
+    cert_num = it["certificate_number"] or f"{cert_prefix}-{it['course_code']}-2026-{it['id']:04d}"
+    ver_code = it["verification_code"] or f"VER-{cert_prefix}-{it['course_code']}-{it['id']:05d}"
     raw_issue = it.get("finalized_at")
     issue_date = raw_issue[:10] if raw_issue else datetime.now().strftime("%Y-%m-%d")
 
@@ -1108,20 +1161,18 @@ def generate_completion_certificate(internship_id: int) -> str:
     # 1. Double Guilloche Decorative Borders
     c.saveState()
     # Outer Navy Border
-    c.setStrokeColor(PRIMARY)
+    c.setStrokeColor(c_primary)
     c.setLineWidth(4)
     c.rect(10 * mm, 10 * mm, width - 20 * mm, height - 20 * mm)
 
     # Inner Gold Border
-    c.setStrokeColor(ACCENT)
+    c.setStrokeColor(c_accent)
     c.setLineWidth(1.5)
     c.rect(13 * mm, 13 * mm, width - 26 * mm, height - 26 * mm)
 
-    # Subtle background watermark/tint
-    c.setFillColor(colors.HexColor("#FDFBF7"))
     # Corner Ornaments (Top-Left, Top-Right, Bottom-Right)
     orn_len = 14 * mm
-    c.setStrokeColor(ACCENT)
+    c.setStrokeColor(c_accent)
     c.setLineWidth(1.8)
     # Top-Left
     c.line(16*mm, height - 16*mm, 16*mm + orn_len, height - 16*mm)
@@ -1134,9 +1185,34 @@ def generate_completion_certificate(internship_id: int) -> str:
     c.line(width - 16*mm, 16*mm, width - 16*mm, 16*mm + orn_len)
     c.restoreState()
 
+    # Translucent Background Watermark
+    poddar_logo_path = os.path.join(os.path.dirname(__file__), "poddar_logo.png")
+    if is_poddar and os.path.exists(poddar_logo_path):
+        c.saveState()
+        try:
+            c.setFillAlpha(0.08)
+            c.setStrokeAlpha(0.08)
+        except Exception:
+            pass
+        wm_size = 95 * mm
+        c.drawImage(poddar_logo_path, (width - wm_size)/2.0, (height - wm_size)/2.0 - 4*mm, width=wm_size, height=wm_size, mask='auto', preserveAspectRatio=True)
+        c.restoreState()
+
     # 2. Header / Branding with Official Logo
-    if os.path.exists(LOGO_PATH):
-        # 640x232 aspect ratio = 2.76:1
+    if is_poddar and os.path.exists(poddar_logo_path):
+        logo_size = 23 * mm
+        logo_x = (width - logo_size) / 2.0
+        logo_y = height - 33.5 * mm
+        c.drawImage(poddar_logo_path, logo_x, logo_y, width=logo_size, height=logo_size, mask='auto', preserveAspectRatio=True)
+
+        c.setFont("Helvetica-Bold", 11.5)
+        c.setFillColor(c_primary)
+        c.drawCentredString(width / 2.0, height - 37 * mm, "PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT")
+
+        c.setFont("Helvetica", 7.5)
+        c.setFillColor(MUTED)
+        c.drawCentredString(width / 2.0, height - 40.5 * mm, "Bharatpur, Rajasthan | Website: https://poddarcollege.org")
+    elif os.path.exists(LOGO_PATH):
         logo_w = 46 * mm
         logo_h = 16.7 * mm
         logo_x = (width - logo_w) / 2.0
@@ -1144,54 +1220,51 @@ def generate_completion_certificate(internship_id: int) -> str:
         c.drawImage(LOGO_PATH, logo_x, logo_y, width=logo_w, height=logo_h, mask='auto', preserveAspectRatio=True)
 
         c.setFont("Helvetica-Bold", 10.5)
-        c.setFillColor(SECONDARY)
-        c.drawCentredString(width / 2.0, height - 35.5 * mm, s["centre_name"])
+        c.setFillColor(c_secondary)
+        c.drawCentredString(width / 2.0, height - 35.5 * mm, s.get("centre_name", "TECHNOGLOBE – BHARATPUR CENTRE"))
 
         c.setFont("Helvetica", 7.2)
         c.setFillColor(MUTED)
-        c.drawCentredString(width / 2.0, height - 39 * mm, f"{s['address']} | Website: {s['website']}")
+        c.drawCentredString(width / 2.0, height - 39 * mm, f"{s.get('address')} | Website: {s.get('website')}")
     else:
         c.setFont("Helvetica-Bold", 18)
-        c.setFillColor(PRIMARY)
-        c.drawCentredString(width / 2.0, height - 26 * mm, s["org_name"])
+        c.setFillColor(c_primary)
+        c.drawCentredString(width / 2.0, height - 26 * mm, inst.get("full_name") or s.get("org_name"))
 
         c.setFont("Helvetica-Bold", 12)
-        c.setFillColor(SECONDARY)
-        c.drawCentredString(width / 2.0, height - 32 * mm, s["centre_name"])
+        c.setFillColor(c_secondary)
+        c.drawCentredString(width / 2.0, height - 32 * mm, inst.get("address") or s.get("centre_name"))
 
-        c.setFont("Helvetica", 8)
-        c.setFillColor(MUTED)
-        c.drawCentredString(width / 2.0, height - 36 * mm, f"{s['address']} | Website: {s['website']}")
-
-    # Gold separator line
-    c.setStrokeColor(ACCENT)
+    # Gold / Accent separator line
+    c.setStrokeColor(c_accent)
     c.setLineWidth(1)
-    c.line(55 * mm, height - 41.5 * mm, width - 55 * mm, height - 41.5 * mm)
+    c.line(55 * mm, height - 42.5 * mm, width - 55 * mm, height - 42.5 * mm)
 
     # Certificate Title
-    c.setFont("Helvetica-Bold", 21)
-    c.setFillColor(PRIMARY)
-    c.drawCentredString(width / 2.0, height - 50.5 * mm, "CERTIFICATE OF INTERNSHIP COMPLETION")
+    c.setFont("Helvetica-Bold", 20.5)
+    c.setFillColor(c_primary)
+    c.drawCentredString(width / 2.0, height - 51 * mm, "CERTIFICATE OF INTERNSHIP COMPLETION")
 
     c.setFont("Helvetica-Oblique", 10.5)
     c.setFillColor(DARK)
-    c.drawCentredString(width / 2.0, height - 57.5 * mm, "This is to certify that")
+    c.drawCentredString(width / 2.0, height - 58 * mm, "This is to certify that")
 
     # Student Name (Large, Bold & Highlighted)
     c.setFont("Helvetica-Bold", 23)
-    c.setFillColor(SECONDARY)
+    c.setFillColor(c_secondary)
     c.drawCentredString(width / 2.0, height - 68 * mm, it["student_name"].upper())
 
     # Decorative underline below name
     name_w = c.stringWidth(it["student_name"].upper(), "Helvetica-Bold", 23)
-    c.setStrokeColor(ACCENT)
+    c.setStrokeColor(c_accent)
     c.setLineWidth(1.5)
     c.line((width - name_w) / 2.0 - 10*mm, height - 70 * mm, (width + name_w) / 2.0 + 10*mm, height - 70 * mm)
 
     # Micro-text security line below name underline
     c.setFont("Helvetica-Bold", 4.3)
     c.setFillColor(colors.HexColor("#475569"))
-    c.drawCentredString(width / 2.0, height - 72.3 * mm, "• TECHNOGLOBE IT SOLUTIONS PVT. LTD. • AUTHORIZED CENTRE BHARATPUR • AUTHENTIC CREDENTIAL • ISO 9001:2015 COMPLIANT •")
+    sec_line = "• PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT • BHARATPUR, RAJASTHAN • AUTHENTIC CREDENTIAL •" if is_poddar else "• TECHNOGLOBE IT SOLUTIONS PVT. LTD. • AUTHORIZED CENTRE BHARATPUR • AUTHENTIC CREDENTIAL • ISO 9001:2015 COMPLIANT •"
+    c.drawCentredString(width / 2.0, height - 72.3 * mm, sec_line)
 
     # Student College & Academic Details
     c.setFont("Helvetica", 10)
@@ -1205,7 +1278,7 @@ def generate_completion_certificate(internship_id: int) -> str:
     c.drawCentredString(width / 2.0, height - 83.5 * mm, line1)
 
     c.setFont("Helvetica-Bold", 13.5)
-    c.setFillColor(PRIMARY)
+    c.setFillColor(c_primary)
     c.drawCentredString(width / 2.0, height - 90 * mm, it["course_title"])
 
     c.setFont("Helvetica", 9.5)
@@ -1215,7 +1288,7 @@ def generate_completion_certificate(internship_id: int) -> str:
 
     proj_text = f"Capstone Project: \"{pf.get('project_title', it['internship_title'])}\""
     c.setFont("Helvetica-BoldOblique", 9.5)
-    c.setFillColor(SECONDARY)
+    c.setFillColor(c_secondary)
     c.drawCentredString(width / 2.0, height - 103 * mm, proj_text)
 
     # Statement of Performance
@@ -1225,7 +1298,6 @@ def generate_completion_certificate(internship_id: int) -> str:
     c.drawCentredString(width / 2.0, height - 109.5 * mm, line3)
 
     # 3. Direct Online/LAN Verification URL QR Code (Left Side)
-    # Scannable by any mobile camera to immediately open the official verification portal
     sem_text = it.get("semester_year") or "6th Semester"
     deg_text = it.get("degree") or "BCA"
     branch_text = it.get("branch") or "Computer Science"
@@ -1275,14 +1347,14 @@ def generate_completion_certificate(internship_id: int) -> str:
 
     # Label centered directly beneath QR code
     c.setFont("Helvetica-Bold", 5.5)
-    c.setFillColor(PRIMARY)
+    c.setFillColor(c_primary)
     c.drawCentredString(32.5 * mm, box_y + 5 * mm, "SCAN TO VIEW")
     c.drawCentredString(32.5 * mm, box_y + 2.5 * mm, "STUDENT DETAILS")
 
     # Text metadata on right side of QR box
     text_x = box_x + 29 * mm
     c.setFont("Helvetica-Bold", 7.5)
-    c.setFillColor(PRIMARY)
+    c.setFillColor(c_primary)
     c.drawString(text_x, box_y + 29.5 * mm, "OFFICIAL VERIFICATION RECORD")
 
     c.setFont("Helvetica", 6.8)
@@ -1291,7 +1363,7 @@ def generate_completion_certificate(internship_id: int) -> str:
     c.drawString(text_x, box_y + 20 * mm, f"Course: {it['course_name']}")
     c.drawString(text_x, box_y + 15.5 * mm, f"Program: {deg_text} ({sem_text})")
     c.drawString(text_x, box_y + 11 * mm, f"Cert No: {cert_num}")
-    c.drawString(text_x, box_y + 6.5 * mm, f"Issue Date: {issue_date} • {s['centre_code']}")
+    c.drawString(text_x, box_y + 6.5 * mm, f"Issue Date: {issue_date} • {inst.get('code', 'BPT')}")
 
     c.setFont("Helvetica-Bold", 5.5)
     c.setFillColor(colors.HexColor("#059669"))
@@ -1301,61 +1373,76 @@ def generate_completion_certificate(internship_id: int) -> str:
     # Mentor
     c.setFont("Helvetica-Bold", 9)
     c.setFillColor(DARK)
-    c.drawCentredString(150 * mm, 38 * mm, it["mentor_name"])
+    c.drawCentredString(148 * mm, 38 * mm, it["mentor_name"])
     c.setFont("Helvetica", 8)
     c.setFillColor(MUTED)
-    c.drawCentredString(150 * mm, 34 * mm, it["mentor_designation"])
+    c.drawCentredString(148 * mm, 34 * mm, it["mentor_designation"])
     c.setStrokeColor(DARK)
     c.setLineWidth(0.5)
-    c.line(125 * mm, 42 * mm, 175 * mm, 42 * mm)
+    c.line(125 * mm, 42 * mm, 171 * mm, 42 * mm)
     c.setFont("Helvetica-Oblique", 7.5)
-    c.drawCentredString(150 * mm, 26 * mm, "Industry Mentor / Guide")
+    c.drawCentredString(148 * mm, 26 * mm, "Faculty Mentor / Guide")
 
     # Centre Director / Authorized Signatory
     c.setFont("Helvetica-Bold", 9)
     c.setFillColor(DARK)
-    c.drawCentredString(238 * mm, 38 * mm, s["signatory_name"])
+    c.drawCentredString(244 * mm, 38 * mm, "Nitin Sir")
     c.setFont("Helvetica", 8)
     c.setFillColor(MUTED)
-    c.drawCentredString(238 * mm, 34 * mm, s["signatory_designation"])
+    c.drawCentredString(244 * mm, 34 * mm, "Center Head & Authorized Signatory" if is_poddar else s.get("signatory_designation", "Centre Head"))
     c.setStrokeColor(DARK)
     c.setLineWidth(0.5)
-    c.line(213 * mm, 42 * mm, 263 * mm, 42 * mm)
+    c.line(220 * mm, 42 * mm, 268 * mm, 42 * mm)
     c.setFont("Helvetica-Oblique", 7.5)
-    c.drawCentredString(238 * mm, 26 * mm, "Authorized Signatory (Seal & Stamp)")
+    c.drawCentredString(244 * mm, 26 * mm, "Authorized Signatory (Seal & Stamp)")
 
-    # Official Centre Embossed Gold Seal Badge (between signatures)
-    seal_x = 194 * mm
-    seal_y = 33 * mm
-    c.saveState()
-    # Outer gold ring
-    c.setStrokeColor(colors.HexColor("#B45309"))
-    c.setFillColor(colors.HexColor("#FEF3C7"))
-    c.setLineWidth(1.6)
-    c.circle(seal_x, seal_y, 13 * mm, stroke=1, fill=1)
+    if is_poddar:
+        # Empty space for physical ink stamp
+        stamp_x = 180 * mm
+        stamp_y = 15 * mm
+        stamp_w = 34 * mm
+        stamp_h = 35 * mm
+        c.saveState()
+        c.setStrokeColor(colors.HexColor("#94A3B8"))
+        c.setLineWidth(0.8)
+        c.setDash(2, 1.5)
+        c.setFillColor(colors.HexColor("#FFFFFF"))
+        c.roundRect(stamp_x, stamp_y, stamp_w, stamp_h, 2*mm, fill=1, stroke=1)
+        c.setFont("Helvetica-Bold", 5.5)
+        c.setFillColor(colors.HexColor("#64748B"))
+        c.drawCentredString(stamp_x + stamp_w/2.0, stamp_y + stamp_h/2.0 + 3*mm, "[ OFFICIAL COLLEGE SEAL ]")
+        c.setFont("Helvetica-Oblique", 5)
+        c.drawCentredString(stamp_x + stamp_w/2.0, stamp_y + stamp_h/2.0 - 3*mm, "(Apply Ink Stamp Here)")
+        c.restoreState()
+    else:
+        # Official Centre Embossed Gold Seal Badge (between signatures)
+        seal_x = 194 * mm
+        seal_y = 33 * mm
+        c.saveState()
+        c.setStrokeColor(colors.HexColor("#B45309"))
+        c.setFillColor(colors.HexColor("#FEF3C7"))
+        c.setLineWidth(1.6)
+        c.circle(seal_x, seal_y, 13 * mm, stroke=1, fill=1)
 
-    # Middle dashed ring
-    c.setStrokeColor(colors.HexColor("#D97706"))
-    c.setLineWidth(0.8)
-    c.setDash(2, 1.5)
-    c.circle(seal_x, seal_y, 11 * mm, stroke=1, fill=0)
-    c.setDash()
+        c.setStrokeColor(colors.HexColor("#D97706"))
+        c.setLineWidth(0.8)
+        c.setDash(2, 1.5)
+        c.circle(seal_x, seal_y, 11 * mm, stroke=1, fill=0)
+        c.setDash()
 
-    # Inner ring
-    c.setStrokeColor(colors.HexColor("#92400E"))
-    c.setLineWidth(0.5)
-    c.circle(seal_x, seal_y, 9 * mm, stroke=1, fill=0)
+        c.setStrokeColor(colors.HexColor("#92400E"))
+        c.setLineWidth(0.5)
+        c.circle(seal_x, seal_y, 9 * mm, stroke=1, fill=0)
 
-    # Seal Typography
-    c.setFont("Helvetica-Bold", 4.5)
-    c.setFillColor(colors.HexColor("#92400E"))
-    c.drawCentredString(seal_x, seal_y + 5.5 * mm, "★ TECHNOGLOBE ★")
-    c.setFont("Helvetica-Bold", 5.5)
-    c.drawCentredString(seal_x, seal_y + 1.2 * mm, "OFFICIAL")
-    c.drawCentredString(seal_x, seal_y - 2.8 * mm, "SEAL")
-    c.setFont("Helvetica-Bold", 3.8)
-    c.drawCentredString(seal_x, seal_y - 6.5 * mm, "BHARATPUR CENTRE")
-    c.restoreState()
+        c.setFont("Helvetica-Bold", 4.5)
+        c.setFillColor(colors.HexColor("#92400E"))
+        c.drawCentredString(seal_x, seal_y + 5.5 * mm, "★ TECHNOGLOBE ★")
+        c.setFont("Helvetica-Bold", 5.5)
+        c.drawCentredString(seal_x, seal_y + 1.2 * mm, "OFFICIAL")
+        c.drawCentredString(seal_x, seal_y - 2.8 * mm, "SEAL")
+        c.setFont("Helvetica-Bold", 3.8)
+        c.drawCentredString(seal_x, seal_y - 6.5 * mm, "BHARATPUR CENTRE")
+        c.restoreState()
 
     c.showPage()
     c.save()
@@ -1431,203 +1518,11 @@ def generate_experience_certificate(internship_id: int) -> str:
     return filepath
 
 # -------------------------------------------------------------
-# Complete Academic Internship Report (Consolidated 25+ Page Document)
+# Complete Academic Internship Report (30-Page Calibrated Document)
 # -------------------------------------------------------------
 def generate_consolidated_report(internship_id: int) -> str:
-    ctx = get_base_context(internship_id)
-    s = ctx["settings"]
-    it = ctx["internship"]
-    pf = ctx["project_fields"]
-    ev = ctx["evaluation"]
-    stats = ctx["att_stats"]
-
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM course_modules WHERE course_id = ? ORDER BY module_number ASC", (it["course_id"],))
-    modules = [dict(r) for r in cursor.fetchall()]
-    cursor.execute("SELECT * FROM weekly_reports WHERE internship_id = ? ORDER BY week_number ASC", (internship_id,))
-    weeks = [dict(r) for r in cursor.fetchall()]
-    conn.close()
-
-    filename = f"Complete_Academic_Internship_Report_{it['student_name'].replace(' ', '_')}.pdf"
-    filepath = os.path.join(GENERATED_DIR, filename)
-
-    doc = SimpleDocTemplate(filepath, pagesize=A4, rightMargin=20*mm, leftMargin=20*mm, topMargin=15*mm, bottomMargin=15*mm)
-    story = []
-
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('CoverTitle', fontName='Helvetica-Bold', fontSize=18, leading=22, textColor=PRIMARY, alignment=1)
-    sub_style = ParagraphStyle('CoverSub', fontName='Helvetica', fontSize=12, leading=16, textColor=DARK, alignment=1)
-    bold_style = ParagraphStyle('Bold', fontName='Helvetica-Bold', fontSize=10, leading=14, textColor=DARK)
-    body_style = ParagraphStyle('Body', fontName='Helvetica', fontSize=9.5, leading=14, textColor=DARK)
-    h1 = ParagraphStyle('H1', fontName='Helvetica-Bold', fontSize=13, leading=17, textColor=PRIMARY)
-
-    # 1. Cover Page
-    story.append(Spacer(1, 15 * mm))
-    if os.path.exists(LOGO_PATH):
-        story.append(RLImage(LOGO_PATH, width=54 * mm, height=19.6 * mm, hAlign='CENTER'))
-        story.append(Spacer(1, 2 * mm))
-        story.append(Paragraph(s["centre_name"].upper(), sub_style))
-    else:
-        story.append(Paragraph(s["org_name"].upper(), title_style))
-        story.append(Spacer(1, 3 * mm))
-        story.append(Paragraph(s["centre_name"].upper(), sub_style))
-    story.append(Spacer(1, 12 * mm))
-    story.append(HRFlowable(width="80%", thickness=2, color=ACCENT, spaceAfter=20, spaceBefore=10))
-
-    story.append(Paragraph("A COMPREHENSIVE INTERNSHIP PROJECT REPORT", ParagraphStyle('SubHeading', fontName='Helvetica-Bold', fontSize=14, leading=18, textColor=SECONDARY, alignment=1)))
-    story.append(Spacer(1, 5 * mm))
-    story.append(Paragraph(f"<b>ON</b><br/><br/><i>\"{pf.get('project_title', it['internship_title'])}\"</i>", ParagraphStyle('ProjTitle', fontName='Helvetica-Bold', fontSize=14, leading=18, textColor=PRIMARY, alignment=1)))
-    story.append(Spacer(1, 8 * mm))
-    story.append(Paragraph(f"Submitted in partial fulfillment for the award of degree of<br/><b>{it['degree']} in {it['branch']}</b>", sub_style))
-    story.append(Spacer(1, 15 * mm))
-
-    cover_table_data = [
-        [
-            Paragraph(f"<b>SUBMITTED BY:</b><br/><b>{it['student_name']}</b><br/>{it['degree']} ({it['branch']})<br/>{it['college_name']}", body_style),
-            Paragraph(f"<b>UNDER THE GUIDANCE OF:</b><br/><b>{it['mentor_name']}</b><br/>{it['mentor_designation']}<br/>{s['centre_name']}", body_style)
-        ]
-    ]
-    ct = Table(cover_table_data, colWidths=[85 * mm, 85 * mm])
-    ct.setStyle(TableStyle([
-        ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('BOX', (0,0), (-1,-1), 1, PRIMARY),
-        ('BACKGROUND', (0,0), (-1,-1), BG_LIGHT),
-        ('TOPPADDING', (0,0), (-1,-1), 8),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 8),
-    ]))
-    story.append(ct)
-    story.append(Spacer(1, 15 * mm))
-    story.append(Paragraph(f"Academic Session: {it['academic_session']}", ParagraphStyle('Sess', fontName='Helvetica-Bold', fontSize=10, leading=13, alignment=1)))
-    story.append(PageBreak())
-
-    # 2. Student Declaration
-    story.append(Paragraph("CANDIDATE DECLARATION", h1))
-    story.append(Spacer(1, 4 * mm))
-    decl_p = f"""
-    I, <b>{it['student_name']}</b>, student of <b>{it['college_name']}</b>, pursuing <b>{it['degree']} ({it['branch']})</b>, hereby declare that the internship report entitled <b>\"{pf.get('project_title', it['internship_title'])}\"</b> submitted to <b>{s['centre_name']}</b> is an authentic record of practical work carried out by me during the period from <b>{it['start_date']} to {it['end_date']}</b> under the supervision of <b>{it['mentor_name']}</b>.<br/><br/>
-    The matter embodied in this report has not been submitted to any other University or Institution for the award of any degree or diploma.
-    """
-    story.append(Paragraph(decl_p, body_style))
-    story.append(Spacer(1, 15 * mm))
-    story.append(Paragraph(f"Date: {it['end_date']}<br/>Place: Bharatpur<br/><br/><br/>_______________________________<br/><b>({it['student_name']})</b><br/>Signature of the Candidate", body_style))
-    story.append(PageBreak())
-
-    # 3. Certificate of Supervisor
-    story.append(Paragraph("CERTIFICATE OF SUPERVISOR", h1))
-    story.append(Spacer(1, 4 * mm))
-    sup_p = f"""
-    This is to certify that the internship project report entitled <b>\"{pf.get('project_title', it['internship_title'])}\"</b> is a bona fide record of work carried out by <b>{it['student_name']}</b> in partial fulfillment of the requirements for <b>{it['degree']} ({it['branch']})</b> during his/her industrial training at <b>{s['centre_name']}</b>.<br/><br/>
-    The practical work and analysis presented in this report have been verified and found satisfactory.
-    """
-    story.append(Paragraph(sup_p, body_style))
-    story.append(Spacer(1, 15 * mm))
-    story.append(Paragraph(f"Date: {it['end_date']}<br/>Place: Bharatpur<br/><br/><br/>_______________________________<br/><b>{it['mentor_name']}</b><br/>{it['mentor_designation']}<br/>{s['centre_name']}", body_style))
-    story.append(PageBreak())
-
-    # 4. Acknowledgement
-    story.append(Paragraph("ACKNOWLEDGEMENT", h1))
-    story.append(Spacer(1, 4 * mm))
-    ack_p = f"""
-    I express my profound gratitude and indebtedness to my industry mentor, <b>{it['mentor_name']}</b> ({it['mentor_designation']}), for his/her invaluable guidance, constructive criticism, and continuous encouragement throughout the course of this internship.<br/><br/>
-    I would also like to extend my sincere thanks to <b>{s['signatory_name']}</b>, Centre Director of <b>{s['centre_name']}</b>, for providing state-of-the-art laboratory infrastructure and a professional learning atmosphere.<br/><br/>
-    Special thanks to the management and Training & Placement Cell of <b>{it['college_name']}</b> for recommending me for this industrial exposure.
-    """
-    story.append(Paragraph(ack_p, body_style))
-    story.append(PageBreak())
-
-    # 5. Table of Contents
-    story.append(Paragraph("TABLE OF CONTENTS", h1))
-    story.append(Spacer(1, 4 * mm))
-    toc_data = [
-        [Paragraph("<b>Chapter / Section</b>", bold_style), Paragraph("<b>Description</b>", bold_style)],
-        [Paragraph("Chapter 1", bold_style), Paragraph("Organization Profile & Centre Overview", body_style)],
-        [Paragraph("Chapter 2", bold_style), Paragraph(f"Course Curriculum: {it['course_name']}", body_style)],
-        [Paragraph("Chapter 3", bold_style), Paragraph("Structured Training Schedule & Weekly Progress", body_style)],
-        [Paragraph("Chapter 4", bold_style), Paragraph("Daily Logbook Summary & Key Competencies", body_style)],
-        [Paragraph("Chapter 5", bold_style), Paragraph(f"Capstone Project: {pf.get('project_title', 'Final Project')}", body_style)],
-        [Paragraph("Chapter 6", bold_style), Paragraph("Learning Outcomes, Challenges & Solutions", body_style)],
-        [Paragraph("Chapter 7", bold_style), Paragraph("Conclusions & Future Scope", body_style)],
-        [Paragraph("Appendix", bold_style), Paragraph("Attendance Audit, Performance & Certificates", body_style)],
-    ]
-    ttoc = Table(toc_data, colWidths=[35 * mm, 135 * mm])
-    ttoc.setStyle(TableStyle([
-        ('BOX', (0,0), (-1,-1), 0.5, PRIMARY),
-        ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
-        ('BACKGROUND', (0,0), (-1,0), BG_LIGHT),
-        ('TOPPADDING', (0,0), (-1,-1), 3.5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 3.5),
-    ]))
-    story.append(ttoc)
-    story.append(PageBreak())
-
-    # 6. Chapter 1: Organization Profile
-    story.append(Paragraph("CHAPTER 1: ORGANIZATION PROFILE & CENTRE OVERVIEW", h1))
-    story.append(Spacer(1, 4 * mm))
-    org_p = f"""
-    <b>{s['org_name']}</b> is a premier Indian IT training and educational services organization delivering industry-oriented technical certification programs across diverse computer science and business domains.<br/><br/>
-    <b>Franchise Centre: {s['centre_name']}</b><br/>
-    Located at {s['address']}, the Bharatpur Centre provides specialized industrial training, computer laboratories, and technical mentorship for undergraduate students from universities across Rajasthan.<br/><br/>
-    <b>Centre Contact & Official Details:</b><br/>
-    • Centre Code: {s['centre_code']}<br/>
-    • Franchise / Authorization Reference: {s.get('auth_ref') or 'TG/FRAN/RAJ/BPT/2024-001'}<br/>
-    • Authorized Signatory: {s['signatory_name']}, {s['signatory_designation']}<br/>
-    • Official Website: {s['website']} | Email: {s['email']}
-    """
-    story.append(Paragraph(org_p, body_style))
-    story.append(PageBreak())
-
-    # 7. Chapter 5: Capstone Project Details
-    story.append(Paragraph("CHAPTER 5: CAPSTONE PROJECT DOCUMENTATION", h1))
-    story.append(Spacer(1, 4 * mm))
-    story.append(Paragraph(f"<b>Project Title:</b> {pf.get('project_title', it['internship_title'])}", ParagraphStyle('PT', fontName='Helvetica-Bold', fontSize=11, leading=14, textColor=SECONDARY)))
-    story.append(Spacer(1, 3 * mm))
-
-    if it['course_code'] == 'DA':
-        proj_pts = [
-            ("Problem Statement", pf.get("problem_statement")),
-            ("Dataset Architecture", pf.get("dataset")),
-            ("Tools & Libraries", pf.get("tools")),
-            ("Methodology", pf.get("methodology")),
-            ("Exploratory Insights", pf.get("analysis")),
-            ("Key Findings", pf.get("findings")),
-            ("Actionable Recommendations", pf.get("recommendations")),
-            ("Conclusion", pf.get("conclusion"))
-        ]
-    else:
-        proj_pts = [
-            ("Client Overview", pf.get("brand_business")),
-            ("Strategic Objective", pf.get("campaign_objective")),
-            ("Target Audience", pf.get("target_audience")),
-            ("SEO Roadmap", pf.get("seo_strategy")),
-            ("Social Media & Content Strategy", pf.get("social_media_strategy")),
-            ("Target Performance KPIs & ROAS", pf.get("kpis")),
-            ("Results & Recommendations", pf.get("results")),
-            ("Conclusion", pf.get("conclusion"))
-        ]
-
-    for label, val in proj_pts:
-        if val:
-            story.append(Paragraph(f"<b>5.{label}:</b>", bold_style))
-            story.append(Spacer(1, 1 * mm))
-            story.append(Paragraph(val.replace('\n', '<br/>'), body_style))
-            story.append(Spacer(1, 2.5 * mm))
-
-    story.append(PageBreak())
-
-    # 8. Chapter 7: Conclusions & Appendix
-    story.append(Paragraph("CHAPTER 7: CONCLUSIONS & APPENDIX", h1))
-    story.append(Spacer(1, 4 * mm))
-    summary_final = f"""
-    The course-based internship successfully provided comprehensive hands-on exposure to <b>{it['course_title']}</b>. The candidate completed <b>{stats.get('total_hours_logged', 120)} training hours</b> with an evaluated attendance rate of <b>{((stats['present_days'] or 0) / (stats['total_days'] or 1) * 100):.1f}%</b> and achieved a final mentor evaluation score of <b>{ev.get('overall_score', 92)} / 100</b>.<br/><br/>
-    This report confirms that all academic and practical guidelines set forth by TechnoGlobe Bharatpur Centre were met in full compliance.
-    """
-    story.append(Paragraph(summary_final, body_style))
-    story.append(Spacer(1, 10 * mm))
-    story.append(build_signature_section(s, it['mentor_name'], it['mentor_designation']))
-
-    doc.build(story, canvasmaker=NumberedCanvas)
-    return filepath
+    import project_report_service
+    return project_report_service.build_25page_academic_project_report(internship_id)
 
 # -------------------------------------------------------------
 # Complete Package ZIP Bundle Generator

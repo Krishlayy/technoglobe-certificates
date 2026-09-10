@@ -28,7 +28,9 @@ os.makedirs(GENERATED_DIR, exist_ok=True)
 LOGO_PATH = os.path.join(os.path.dirname(__file__), "technoglobe_logo.png")
 
 class AcademicProjectReportCanvas(canvas.Canvas):
-    """Canvas with professional running headers and page numbers (skipping cover)."""
+    """Canvas with professional running headers, page numbers, and dynamic watermarks."""
+    institution_info = None
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._saved_page_states = []
@@ -46,25 +48,46 @@ class AcademicProjectReportCanvas(canvas.Canvas):
         canvas.Canvas.save(self)
 
     def draw_header_footer(self, page_count):
+        inst = AcademicProjectReportCanvas.institution_info or {}
+        is_poddar = (inst.get("code") == "PODDAR")
+        inst_p = colors.HexColor("#0A2540") if is_poddar else PRIMARY
+        inst_s = colors.HexColor("#0F3A66") if is_poddar else SECONDARY
+        inst_a = colors.HexColor("#EAA824") if is_poddar else ACCENT
+
         if self._pageNumber == 1:
             self.saveState()
-            self.setStrokeColor(PRIMARY)
+            self.setStrokeColor(inst_p)
             self.setLineWidth(2.5)
             self.rect(12*mm, 12*mm, A4[0] - 24*mm, A4[1] - 24*mm)
-            self.setStrokeColor(ACCENT)
+            self.setStrokeColor(inst_a)
             self.setLineWidth(1)
             self.rect(14.5*mm, 14.5*mm, A4[0] - 29*mm, A4[1] - 29*mm)
             self.restoreState()
             return
 
         self.saveState()
+        # Translucent Watermark on inner pages
+        logo_filename = "poddar_logo.png" if is_poddar else "technoglobe_logo.png"
+        logo_path = os.path.join(os.path.dirname(__file__), logo_filename)
+        if is_poddar and os.path.exists(logo_path):
+            try:
+                self.saveState()
+                self.setFillAlpha(0.04)
+                self.setStrokeAlpha(0.04)
+                wm_size = 110 * mm
+                self.drawImage(logo_path, (A4[0] - wm_size)/2.0, (A4[1] - wm_size)/2.0, width=wm_size, height=wm_size, mask='auto', preserveAspectRatio=True)
+                self.restoreState()
+            except Exception:
+                pass
+
         # Running Header
         self.setFont("Helvetica-Bold", 7.5)
-        self.setFillColor(SECONDARY)
-        self.drawString(18*mm, A4[1] - 13*mm, "TECHNO GLOBE IT SOLUTIONS — ACADEMIC CAPSTONE INTERNSHIP DISSERTATION")
+        self.setFillColor(inst_s)
+        header_title = "PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT — CAPSTONE DISSERTATION" if is_poddar else "TECHNO GLOBE IT SOLUTIONS — ACADEMIC CAPSTONE INTERNSHIP DISSERTATION"
+        self.drawString(18*mm, A4[1] - 13*mm, header_title)
         self.setFont("Helvetica", 7.5)
         self.setFillColor(MUTED)
-        self.drawRightString(A4[0] - 18*mm, A4[1] - 13*mm, "CONFIDENTIAL & PROPRIETARY")
+        self.drawRightString(A4[0] - 18*mm, A4[1] - 13*mm, "ACADEMIC SUBMISSION")
         
         self.setStrokeColor(BORDER_COLOR)
         self.setLineWidth(0.5)
@@ -76,8 +99,9 @@ class AcademicProjectReportCanvas(canvas.Canvas):
         self.line(18*mm, 16*mm, A4[0] - 18*mm, 16*mm)
         
         self.setFont("Helvetica-Bold", 7.5)
-        self.setFillColor(PRIMARY)
-        self.drawString(18*mm, 11*mm, "TechnoGlobe Authorized Regional Centre — Bharatpur (BPT-01)")
+        self.setFillColor(inst_p)
+        footer_sub = "Poddar College of Technology & Management — Bharatpur" if is_poddar else "TechnoGlobe Authorized Regional Centre — Bharatpur (BPT-01)"
+        self.drawString(18*mm, 11*mm, footer_sub)
         self.setFont("Helvetica", 7.5)
         self.setFillColor(MUTED)
         self.drawRightString(A4[0] - 18*mm, 11*mm, f"Page {self._pageNumber} of {page_count}")
@@ -664,6 +688,14 @@ def build_25page_academic_project_report(internship_id: int) -> str:
     ctx = get_base_context(internship_id)
     it = ctx["internship"]
     s = ctx.get("settings", {})
+    inst = ctx.get("institution", {})
+
+    is_poddar = (inst.get("code") == "PODDAR" or it.get("institution_id") == 2)
+    AcademicProjectReportCanvas.institution_info = inst
+
+    rep_primary = colors.HexColor("#0A2540") if is_poddar else PRIMARY
+    rep_secondary = colors.HexColor("#0F3A66") if is_poddar else SECONDARY
+    rep_accent = colors.HexColor("#EAA824") if is_poddar else ACCENT
 
     student_name = it.get('student_name') or "Rohit Verma"
     father_name = it.get('father_mother_name') or "Suresh Verma"
@@ -681,7 +713,7 @@ def build_25page_academic_project_report(internship_id: int) -> str:
     mentor_desig = it.get('mentor_designation') or "Professor"
     cert_num = enrollment_no
     signatory_name = "Nitin Sir"
-    signatory_desig = "Centre Head & Authorized Signatory"
+    signatory_desig = "Center Head & Authorized Signatory" if is_poddar else "Centre Head & Authorized Signatory"
 
     artifacts = get_track_artifacts(course_code, course_name, student_name)
 
@@ -700,10 +732,10 @@ def build_25page_academic_project_report(internship_id: int) -> str:
     styles = getSampleStyleSheet()
     
     # Custom styles
-    title_main = ParagraphStyle('TitleMain', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=18, leading=22, textColor=PRIMARY, alignment=1)
-    title_sub = ParagraphStyle('TitleSub', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=12, leading=16, textColor=SECONDARY, alignment=1)
-    chap_heading = ParagraphStyle('ChapHeading', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=14, leading=18, textColor=PRIMARY, spaceAfter=8)
-    sec_heading = ParagraphStyle('SecHeading', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=11, leading=15, textColor=SECONDARY, spaceBefore=6, spaceAfter=4)
+    title_main = ParagraphStyle('TitleMain', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=18, leading=22, textColor=rep_primary, alignment=1)
+    title_sub = ParagraphStyle('TitleSub', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=12, leading=16, textColor=rep_secondary, alignment=1)
+    chap_heading = ParagraphStyle('ChapHeading', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=14, leading=18, textColor=rep_primary, spaceAfter=8)
+    sec_heading = ParagraphStyle('SecHeading', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=11, leading=15, textColor=rep_secondary, spaceBefore=6, spaceAfter=4)
     subsec_heading = ParagraphStyle('SubSecHeading', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9.5, leading=13, textColor=DARK, spaceBefore=4, spaceAfter=2)
     
     body = ParagraphStyle('ReportBody', parent=styles['Normal'], fontName='Helvetica', fontSize=8.5, leading=12, textColor=DARK)
@@ -717,7 +749,7 @@ def build_25page_academic_project_report(internship_id: int) -> str:
 
     def make_table_style(pad=3.2):
         return TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), PRIMARY),
+            ('BACKGROUND', (0,0), (-1,0), rep_primary),
             ('TEXTCOLOR', (0,0), (-1,0), colors.white),
             ('ALIGN', (0,0), (-1,-1), 'LEFT'),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
@@ -737,7 +769,7 @@ def build_25page_academic_project_report(internship_id: int) -> str:
     # PAGE 1: COVER PAGE
     # =========================================================================
     story.append(Spacer(1, 10 * mm))
-    story.append(Paragraph("<b>A DISSERTATION & CAPSTONE INTERNSHIP PROJECT REPORT</b>", ParagraphStyle('CoverSub1', parent=body_center, fontSize=11, leading=14, textColor=SECONDARY)))
+    story.append(Paragraph("<b>A DISSERTATION & CAPSTONE INTERNSHIP PROJECT REPORT</b>", ParagraphStyle('CoverSub1', parent=body_center, fontSize=11, leading=14, textColor=rep_secondary)))
     story.append(Spacer(1, 3 * mm))
     story.append(Paragraph("ON", ParagraphStyle('CoverOn', parent=body_center, fontSize=9.5, leading=12, textColor=MUTED)))
     story.append(Spacer(1, 4 * mm))
@@ -746,7 +778,7 @@ def build_25page_academic_project_report(internship_id: int) -> str:
     title_p = Paragraph(f"<b>&quot;{project_title.upper()}&quot;</b>", title_main)
     t_box = Table([[title_p]], colWidths=[174*mm])
     t_box.setStyle(TableStyle([
-        ('BOX', (0,0), (-1,-1), 1.5, ACCENT),
+        ('BOX', (0,0), (-1,-1), 1.5, rep_accent),
         ('BACKGROUND', (0,0), (-1,-1), BG_LIGHT),
         ('TOPPADDING', (0,0), (-1,-1), 12),
         ('BOTTOMPADDING', (0,0), (-1,-1), 12),
@@ -758,12 +790,26 @@ def build_25page_academic_project_report(internship_id: int) -> str:
 
     story.append(Paragraph(f"Submitted in partial fulfillment of the requirements for the award of degree of", ParagraphStyle('CoverDegNote', parent=body_center, fontSize=9, leading=12, textColor=DARK)))
     story.append(Spacer(1, 2 * mm))
-    story.append(Paragraph(f"<b>{degree.upper()}</b>", ParagraphStyle('CoverDeg', parent=body_center, fontSize=12, leading=16, textColor=PRIMARY)))
-    story.append(Paragraph(f"<b>ACADEMIC SESSION 2025-2026</b>", ParagraphStyle('CoverSess', parent=body_center, fontSize=10, leading=14, textColor=SECONDARY)))
+    story.append(Paragraph(f"<b>{degree.upper()}</b>", ParagraphStyle('CoverDeg', parent=body_center, fontSize=12, leading=16, textColor=rep_primary)))
+    story.append(Paragraph(f"<b>ACADEMIC SESSION 2025-2026</b>", ParagraphStyle('CoverSess', parent=body_center, fontSize=10, leading=14, textColor=rep_secondary)))
     story.append(Spacer(1, 8 * mm))
 
     # Logo Table
-    if os.path.exists(LOGO_PATH):
+    poddar_logo_file = os.path.join(os.path.dirname(__file__), "poddar_logo.png")
+    if is_poddar and os.path.exists(poddar_logo_file):
+        img = RLImage(poddar_logo_file, width=28*mm, height=28*mm)
+        logo_tab = Table([[img]], colWidths=[174*mm])
+        logo_tab.setStyle(TableStyle([
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 0),
+            ('TOPPADDING', (0,0), (-1,-1), 0),
+        ]))
+        story.append(logo_tab)
+        story.append(Spacer(1, 2 * mm))
+        story.append(Paragraph("<b>PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT</b>", ParagraphStyle('CoverOrg', parent=body_center, fontSize=10.5, leading=13.5, textColor=rep_primary)))
+        story.append(Spacer(1, 6 * mm))
+    elif os.path.exists(LOGO_PATH):
         img = RLImage(LOGO_PATH, width=58*mm, height=21*mm)
         logo_tab = Table([[img]], colWidths=[174*mm])
         logo_tab.setStyle(TableStyle([
@@ -773,13 +819,14 @@ def build_25page_academic_project_report(internship_id: int) -> str:
             ('TOPPADDING', (0,0), (-1,-1), 0),
         ]))
         story.append(logo_tab)
-    story.append(Spacer(1, 2 * mm))
-    story.append(Paragraph("<b>Technoglobe IT Solutions Pvt. Ltd.</b>", ParagraphStyle('CoverOrg', parent=body_center, fontSize=10, leading=13, textColor=colors.HexColor("#DC2626"))))
-    story.append(Spacer(1, 8 * mm))
+        story.append(Spacer(1, 2 * mm))
+        story.append(Paragraph("<b>Technoglobe IT Solutions Pvt. Ltd.</b>", ParagraphStyle('CoverOrg', parent=body_center, fontSize=10, leading=13, textColor=colors.HexColor("#DC2626"))))
+        story.append(Spacer(1, 8 * mm))
 
     # Two column Submitted By / Supervised By Box
+    host_org_label = "Poddar College of Technology & Management" if is_poddar else "TechnoGlobe IT Solutions"
     cand_info = f"<b>Candidate Name:</b> {student_name.upper()}<br/><b>Enrollment / Ref:</b> {enrollment_no}<br/><b>Degree / Branch:</b> {degree}<br/><b>Affiliated College:</b> {college_name}<br/><b>Academic Session:</b> 2025-2026"
-    sup_info = f"<b>Supervising Faculty:</b> {mentor_name}<br/><b>Designation:</b> {mentor_desig}<br/><b>Department:</b> Emerging Technologies<br/><b>Host Institute:</b> TechnoGlobe IT Solutions<br/><b>Centre Head:</b> {signatory_name}"
+    sup_info = f"<b>Supervising Faculty:</b> {mentor_name}<br/><b>Designation:</b> {mentor_desig}<br/><b>Department:</b> Computer Science & Tech<br/><b>Host Institute:</b> {host_org_label}<br/><b>Centre Head:</b> {signatory_name}"
     
     meta_table = Table([
         [Paragraph("<b>SUBMITTED BY:</b>", body_bold), Paragraph("<b>UNDER THE SUPERVISION OF:</b>", body_bold)],
@@ -797,14 +844,16 @@ def build_25page_academic_project_report(internship_id: int) -> str:
     story.append(meta_table)
     story.append(Spacer(1, 10 * mm))
 
-    story.append(Paragraph(f"<b>DEPARTMENT OF COMPUTER SCIENCE & INFORMATION TECHNOLOGY</b>", ParagraphStyle('CoverDept', parent=body_center, fontSize=10.5, leading=14, textColor=PRIMARY)))
-    story.append(Paragraph(f"<b>{college_name.upper()}</b>", ParagraphStyle('CoverColl', parent=body_center, fontSize=10, leading=13, textColor=SECONDARY)))
+    story.append(Paragraph(f"<b>DEPARTMENT OF COMPUTER SCIENCE & INFORMATION TECHNOLOGY</b>", ParagraphStyle('CoverDept', parent=body_center, fontSize=10.5, leading=14, textColor=rep_primary)))
+    story.append(Paragraph(f"<b>{college_name.upper()}</b>", ParagraphStyle('CoverColl', parent=body_center, fontSize=10, leading=13, textColor=rep_secondary)))
     story.append(Spacer(1, 2 * mm))
-    story.append(Paragraph("IN COLLABORATION WITH TECHNOGLOBE IT SOLUTIONS PVT. LTD. (BHARATPUR REGIONAL CENTRE BPT-01)", ParagraphStyle('CoverCollab', parent=body_center, fontSize=7.5, leading=10, textColor=MUTED)))
+    collab_text = "PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT (BHARATPUR, RAJASTHAN)" if is_poddar else "IN COLLABORATION WITH TECHNOGLOBE IT SOLUTIONS PVT. LTD. (BHARATPUR REGIONAL CENTRE BPT-01)"
+    story.append(Paragraph(collab_text, ParagraphStyle('CoverCollab', parent=body_center, fontSize=7.5, leading=10, textColor=MUTED)))
     story.append(Spacer(1, 6 * mm))
     
     # Accreditation & Quality Standards Banner
-    accred_p = Paragraph("<b>Accreditation & Curriculum Standard:</b> Certified under ISO 9001:2015 Quality Management Systems. Aligned with UGC / AICTE Outcome-Based Education (OBE) Framework and National Skill Qualification Framework (NSQF Level 7).", ParagraphStyle('Accred', parent=body_center, fontSize=7, leading=9.5, textColor=MUTED))
+    accred_text = "<b>Academic Standards & Degree Curriculum:</b> Engineered and submitted in full compliance with university academic degree standards and laboratory guidelines." if is_poddar else "<b>Accreditation & Curriculum Standard:</b> Certified under ISO 9001:2015 Quality Management Systems. Aligned with UGC / AICTE Outcome-Based Education (OBE) Framework and National Skill Qualification Framework (NSQF Level 7)."
+    accred_p = Paragraph(accred_text, ParagraphStyle('Accred', parent=body_center, fontSize=7, leading=9.5, textColor=MUTED))
     accred_box = Table([[accred_p]], colWidths=[174*mm], style=[('BOX', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#F1F5F9")), ('TOPPADDING', (0,0), (-1,-1), 4), ('BOTTOMPADDING', (0,0), (-1,-1), 4)])
     story.append(accred_box)
     story.append(PageBreak())
@@ -814,17 +863,19 @@ def build_25page_academic_project_report(internship_id: int) -> str:
     # =========================================================================
     story.append(Paragraph("<b>CAPSTONE INTERNSHIP DISSERTATION & PROJECT RECORD</b>", chap_heading))
     story.append(Paragraph(f"<b>Project Title: {project_title}</b>", title_sub))
-    story.append(HRFlowable(width="100%", thickness=1, color=ACCENT, spaceBefore=3, spaceAfter=6))
+    story.append(HRFlowable(width="100%", thickness=1, color=rep_accent, spaceBefore=3, spaceAfter=6))
     
     story.append(Paragraph("<b>Section 1: Candidate & Institutional Registration Matrix</b>", sec_heading))
+    host_org_name = "Poddar College of Technology & Management" if is_poddar else "TechnoGlobe IT Solutions Pvt. Ltd."
+    host_centre_name = "Poddar College Campus, Bharatpur" if is_poddar else "Bharatpur Centre (BPT-01)"
     reg_data = [
         [Paragraph("<b>Candidate Full Name:</b>", body_bold), Paragraph(student_name, body), Paragraph("<b>Enrollment / Ref No:</b>", body_bold), Paragraph(enrollment_no, body)],
         [Paragraph("<b>Father's / Mother's Name:</b>", body_bold), Paragraph(father_name, body), Paragraph("<b>Academic Degree:</b>", body_bold), Paragraph(degree, body)],
         [Paragraph("<b>Affiliated College:</b>", body_bold), Paragraph(college_name, body), Paragraph("<b>Academic Session:</b>", body_bold), Paragraph("2025-2026", body)],
         [Paragraph("<b>Internship Track:</b>", body_bold), Paragraph(course_name, body), Paragraph("<b>Training Duration:</b>", body_bold), Paragraph("6 Weeks (126 Hours)", body)],
         [Paragraph("<b>Training Tenure:</b>", body_bold), Paragraph(f"{start_date} to {end_date}", body), Paragraph("<b>Training Mode:</b>", body_bold), Paragraph("Offline Hands-on Laboratory", body)],
-        [Paragraph("<b>Supervising Faculty Mentor:</b>", body_bold), Paragraph(f"{mentor_name}<br/>({mentor_desig})", body), Paragraph("<b>Authorized Signatory:</b>", body_bold), Paragraph(f"{signatory_name} (Centre Head &<br/>Authorized Signatory)", body)],
-        [Paragraph("<b>Host Training Organization:</b>", body_bold), Paragraph("TechnoGlobe IT Solutions Pvt. Ltd.", body), Paragraph("<b>Centre Regional Code:</b>", body_bold), Paragraph("Bharatpur Centre (BPT-01)", body)],
+        [Paragraph("<b>Supervising Faculty Mentor:</b>", body_bold), Paragraph(f"{mentor_name}<br/>({mentor_desig})", body), Paragraph("<b>Authorized Signatory:</b>", body_bold), Paragraph(f"{signatory_name} (Center Head &<br/>Authorized Signatory)" if is_poddar else f"{signatory_name} (Centre Head &<br/>Authorized Signatory)", body)],
+        [Paragraph("<b>Host Training Organization:</b>", body_bold), Paragraph(host_org_name, body), Paragraph("<b>Centre Regional Code:</b>", body_bold), Paragraph(host_centre_name, body)],
     ]
     t_reg = Table(reg_data, colWidths=[42*mm, 45*mm, 42*mm, 45*mm])
     t_reg.setStyle(make_table_style(4.5))
@@ -832,13 +883,17 @@ def build_25page_academic_project_report(internship_id: int) -> str:
     story.append(Spacer(1, 4 * mm))
 
     story.append(Paragraph("<b>Section 2: Curriculum Authorization & Industry Compliance Statement</b>", sec_heading))
-    story.append(Paragraph(f"This project dissertation report has been engineered and documented in accordance with the mandatory curriculum guidelines for <b>{degree}</b> industrial training prescribed by university regulatory bodies and UGC/AICTE standards. All algorithms, analytical workflows, data transformations, source code artifacts, and evaluation deliverables documented herein have been executed, reviewed, and validated on-site at the TechnoGlobe Bharatpur Centre laboratory.", body_justify))
+    comp_loc = "on-site at the Poddar College computing laboratory" if is_poddar else "on-site at the TechnoGlobe Bharatpur Centre laboratory"
+    story.append(Paragraph(f"This project dissertation report has been engineered and documented in accordance with the mandatory curriculum guidelines for <b>{degree}</b> industrial training prescribed by university regulatory bodies and academic standards. All algorithms, analytical workflows, data transformations, source code artifacts, and evaluation deliverables documented herein have been executed, reviewed, and validated {comp_loc}.", body_justify))
     story.append(Spacer(1, 2.5 * mm))
     story.append(Paragraph(f"The candidate has satisfied the minimum mandatory requirement of <b>120+ contact hours</b> (Total Completed: <b>126 Hours</b> across 36 instructional days) encompassing classroom architectural lectures, algorithmic problem-solving, live system development, unit and integration testing, and academic project defense.", body_justify))
     story.append(Spacer(1, 4 * mm))
 
     story.append(Paragraph("<b>Section 3: Host Organization & Centre Profile</b>", sec_heading))
-    story.append(Paragraph("<b>TechnoGlobe IT Solutions Pvt. Ltd.</b> is an ISO 9001:2015 certified premier technical education and software development enterprise operating authorized regional centers across India. The Bharatpur Regional Centre (BPT-01) is equipped with advanced enterprise computing infrastructure, cloud simulation testbeds, dedicated development sandboxes, and modern software engineering suites designed to mentor computer science and engineering undergraduates through industrial-grade capstone lifecycles.", body_justify))
+    if is_poddar:
+        story.append(Paragraph("<b>Poddar College of Technology & Management</b> is an advanced higher education institution situated in Bharatpur, Rajasthan. The campus is equipped with specialized computing laboratories, cloud simulation sandboxes, and modern software engineering suites designed to mentor computer science and engineering undergraduates through industrial-grade capstone lifecycles.", body_justify))
+    else:
+        story.append(Paragraph("<b>TechnoGlobe IT Solutions Pvt. Ltd.</b> is an ISO 9001:2015 certified premier technical education and software development enterprise operating authorized regional centers across India. The Bharatpur Regional Centre (BPT-01) is equipped with advanced enterprise computing infrastructure, cloud simulation testbeds, dedicated development sandboxes, and modern software engineering suites designed to mentor computer science and engineering undergraduates through industrial-grade capstone lifecycles.", body_justify))
     story.append(Spacer(1, 4 * mm))
 
     story.append(Paragraph("<b>Section 4: Laboratory Infrastructure & Computing Sandbox</b>", sec_heading))
@@ -861,15 +916,17 @@ def build_25page_academic_project_report(internship_id: int) -> str:
     # PAGE 3: CERTIFICATE OF INTERNSHIP & PROJECT COMPLETION
     # =========================================================================
     story.append(Paragraph("<b>CERTIFICATE OF INTERNSHIP & PROJECT COMPLETION</b>", chap_heading))
-    story.append(Paragraph("<b>TECHNOGLOBE IT SOLUTIONS PVT. LTD. — AUTHORIZED REGIONAL CENTRE</b>", title_sub))
-    story.append(HRFlowable(width="100%", thickness=1, color=ACCENT, spaceBefore=3, spaceAfter=8))
+    cert_sub_title = "<b>PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT — BHARATPUR</b>" if is_poddar else "<b>TECHNOGLOBE IT SOLUTIONS PVT. LTD. — AUTHORIZED REGIONAL CENTRE</b>"
+    story.append(Paragraph(cert_sub_title, title_sub))
+    story.append(HRFlowable(width="100%", thickness=1, color=rep_accent, spaceBefore=3, spaceAfter=8))
 
-    cert_text = f"This is to formally certify that <b>{student_name}</b>, daughter/son of <b>{father_name}</b>, enrolled in <b>{degree}</b> at <b>{college_name}</b> (Academic Session: 2025-2026), has successfully completed a rigorous 6-Week (126 Hours) Course-Based Internship in <b>{course_name}</b> from <b>{start_date}</b> to <b>{end_date}</b> at TechnoGlobe IT Solutions Pvt. Ltd., Bharatpur Centre."
+    cert_loc_phrase = "at Poddar College, Bharatpur." if is_poddar else "at TechnoGlobe IT Solutions Pvt. Ltd., Bharatpur Centre."
+    cert_text = f"This is to formally certify that <b>{student_name}</b>, daughter/son of <b>{father_name}</b>, enrolled in <b>{degree}</b> at <b>{college_name}</b> (Academic Session: 2025-2026), has successfully completed a rigorous 6-Week (126 Hours) Course-Based Internship in <b>{course_name}</b> from <b>{start_date}</b> to <b>{end_date}</b> {cert_loc_phrase}"
     story.append(Paragraph(cert_text, body_justify))
     story.append(Spacer(1, 3 * mm))
     story.append(Paragraph(f"As a core prerequisite for the successful completion of the internship program, the candidate conceptualized, engineered, and defended the Capstone Project entitled:", body_justify))
     story.append(Spacer(1, 2 * mm))
-    story.append(Paragraph(f"<b>{project_title}</b>", ParagraphStyle('CertProjTitle', parent=body_bold, fontSize=10, leading=14, textColor=PRIMARY, alignment=1)))
+    story.append(Paragraph(f"<b>{project_title}</b>", ParagraphStyle('CertProjTitle', parent=body_bold, fontSize=10, leading=14, textColor=rep_primary, alignment=1)))
     story.append(Spacer(1, 3 * mm))
     story.append(Paragraph(f"Under the direct academic supervision and technical mentorship of <b>{mentor_name}</b> ({mentor_desig}), the candidate demonstrated exemplary diligence, professional ethics, algorithmic problem-solving capabilities, and technical execution. The candidate's comprehensive performance has been formally evaluated across the multi-parameter assessment rubric below.", body_justify))
     story.append(Spacer(1, 4 * mm))
@@ -893,9 +950,11 @@ def build_25page_academic_project_report(internship_id: int) -> str:
     story.append(Paragraph(f"1. <b>Full Lifecycle Engineering:</b> Successfully engineered and deployed end-to-end applications within the domain of {artifacts['domain']}.<br/>2. <b>Database Architecture & Normalization:</b> Designed schemas satisfying 3NF constraints with ACID compliance.<br/>3. <b>Automated Testing & Security:</b> Implemented comprehensive unit/integration test suites achieving &gt; 90% statement coverage.<br/>4. <b>Professional Industry Conduct:</b> Maintained 100% laboratory attendance and strictly adhered to engineering ethics.", body))
     story.append(Spacer(1, 6 * mm))
 
+    seal_line_text = "[ Official College Seal & Ink Stamp ]" if is_poddar else "Official Centre Seal & Watermark"
+    org_sign_text = "Poddar College of Technology & Management" if is_poddar else "TechnoGlobe IT Solutions Pvt. Ltd."
     sig_data = [
-        [Paragraph("____________________________<br/><b>" + mentor_name + "</b><br/>" + mentor_desig + "<br/>Supervising Faculty Mentor<br/>TechnoGlobe Bharatpur Centre", body),
-         Paragraph("____________________________<br/><b>" + signatory_name + "</b><br/>" + signatory_desig + "<br/>TechnoGlobe IT Solutions Pvt. Ltd.<br/>Official Centre Seal & Watermark", body)]
+        [Paragraph("____________________________<br/><b>" + mentor_name + "</b><br/>" + mentor_desig + "<br/>Supervising Faculty Mentor<br/>" + ("Poddar College" if is_poddar else "TechnoGlobe Bharatpur Centre"), body),
+         Paragraph("____________________________<br/><b>" + signatory_name + "</b><br/>" + signatory_desig + "<br/>" + org_sign_text + "<br/>" + seal_line_text, body)]
     ]
     t_sig = Table(sig_data, colWidths=[87*mm, 87*mm])
     t_sig.setStyle(TableStyle([
@@ -911,16 +970,17 @@ def build_25page_academic_project_report(internship_id: int) -> str:
     # PAGE 4: CANDIDATE'S DECLARATION & ETHICAL INTEGRITY AUDIT
     # =========================================================================
     story.append(Paragraph("<b>CANDIDATE'S DECLARATION & ETHICAL INTEGRITY AUDIT</b>", chap_heading))
-    story.append(HRFlowable(width="100%", thickness=1, color=ACCENT, spaceBefore=3, spaceAfter=8))
+    story.append(HRFlowable(width="100%", thickness=1, color=rep_accent, spaceBefore=3, spaceAfter=8))
     
     story.append(Paragraph(f"I, <b>{student_name}</b>, Roll Number: <b>{roll_no}</b>, Enrollment Number: <b>{enrollment_no}</b>, bonafide student of <b>{degree}</b> at <b>{college_name}</b>, hereby solemnly declare and affirm that:", body_justify))
     story.append(Spacer(1, 3 * mm))
 
+    loc_name_decl = "Poddar College, Bharatpur" if is_poddar else "TechnoGlobe IT Solutions Pvt. Ltd., Bharatpur Centre"
     clauses = [
-        f"<b>1. Authenticity of Work:</b> The Capstone Project Report entitled <b>f'{project_title}'</b> submitted in partial fulfillment of the requirements for the award of the degree of <b>{degree}</b> is an authentic, original record of industrial and research work carried out by me during the period from <b>{start_date}</b> to <b>{end_date}</b> at TechnoGlobe IT Solutions Pvt. Ltd., Bharatpur Centre under the academic supervision of <b>{mentor_name}</b> ({mentor_desig}).",
+        f"<b>1. Authenticity of Work:</b> The Capstone Project Report entitled <b>f'{project_title}'</b> submitted in partial fulfillment of the requirements for the award of the degree of <b>{degree}</b> is an authentic, original record of industrial and research work carried out by me during the period from <b>{start_date}</b> to <b>{end_date}</b> at {loc_name_decl} under the academic supervision of <b>{mentor_name}</b> ({mentor_desig}).",
         f"<b>2. Originality & Plagiarism Standards:</b> The project architecture, implementation routines, data structures, algorithms, test scripts, and documentation presented in this dissertation are original. Any technical concepts, libraries, frameworks, or datasets sourced from external academic literature, open-source repositories, or standard reference manuals have been duly cited and acknowledged in the References section.",
         f"<b>3. Non-Submission Elsewhere:</b> The technical substance of this report has not been submitted, in whole or in part, to any other University, Institute, Examination Board, or Academic Institution for the award of any degree, diploma, fellowship, or other academic qualification.",
-        f"<b>4. Laboratory Compliance & Data Integrity:</b> All experimental benchmarks, throughput metrics, API response timings, and test outputs recorded herein reflect genuine executions in the TechnoGlobe laboratory environment."
+        f"<b>4. Laboratory Compliance & Data Integrity:</b> All experimental benchmarks, throughput metrics, API response timings, and test outputs recorded herein reflect genuine executions in the {('Poddar College' if is_poddar else 'TechnoGlobe')} laboratory environment."
     ]
     for c_text in clauses:
         story.append(Paragraph(c_text, body_justify))
@@ -940,7 +1000,8 @@ def build_25page_academic_project_report(internship_id: int) -> str:
     story.append(Spacer(1, 4 * mm))
 
     story.append(Paragraph("<b>Section 4.3: Intellectual Property & Laboratory Work Log Verification</b>", sec_heading))
-    story.append(Paragraph(f"I further declare that the 36-day training logbook appended to this dissertation reflects my daily technical engagements. All source code artifacts and configuration manifests have been archived in the TechnoGlobe Bharatpur code vault under custody of the department.", body_justify))
+    archive_loc = "Poddar College institutional code vault" if is_poddar else "TechnoGlobe Bharatpur code vault"
+    story.append(Paragraph(f"I further declare that the 36-day training logbook appended to this dissertation reflects my daily technical engagements. All source code artifacts and configuration manifests have been archived in the {archive_loc} under custody of the department.", body_justify))
     story.append(Spacer(1, 6 * mm))
 
     decl_sign = [
@@ -961,7 +1022,7 @@ def build_25page_academic_project_report(internship_id: int) -> str:
     # =========================================================================
     story.append(Paragraph("<b>CERTIFICATE OF APPROVAL BY VIVA-VOCE EXAMINATION BOARD</b>", chap_heading))
     story.append(Paragraph("<b>DEPARTMENT OF COMPUTER SCIENCE & INFORMATION TECHNOLOGY</b>", title_sub))
-    story.append(HRFlowable(width="100%", thickness=1, color=ACCENT, spaceBefore=3, spaceAfter=8))
+    story.append(HRFlowable(width="100%", thickness=1, color=rep_accent, spaceBefore=3, spaceAfter=8))
 
     story.append(Paragraph(f"This is to certify that the Capstone Project Dissertation entitled <b>f'{project_title}'</b> submitted by <b>{student_name}</b> (Roll No: <b>{roll_no}</b>, Enrollment No: <b>{enrollment_no}</b>) in partial fulfillment of the requirements for the degree of <b>{degree}</b> of <b>{college_name}</b> has been evaluated and approved by the Board of Examiners after comprehensive viva-voce examination and live technical defense.", body_justify))
     story.append(Spacer(1, 4 * mm))
@@ -987,12 +1048,12 @@ def build_25page_academic_project_report(internship_id: int) -> str:
 
     exam_board = [
         [
-            Paragraph("____________________________<br/><b>1. Internal Faculty Guide</b><br/>Name: <b>" + mentor_name + "</b><br/>" + mentor_desig + "<br/>TechnoGlobe Bharatpur Centre", body),
+            Paragraph("____________________________<br/><b>1. Internal Faculty Guide</b><br/>Name: <b>" + mentor_name + "</b><br/>" + mentor_desig + "<br/>" + ("Poddar College" if is_poddar else "TechnoGlobe Bharatpur Centre"), body),
             Paragraph("____________________________<br/><b>2. External Technical Examiner</b><br/>Name: <b>Prof. Rahul Bhatnagar</b><br/>Professor & Tech Assessor<br/>External Board Nominee", body)
         ],
         [
             Paragraph("<br/>____________________________<br/><b>3. College Faculty Coordinator</b><br/>Name: <b>Head of Department</b><br/>Dept. of Computer Science<br/>" + college_name, body),
-            Paragraph("<br/>____________________________<br/><b>4. Centre Director & Head</b><br/>Name: <b>" + signatory_name + "</b><br/>" + signatory_desig + "<br/>TechnoGlobe IT Solutions", body)
+            Paragraph("<br/>____________________________<br/><b>4. Center Head & Director</b><br/>Name: <b>" + signatory_name + "</b><br/>" + signatory_desig + "<br/>" + org_sign_text, body)
         ]
     ]
     t_exam = Table(exam_board, colWidths=[87*mm, 87*mm])

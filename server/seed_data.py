@@ -18,6 +18,22 @@ def normalize_text(text: str) -> str:
     cleaned = re.sub(r'None training hours', '120 Training Hours', cleaned)
     return ' '.join(cleaned.split())
 
+# 2 Core Institutions Definition (TechnoGlobe vs. Poddar College)
+INSTITUTIONS_CATALOG = [
+    (1, 'TG', 'TechnoGlobe', 'TechnoGlobe IT Solutions Pvt. Ltd.', 'Authorized Learning Center',
+     'Near SP Office, Bharatpur, Rajasthan, India', 'ISO 9001:2015 Certified IT Training Partner',
+     'https://www.technoglobe.co.in', 'bharatpur@technoglobe.co.in', '+91 98290 12345',
+     'technoglobe_logo.png', '#0B2545', '#134074', '#D4AF37',
+     'Nitin Sir', 'Centre Head & Authorized Signatory',
+     'DIGITAL_BADGE', 'SEAL', 'TG/BPT', 'TG-BPT', 1),
+    (2, 'PODDAR', 'Poddar College', 'Poddar College of Technology & Management', '',
+     'Bharatpur, Rajasthan', '',
+     'https://poddarcollege.org', 'info@poddarcollege.org', '+91 94140 12345',
+     'poddar_logo.png', '#0A2540', '#EAA824', '#EAA824',
+     'Nitin Sir', 'Center Head & Authorized Signatory',
+     'EMPTY_INK_PAD_BOX', 'PODDAR_LOGO_TRANSLUCENT', 'PCTM/BPT', 'PCTM', 1)
+]
+
 # 9 Full Industry Courses Definition
 COURSES_CATALOG = [
     ('DA', 'Data Analytics', 'Course-Based Internship in Data Analytics & Business Intelligence',
@@ -501,6 +517,9 @@ def _seed_base_data(cursor, conn):
     );
     """)
 
+    # 2.1 Institutions
+    ensure_institutions(cursor, conn)
+
     # 3. Mentors
     mentors = [
         ("Prof. Krishlay Sharma", "Professor", "krishlay@pctm", "+91 98290 12345", "Professor & Supervising Faculty for Data Analytics, Computing, AI & Emerging Technologies.", 1),
@@ -533,7 +552,41 @@ def _seed_base_data(cursor, conn):
     ]
     cursor.executemany("INSERT INTO document_templates (template_key, name, layout_config_json) VALUES (?, ?, ?)", templates)
 
+def ensure_institutions(cursor, conn):
+    for inst in INSTITUTIONS_CATALOG:
+        cursor.execute("""
+        INSERT INTO institutions (
+            id, code, name, full_name, tagline, address, affiliation_text, website, email, phone,
+            logo_path, primary_color, secondary_color, accent_color, signatory_name, signatory_designation,
+            stamp_mode, watermark_mode, doc_prefix, cert_prefix, is_active
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+            code = excluded.code,
+            name = excluded.name,
+            full_name = excluded.full_name,
+            tagline = excluded.tagline,
+            address = excluded.address,
+            affiliation_text = excluded.affiliation_text,
+            website = excluded.website,
+            email = excluded.email,
+            phone = excluded.phone,
+            logo_path = excluded.logo_path,
+            primary_color = excluded.primary_color,
+            secondary_color = excluded.secondary_color,
+            accent_color = excluded.accent_color,
+            signatory_name = excluded.signatory_name,
+            signatory_designation = excluded.signatory_designation,
+            stamp_mode = excluded.stamp_mode,
+            watermark_mode = excluded.watermark_mode,
+            doc_prefix = excluded.doc_prefix,
+            cert_prefix = excluded.cert_prefix,
+            is_active = 1
+        """, inst)
+
 def apply_faculty_updates(cursor, conn):
+    # 0. Ensure institutions
+    ensure_institutions(cursor, conn)
+
     # 1. Update Head in centre_settings
     cursor.execute("""
     UPDATE centre_settings 

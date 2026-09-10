@@ -192,6 +192,18 @@ def get_dashboard_stats():
     }
 
 # -------------------------------------------------------------
+# 2.5 Institutions Management (Multi-Institution Support)
+# -------------------------------------------------------------
+@app.get("/api/institutions")
+def list_institutions():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM institutions WHERE is_active = 1 ORDER BY id ASC")
+    institutions = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return institutions
+
+# -------------------------------------------------------------
 # 3. Students Management
 # -------------------------------------------------------------
 class StudentCreate(BaseModel):
@@ -212,6 +224,7 @@ class StudentCreate(BaseModel):
     semester_year: str
     academic_session: str
     # Internship enrollment details
+    institution_id: Optional[int] = 1
     course_id: int
     mentor_id: int
     batch_id: Optional[int] = None
@@ -224,20 +237,22 @@ class StudentCreate(BaseModel):
     mode: str = "Offline"
 
 @app.get("/api/students")
-def list_students(search: Optional[str] = None, course: Optional[str] = None, status: Optional[str] = None):
+def list_students(search: Optional[str] = None, course: Optional[str] = None, status: Optional[str] = None, institution_id: Optional[int] = None):
     conn = get_db()
     cursor = conn.cursor()
 
     query = """
     SELECT s.*, 
            i.id as internship_id, i.internship_title, i.status as internship_status, 
-           i.certificate_number, i.verification_code, i.start_date, i.end_date,
+           i.certificate_number, i.verification_code, i.start_date, i.end_date, i.institution_id,
            c.name as course_name, c.code as course_code,
-           m.name as mentor_name
+           m.name as mentor_name,
+           inst.name as institution_name, inst.code as institution_code
     FROM students s
     LEFT JOIN internships i ON s.id = i.student_id
     LEFT JOIN courses c ON i.course_id = c.id
     LEFT JOIN mentors m ON i.mentor_id = m.id
+    LEFT JOIN institutions inst ON i.institution_id = inst.id
     WHERE 1=1
     """
     params = []
@@ -251,6 +266,9 @@ def list_students(search: Optional[str] = None, course: Optional[str] = None, st
     if status:
         query += " AND i.status = ?"
         params.append(status)
+    if institution_id:
+        query += " AND i.institution_id = ?"
+        params.append(institution_id)
 
     query += " ORDER BY s.id DESC"
     cursor.execute(query, params)
@@ -308,11 +326,11 @@ def create_student(req: StudentCreate, user = Depends(get_current_user)):
     # Create Internship record
     cursor.execute("""
     INSERT INTO internships (
-        student_id, course_id, batch_id, mentor_id, internship_title, internship_type,
+        student_id, course_id, batch_id, mentor_id, institution_id, internship_title, internship_type,
         start_date, end_date, total_days, total_training_hours, mode, status
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'REGISTERED')
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'REGISTERED')
     """, (
-        student_id, req.course_id, req.batch_id, req.mentor_id, title,
+        student_id, req.course_id, req.batch_id, req.mentor_id, req.institution_id or 1, title,
         req.internship_type, req.start_date, req.end_date, req.total_days, req.total_training_hours, req.mode
     ))
     internship_id = cursor.lastrowid
@@ -878,15 +896,18 @@ def verify_certificate_endpoint(query_code: str, sig: Optional[str] = None):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-    SELECT c.*, i.start_date, i.end_date, i.total_training_hours,
+    SELECT c.*, i.start_date, i.end_date, i.total_training_hours, i.institution_id,
            s.full_name as student_name, s.college_name, s.degree, s.branch, s.semester_year,
            cr.name as course_name, cr.title as course_title,
-           m.name as mentor_name
+           m.name as mentor_name,
+           inst.name as institution_name, inst.code as institution_code, inst.full_name as institution_full_name,
+           inst.logo_path as institution_logo_path, inst.address as institution_address
     FROM certificates c
     JOIN internships i ON c.internship_id = i.id
     JOIN students s ON i.student_id = s.id
     LEFT JOIN courses cr ON i.course_id = cr.id
     LEFT JOIN mentors m ON i.mentor_id = m.id
+    LEFT JOIN institutions inst ON i.institution_id = inst.id
     WHERE (c.certificate_number = ? OR c.verification_code = ?)
     """, (query_code.strip(), query_code.strip()))
     row = cursor.fetchone()
@@ -913,6 +934,11 @@ def verify_certificate_endpoint(query_code: str, sig: Optional[str] = None):
         "internship_duration": f"{res.get('duration_weeks', 6)} Weeks ({res['total_training_hours']} Training Hours)",
         "mentor_name": res["mentor_name"],
         "internship_id": res["internship_id"],
+        "institution_name": res.get("institution_name") or "TechnoGlobe",
+        "institution_code": res.get("institution_code") or "TG",
+        "institution_full_name": res.get("institution_full_name") or "TechnoGlobe IT Solutions Pvt. Ltd.",
+        "institution_logo_path": res.get("institution_logo_path") or "technoglobe_logo.png",
+        "institution_address": res.get("institution_address") or "Bharatpur, Rajasthan",
         "pdf_download_url": f"/api/documents/{res['internship_id']}/certificate/pdf",
         "status": "AUTHENTIC & OFFICIALLY ISSUED"
     }
@@ -1170,6 +1196,9 @@ def clear_attendance(id: int, user = Depends(get_current_user)):
 # 14e. Guided Quick-Generate Wizard API
 # -------------------------------------------------------------
 class QuickGenerateRequest(BaseModel):
+    # Step 0: Issuing Organization Selection
+    institution_id: int = 1  # 1 for TechnoGlobe, 2 for Poddar College
+
     # Step 1: Student Information
     full_name: str
     father_mother_name: str
@@ -1205,9 +1234,17 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
     conn = get_db()
     cursor = conn.cursor()
 
-    # 1. Centre Settings
+    # 1. Centre Settings & Institution Profile
     cursor.execute("SELECT * FROM centre_settings WHERE id = 1")
     s = dict(cursor.fetchone())
+
+    inst_id = req.institution_id or 1
+    cursor.execute("SELECT * FROM institutions WHERE id = ?", (inst_id,))
+    inst_row = cursor.fetchone()
+    if not inst_row:
+        cursor.execute("SELECT * FROM institutions ORDER BY id ASC LIMIT 1")
+        inst_row = cursor.fetchone()
+    inst = dict(inst_row) if inst_row else {}
 
     # 2. Student Email & Record
     student_email = req.email.strip() if req.email and req.email.strip() else f"{req.full_name.lower().replace(' ', '.')}@example.com"
@@ -1246,10 +1283,10 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
     # 4. Internship Record
     cursor.execute("""
     INSERT INTO internships (
-        student_id, course_id, batch_id, mentor_id, internship_title, internship_type,
+        student_id, course_id, batch_id, mentor_id, institution_id, internship_title, internship_type,
         start_date, end_date, total_days, total_training_hours, mode, status, is_locked
-    ) VALUES (?, ?, 1, ?, ?, 'Course-Based Internship', ?, ?, 36, 126, 'Offline', 'IN_PROGRESS', 0)
-    """, (student_id, course_id, mentor_id, course["title"], req.start_date, req.end_date))
+    ) VALUES (?, ?, 1, ?, ?, ?, 'Course-Based Internship', ?, ?, 36, 126, 'Offline', 'IN_PROGRESS', 0)
+    """, (student_id, course_id, mentor_id, inst_id, course["title"], req.start_date, req.end_date))
     internship_id = cursor.lastrowid
 
     # 5. Compliance Record (Approved)
@@ -1599,8 +1636,9 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
     cursor.execute("SELECT COUNT(*) FROM certificates")
     seq = cursor.fetchone()[0] + 1
     year = datetime.now().year
-    cert_num = f"{s['cert_prefix']}-{track}-{year}-{seq:04d}"
-    ver_code = f"VER-{s['cert_prefix']}-{track}-{datetime.now().strftime('%m%d')}{seq:03d}"
+    cert_p = inst.get("cert_prefix") or s.get("cert_prefix", "TG-BPT")
+    cert_num = f"{cert_p}-{track}-{year}-{seq:04d}"
+    ver_code = f"VER-{cert_p}-{track}-{datetime.now().strftime('%m%d')}{seq:03d}"
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     import urllib.parse
@@ -1655,6 +1693,10 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
         "course_name": course["name"],
         "certificate_number": cert_num,
         "verification_code": ver_code,
+        "institution_id": inst_id,
+        "institution_name": inst.get("name", "TechnoGlobe"),
+        "institution_code": inst.get("code", "TG"),
+        "institution_full_name": inst.get("full_name", "TechnoGlobe IT Solutions Pvt. Ltd."),
         "qr_payload": qr_payload_json,
         "attendance_pct": round(present_count / 36 * 100, 1),
         "total_hours": total_hours,

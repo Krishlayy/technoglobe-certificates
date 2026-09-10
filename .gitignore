@@ -8,4 +8,8 @@ cloudflared.exe
 *.log
 server/generated/*.pdf
 server/generated/*.zip
+server/generated/*.png
+report_pages_inspection/
+*.db
 !server/generated/.gitkeep
+

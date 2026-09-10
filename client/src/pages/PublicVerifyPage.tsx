@@ -103,21 +103,30 @@ export const PublicVerifyPage: React.FC = () => {
     }
   };
 
+  const isPoddar = certData?.institution_code === 'PODDAR' || 
+                   certData?.institution_name?.includes('Poddar') ||
+                   (searchQuery && searchQuery.toUpperCase().startsWith('PCTM')) ||
+                   (certParam && certParam.toUpperCase().startsWith('PCTM'));
+
+  const orgName = isPoddar ? 'Poddar College, Bharatpur' : 'TechnoGlobe IT Solutions Pvt. Ltd.';
+  const orgLogo = isPoddar ? '/poddar_logo.png' : '/technoglobe_logo.png';
+  const orgSub = isPoddar ? 'Department of Technical & Higher Education' : 'Bharatpur Authorized Centre';
+
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col justify-between font-sans">
       {/* Top Branding Bar */}
-      <header className="bg-brand-700 text-white shadow-md">
+      <header className={isPoddar ? "bg-slate-900 text-white shadow-md border-b-2 border-amber-500" : "bg-brand-700 text-white shadow-md"}>
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link to="/" className="flex items-center space-x-3">
             <div className="bg-white px-2 py-1 rounded-md shadow-2xs">
-              <img src="/technoglobe_logo.png" alt="TechnoGlobe Logo" className="h-7 w-auto object-contain" />
+              <img src={orgLogo} alt={orgName} className="h-7 w-auto object-contain" />
             </div>
             <div>
-              <div className="font-serif font-bold text-sm tracking-wide text-white leading-tight">
-                TECHNOGLOBE
+              <div className="font-serif font-bold text-sm tracking-wide text-white leading-tight uppercase">
+                {isPoddar ? 'PODDAR COLLEGE' : 'TECHNOGLOBE'}
               </div>
-              <div className="text-[10px] text-gold-300 font-semibold uppercase tracking-wider">
-                Bharatpur Authorized Centre
+              <div className="text-[10px] text-amber-300 font-semibold uppercase tracking-wider">
+                {orgSub}
               </div>
             </div>
           </Link>
@@ -139,7 +148,7 @@ export const PublicVerifyPage: React.FC = () => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search Certificate No (e.g. TG-BPT-DA-2026-0001)"
+            placeholder="Search Certificate No (e.g. PCTM-DA-2026-0001 or TG-BPT-DA-2026-0001)"
             className="w-full text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none bg-transparent"
           />
           <button
@@ -161,15 +170,15 @@ export const PublicVerifyPage: React.FC = () => {
         {certData && (
           <div className="bg-white rounded-3xl border-2 border-emerald-500 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-300">
             {/* Verified Header Banner */}
-            <div className="bg-linear-to-r from-emerald-600 to-teal-700 text-white p-5 text-center relative overflow-hidden">
+            <div className={isPoddar ? "bg-linear-to-r from-slate-900 via-blue-950 to-slate-900 text-white p-5 text-center relative overflow-hidden border-b-2 border-amber-500" : "bg-linear-to-r from-emerald-600 to-teal-700 text-white p-5 text-center relative overflow-hidden"}>
               <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-white text-emerald-600 shadow-lg mb-2">
                 <ShieldCheck className="w-8 h-8" />
               </div>
               <h2 className="text-lg sm:text-xl font-serif font-black tracking-wide uppercase">
                 Official Credential Verified
               </h2>
-              <p className="text-xs text-emerald-100 font-medium mt-0.5">
-                TechnoGlobe IT Solutions Pvt. Ltd. — Bharatpur Centre
+              <p className="text-xs text-amber-200 font-medium mt-0.5">
+                {isPoddar ? 'Poddar College — Bharatpur, Rajasthan (Official Credential)' : 'TechnoGlobe IT Solutions Pvt. Ltd. — Bharatpur Centre'}
               </p>
               <div className="mt-2 inline-flex items-center space-x-1.5 px-3 py-1 bg-emerald-800/60 rounded-full border border-emerald-400/40 text-[11px] font-mono font-bold tracking-wider">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
@@ -184,7 +193,7 @@ export const PublicVerifyPage: React.FC = () => {
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">
                   Candidate Name
                 </span>
-                <span className="text-xl sm:text-2xl font-serif font-extrabold text-brand-900 uppercase tracking-wide">
+                <span className="text-xl sm:text-2xl font-serif font-extrabold text-slate-900 uppercase tracking-wide">
                   {certData.student_name}
                 </span>
                 <div className="text-xs text-slate-600 font-medium mt-1">
@@ -195,7 +204,7 @@ export const PublicVerifyPage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
                   <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1.5">
-                    <GraduationCap className="w-3.5 h-3.5 text-brand-600" />
+                    <GraduationCap className="w-3.5 h-3.5 text-blue-600" />
                     <span>Course Track</span>
                   </div>
                   <div className="text-sm font-bold text-slate-900 mt-1">
@@ -208,10 +217,10 @@ export const PublicVerifyPage: React.FC = () => {
 
                 <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
                   <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1.5">
-                    <Award className="w-3.5 h-3.5 text-gold-600" />
+                    <Award className="w-3.5 h-3.5 text-amber-600" />
                     <span>Certificate Number</span>
                   </div>
-                  <div className="text-sm font-mono font-bold text-brand-800 mt-1">
+                  <div className="text-sm font-mono font-bold text-slate-900 mt-1">
                     {certData.certificate_number}
                   </div>
                   <div className="text-[11px] font-mono text-slate-500">
@@ -235,13 +244,13 @@ export const PublicVerifyPage: React.FC = () => {
                 <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
                   <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1.5">
                     <Building2 className="w-3.5 h-3.5 text-purple-600" />
-                    <span>Centre Location</span>
+                    <span>Issuing Centre</span>
                   </div>
                   <div className="text-xs font-semibold text-slate-800 mt-1">
-                    Bharatpur Centre (BPT-01)
+                    {isPoddar ? 'Poddar College, Bharatpur' : 'Bharatpur Centre (TG-BPT)'}
                   </div>
                   <div className="text-[10px] text-slate-500 leading-tight">
-                    Poddar College, Bharatpur
+                    Centre Head: Nitin Sir
                   </div>
                 </div>
               </div>
@@ -255,13 +264,15 @@ export const PublicVerifyPage: React.FC = () => {
 
               {/* Verified Seal Footer */}
               <div className="pt-2 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-                <div className="flex items-center space-x-2">
-                  <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs">
-                    TG
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-9 h-9 rounded-lg bg-white border border-slate-200 p-1 flex items-center justify-center shrink-0 shadow-2xs">
+                    <img src={orgLogo} alt={orgName} className="max-h-full max-w-full object-contain" />
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-slate-900">TechnoGlobe IT Solutions Pvt. Ltd.</div>
-                    <div className="text-[10px] text-slate-500">Authorized Course-Based Training Credential</div>
+                    <div className="text-xs font-bold text-slate-900">{orgName}</div>
+                    <div className="text-[10px] text-slate-500">
+                      {isPoddar ? 'Official Academic Credential (Physical Stamp Validated)' : 'Authorized Course-Based Training Credential'}
+                    </div>
                   </div>
                 </div>
 
@@ -295,7 +306,7 @@ export const PublicVerifyPage: React.FC = () => {
 
       {/* Footer */}
       <footer className="bg-slate-800 text-slate-400 text-center py-4 px-4 text-xs">
-        <p>© 2026 TechnoGlobe IT Solutions Pvt. Ltd. — Bharatpur Centre. All rights reserved.</p>
+        <p>© 2026 {orgName}. All rights reserved.</p>
         <p className="text-[10px] text-slate-500 mt-0.5">
           Internal Course-Based Internship Documentation Management System
         </p>

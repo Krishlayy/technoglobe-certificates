@@ -57,6 +57,39 @@ def init_db():
     );
     """)
 
+    # 2.1 Institutions Table (Multi-Institution Support)
+    cursor.execute("PRAGMA table_info(institutions)")
+    cols = [r[1] for r in cursor.fetchall()]
+    if cols and "full_name" not in cols:
+        cursor.execute("DROP TABLE institutions")
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS institutions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        full_name TEXT NOT NULL,
+        tagline TEXT,
+        address TEXT NOT NULL,
+        affiliation_text TEXT,
+        website TEXT,
+        email TEXT,
+        phone TEXT,
+        logo_path TEXT NOT NULL,
+        primary_color TEXT DEFAULT '#0B2545',
+        secondary_color TEXT DEFAULT '#134074',
+        accent_color TEXT DEFAULT '#D4AF37',
+        signatory_name TEXT NOT NULL DEFAULT 'Nitin Sir',
+        signatory_designation TEXT NOT NULL DEFAULT 'Centre Head & Authorized Signatory',
+        stamp_mode TEXT NOT NULL DEFAULT 'DIGITAL_BADGE',
+        watermark_mode TEXT NOT NULL DEFAULT 'SEAL',
+        doc_prefix TEXT DEFAULT 'TG/BPT',
+        cert_prefix TEXT DEFAULT 'TG-BPT',
+        is_active INTEGER DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
     # 3. Courses
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS courses (
@@ -359,11 +392,18 @@ def init_db():
     );
     """)
 
+    # Column migrations
+    cursor.execute("PRAGMA table_info(internships)")
+    int_cols = [col[1] for col in cursor.fetchall()]
+    if "institution_id" not in int_cols:
+        cursor.execute("ALTER TABLE internships ADD COLUMN institution_id INTEGER DEFAULT 1")
+
     # Performance indexes
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_internships_student_id ON internships(student_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_internships_course_id ON internships(course_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_internships_mentor_id ON internships(mentor_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_internships_status ON internships(status)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_internships_institution_id ON internships(institution_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_certificates_internship_id ON certificates(internship_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_course_modules_course_id ON course_modules(course_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_attendance_internship_id ON attendance(internship_id)")

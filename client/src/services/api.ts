@@ -1,5 +1,5 @@
 import {
-  Student, Course, Mentor, Batch, CentreSettings,
+  Student, Course, Mentor, Batch, CentreSettings, Institution,
   ComplianceRecord, AttendanceRecord, DailyLogRecord, WeeklyReportRecord,
   ProjectRecord, EvaluationRecord, ComplianceCheckResult
 } from '../types';
@@ -37,12 +37,19 @@ export const api = {
     return res.json();
   },
 
+  // Institutions (Multi-Institution Support: TechnoGlobe & Poddar College)
+  getInstitutions: async (): Promise<Institution[]> => {
+    const res = await fetch(`${API_BASE}/institutions`);
+    return res.json();
+  },
+
   // Students
-  getStudents: async (params?: { search?: string; course?: string; status?: string }): Promise<Student[]> => {
+  getStudents: async (params?: { search?: string; course?: string; status?: string; institution_id?: number }): Promise<Student[]> => {
     const q = new URLSearchParams();
     if (params?.search) q.set('search', params.search);
     if (params?.course) q.set('course', params.course);
     if (params?.status) q.set('status', params.status);
+    if (params?.institution_id) q.set('institution_id', params.institution_id.toString());
     const res = await fetch(`${API_BASE}/students?${q.toString()}`);
     return res.json();
   },
@@ -301,6 +308,7 @@ export const api = {
 
   // Step-by-Step Quick Generator
   quickGenerateInternship: async (data: {
+    institution_id?: number;
     full_name: string;
     father_mother_name: string;
     dob?: string;

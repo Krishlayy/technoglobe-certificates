@@ -22,6 +22,22 @@ export interface CentreSettings {
   verification_base_url?: string;
 }
 
+export interface Institution {
+  id: number;
+  name: string;
+  code: string;
+  full_name: string;
+  address: string;
+  centre_head: string;
+  stamp_mode: string; // 'DIGITAL_BADGE' | 'EMPTY_INK_PAD_BOX'
+  cert_prefix: string;
+  logo_path: string;
+  watermark_path: string;
+  primary_color: string;
+  secondary_color: string;
+  is_active: number;
+}
+
 export interface Student {
   id: number;
   full_name: string;
@@ -45,6 +61,9 @@ export interface Student {
   internship_id?: number;
   internship_title?: string;
   internship_status?: string;
+  institution_id?: number;
+  institution_name?: string;
+  institution_code?: string;
   certificate_number?: string;
   verification_code?: string;
   course_name?: string;

@@ -9,16 +9,22 @@ export const StudentsPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [courseFilter, setCourseFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [institutionFilter, setInstitutionFilter] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadStudents();
-  }, [courseFilter, statusFilter]);
+  }, [courseFilter, statusFilter, institutionFilter]);
 
   const loadStudents = async () => {
     setLoading(true);
     try {
-      const data = await api.getStudents({ search, course: courseFilter, status: statusFilter });
+      const data = await api.getStudents({ 
+        search, 
+        course: courseFilter, 
+        status: statusFilter,
+        institution_id: institutionFilter ? Number(institutionFilter) : undefined 
+      });
       setStudents(data);
     } catch (err) {
       console.error(err);
@@ -40,7 +46,7 @@ export const StudentsPage: React.FC = () => {
             Student & Internship Directory
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Search, filter and manage registered candidates across Data Analytics and Digital Marketing tracks.
+            Search, filter and manage registered candidates across TechnoGlobe and Poddar College programs.
           </p>
         </div>
 
@@ -67,7 +73,17 @@ export const StudentsPage: React.FC = () => {
             />
           </form>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center flex-wrap gap-2">
+            <select
+              value={institutionFilter}
+              onChange={(e) => setInstitutionFilter(e.target.value)}
+              className="px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 font-medium"
+            >
+              <option value="">All Institutions</option>
+              <option value="1">TechnoGlobe (TG)</option>
+              <option value="2">Poddar College (PODDAR)</option>
+            </select>
+
             <select
               value={courseFilter}
               onChange={(e) => setCourseFilter(e.target.value)}
@@ -76,6 +92,13 @@ export const StudentsPage: React.FC = () => {
               <option value="">All Courses</option>
               <option value="DA">Data Analytics (DA)</option>
               <option value="DM">Digital Marketing (DM)</option>
+              <option value="FS">Full Stack Web (FS)</option>
+              <option value="AI">Python AI & ML (AI)</option>
+              <option value="CS">Cyber Security (CS)</option>
+              <option value="CC">Cloud & DevOps (CC)</option>
+              <option value="JV">Java Enterprise (JV)</option>
+              <option value="BI">Bioinformatics (BI)</option>
+              <option value="AD">Android Apps (AD)</option>
             </select>
 
             <select
@@ -85,7 +108,7 @@ export const StudentsPage: React.FC = () => {
             >
               <option value="">All Statuses</option>
               <option value="REGISTERED">Registered</option>
-              <option value="TRAINING">In Training</option>
+              <option value="IN_PROGRESS">In Training</option>
               <option value="CERTIFIED">Certified & Finalized</option>
             </select>
           </div>
@@ -97,7 +120,7 @@ export const StudentsPage: React.FC = () => {
             <thead className="bg-slate-100/70 text-slate-600 font-semibold uppercase tracking-wider text-[10px] border-b border-slate-200">
               <tr>
                 <th className="py-3 px-4">Candidate & Roll No</th>
-                <th className="py-3 px-4">College & Branch</th>
+                <th className="py-3 px-4">Institution & College</th>
                 <th className="py-3 px-4">Enrolled Course</th>
                 <th className="py-3 px-4">Dates</th>
                 <th className="py-3 px-4">Mentor</th>
@@ -109,7 +132,7 @@ export const StudentsPage: React.FC = () => {
               {students.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-10 text-center text-slate-400">
-                    No student records found. Click "Register New Student" to enroll.
+                    No student records found. Click "Register New Student" or use Step-by-Step Generator.
                   </td>
                 </tr>
               ) : (
@@ -130,7 +153,16 @@ export const StudentsPage: React.FC = () => {
                     </td>
 
                     <td className="py-3 px-4">
-                      <div className="font-medium text-slate-800">{st.college_name}</div>
+                      <div className="flex items-center space-x-1.5 mb-0.5">
+                        <span className={`inline-block px-1.5 py-0.2 rounded text-[9px] font-extrabold border ${
+                          st.institution_code === 'PODDAR' || st.institution_id === 2
+                            ? 'bg-amber-100 text-amber-900 border-amber-300'
+                            : 'bg-blue-100 text-blue-900 border-blue-300'
+                        }`}>
+                          {st.institution_code || (st.institution_id === 2 ? 'PODDAR' : 'TG')}
+                        </span>
+                        <span className="font-medium text-slate-800 truncate max-w-[180px]">{st.college_name}</span>
+                      </div>
                       <div className="text-[11px] text-slate-400">{st.degree} ({st.branch})</div>
                     </td>
 

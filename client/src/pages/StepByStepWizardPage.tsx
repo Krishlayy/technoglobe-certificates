@@ -110,6 +110,41 @@ const FACULTY_MEMBERS = [
   }
 ];
 
+const INSTITUTIONS = [
+  {
+    id: 1,
+    code: 'TG',
+    name: 'TechnoGlobe',
+    fullName: 'TechnoGlobe IT Solutions Pvt. Ltd.',
+    subTitle: 'Premier IT Training & Industrial Internship Partner',
+    location: 'Bharatpur Centre (TG-BPT), Rajasthan',
+    badge: 'ISO 9001:2015 Certified Partner',
+    stampType: 'Digital Gold Foil Seal Badge',
+    watermarkType: 'TechnoGlobe Seal Watermark',
+    centerHead: 'Nitin Sir (Centre Head)',
+    prefix: 'TG-BPT',
+    logo: '/technoglobe_logo.png',
+    borderSelected: 'border-blue-600 ring-2 ring-blue-500/20 bg-blue-50/70',
+    badgeClass: 'bg-blue-100 text-blue-800 border-blue-200'
+  },
+  {
+    id: 2,
+    code: 'PODDAR',
+    name: 'Poddar College',
+    fullName: 'Poddar College, Bharatpur',
+    subTitle: 'Department of Technical & Higher Education (Direct College Credential)',
+    location: 'Bharatpur, Rajasthan (No Affiliation Added)',
+    badge: 'Bharatpur Campus',
+    stampType: 'Empty Box for Physical Ink Stamping',
+    watermarkType: 'Poddar College Crest Watermark',
+    centerHead: 'Nitin Sir (Centre Head)',
+    prefix: 'PCTM',
+    logo: '/poddar_logo.png',
+    borderSelected: 'border-amber-600 ring-2 ring-amber-500/20 bg-amber-50/70',
+    badgeClass: 'bg-amber-100 text-amber-900 border-amber-200'
+  }
+];
+
 export const StepByStepWizardPage: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [generating, setGenerating] = useState<boolean>(false);
@@ -118,6 +153,9 @@ export const StepByStepWizardPage: React.FC = () => {
 
   // Form State with Sensible Autofill Defaults
   const [formData, setFormData] = useState({
+    // Organization Selection: 1 = TechnoGlobe, 2 = Poddar College
+    institution_id: 2,
+
     // Step 1: Student Information
     full_name: '',
     father_mother_name: '',
@@ -148,6 +186,15 @@ export const StepByStepWizardPage: React.FC = () => {
     evaluation_score: 94,
     mentor_remarks: 'Demonstrated exemplary technical aptitude, consistency, and professional work ethic throughout the 6-week internship.'
   });
+
+  const handleInstitutionChange = (instId: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      institution_id: instId,
+      college_name: instId === 2 ? 'Poddar College, Bharatpur' : 'TechnoGlobe Centre / Partner College, Bharatpur',
+      address: instId === 2 ? 'Poddar College Campus, Bharatpur' : 'TechnoGlobe IT Solutions, Bharatpur'
+    }));
+  };
 
   const handleTrackChange = (trackCode: string) => {
     const trackObj = COURSE_TRACKS.find(t => t.code === trackCode);
@@ -345,10 +392,10 @@ export const StepByStepWizardPage: React.FC = () => {
             <div>
               <h2 className="text-lg font-bold text-slate-900 flex items-center space-x-2">
                 <span className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">1</span>
-                <span>Enter Student Information (Mandatory Details)</span>
+                <span>Select Organization & Enter Student Information</span>
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Type candidate details. College is fixed to Poddar College, Bharatpur. All academic credentials propagate cleanly.
+                Choose between TechnoGlobe (IT Partner) or Poddar College (Direct Credential), then enter student particulars.
               </p>
             </div>
             <span className="text-xs font-bold px-3 py-1 rounded-full bg-blue-100 text-blue-800">
@@ -356,7 +403,75 @@ export const StepByStepWizardPage: React.FC = () => {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Organization / Institution Selector Cards */}
+          <div className="space-y-2">
+            <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-700">
+              Issuing Organization / Institution Profile *
+            </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {INSTITUTIONS.map((inst) => {
+                const isSelected = formData.institution_id === inst.id;
+                return (
+                  <div
+                    key={inst.id}
+                    onClick={() => handleInstitutionChange(inst.id)}
+                    className={`p-4 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
+                      isSelected
+                        ? inst.borderSelected + ' shadow-xs'
+                        : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-12 h-12 rounded-lg bg-white border border-slate-200 p-1.5 flex items-center justify-center shrink-0 shadow-2xs">
+                          <img
+                            src={inst.logo}
+                            alt={inst.name}
+                            className="max-h-full max-w-full object-contain"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <h3 className="font-bold text-slate-950 text-base">{inst.name}</h3>
+                            <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${inst.badgeClass}`}>
+                              {inst.code}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-600 font-medium leading-snug">{inst.subTitle}</p>
+                        </div>
+                      </div>
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-1 ${
+                        isSelected ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-300'
+                      }`}>
+                        {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-200/80 grid grid-cols-2 gap-2 text-[11px] text-slate-600">
+                      <div>
+                        <span className="text-slate-400 block text-[9px] uppercase font-bold">Stamp Style</span>
+                        <span className="font-semibold text-slate-800">{inst.stampType}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[9px] uppercase font-bold">Watermark</span>
+                        <span className="font-semibold text-slate-800">{inst.watermarkType}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[9px] uppercase font-bold">Centre Head</span>
+                        <span className="font-semibold text-slate-800">{inst.centerHead}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[9px] uppercase font-bold">Cert Prefix</span>
+                        <span className="font-mono font-bold text-brand-700">{inst.prefix}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
             {/* Full Name */}
             <div>
               <label className={labelStyle}>
@@ -421,19 +536,25 @@ export const StepByStepWizardPage: React.FC = () => {
               />
             </div>
 
-            {/* College (Read Only) */}
+            {/* College */}
             <div>
-              <label className={labelStyle}>College / Institution (Fixed)</label>
+              <label className={labelStyle}>
+                College / Institution Name ({formData.institution_id === 2 ? 'Poddar College' : 'TechnoGlobe Centre'}) *
+              </label>
               <div className="relative">
                 <input
                   type="text"
-                  readOnly
                   value={formData.college_name}
-                  className="w-full px-4 py-3 text-base font-semibold text-slate-800 bg-slate-100 border-2 border-slate-300 rounded-lg cursor-not-allowed"
+                  onChange={(e) => setFormData({ ...formData, college_name: e.target.value })}
+                  className={inputStyle}
                 />
                 <Building2 className="w-5 h-5 text-slate-400 absolute right-3.5 top-3.5" />
               </div>
-              <p className="text-[11px] text-slate-500 mt-1">Authorized franchise partner college in Bharatpur.</p>
+              <p className="text-[11px] text-slate-500 mt-1">
+                {formData.institution_id === 2
+                  ? 'Poddar College, Bharatpur (Direct College Credential, No Affiliation line).'
+                  : 'TechnoGlobe authorized franchise centre in Bharatpur.'}
+              </p>
             </div>
 
             {/* Degree */}
@@ -788,13 +909,17 @@ export const StepByStepWizardPage: React.FC = () => {
             </div>
 
             <div>
-              <label className={labelStyle}>College Compliance Status</label>
+              <label className={labelStyle}>Institutional Compliance Status</label>
               <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-900 text-sm font-semibold flex items-center space-x-2">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                <span>APPROVED by Poddar College, Bharatpur (Ref: PC/INT/2026/042)</span>
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                <span>
+                  APPROVED by {formData.institution_id === 2 ? 'Poddar College, Bharatpur (Ref: PC/INT/2026/042)' : 'TechnoGlobe IT Solutions Centre (Ref: TG/BPT/2026/088)'}
+                </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Faculty coordinator: Prof. Anjali Mathur. Designated sign/stamp box provided.
+                {formData.institution_id === 2
+                  ? 'Faculty coordinator: Prof. Anjali Mathur. Designated ink-stamp box provided for physical stamping.'
+                  : 'Authorized centre supervisor: Nitin Sir. Digital gold foil seal and ISO 9001:2015 certification applied.'}
               </p>
             </div>
 
@@ -848,7 +973,9 @@ export const StepByStepWizardPage: React.FC = () => {
             <div className="space-y-1">
               <div className="inline-flex items-center space-x-1.5 px-3 py-0.5 rounded-full bg-emerald-800/60 text-emerald-100 text-xs font-bold uppercase tracking-wider">
                 <CheckCircle2 className="w-4 h-4 text-emerald-300" />
-                <span>Generation Complete & Verified</span>
+                <span>
+                  {generationResult.institution_name || (formData.institution_id === 2 ? 'Poddar College' : 'TechnoGlobe')} — Package Complete & Verified
+                </span>
               </div>
               <h2 className="text-2xl font-bold">
                 Internship Package Ready for {generationResult.student_name}
