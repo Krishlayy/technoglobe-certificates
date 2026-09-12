@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   CalendarCheck, Clock, CheckCircle2, XCircle, AlertCircle, 
-  RotateCcw, Sliders, CheckSquare, Sparkles, User, ArrowRight
+  RotateCcw, Sliders, CheckSquare, Sparkles, User, ArrowRight, Layers
 } from 'lucide-react';
 import { api } from '../services/api';
 import { Student, AttendanceRecord } from '../types';
@@ -166,6 +167,32 @@ export const AttendancePage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
+      {/* Bulk Batch Callout Banner */}
+      <div className="p-4 bg-gradient-to-r from-indigo-900 via-indigo-950 to-slate-900 rounded-2xl text-white flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md border border-indigo-500/20">
+        <div className="flex items-center space-x-3">
+          <div className="p-2.5 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-400/20">
+            <Layers className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center space-x-2">
+              <span className="font-bold text-sm text-white">Need to Generate Attendance for 50+ Students at once?</span>
+              <span className="text-[10px] bg-amber-400 text-slate-950 font-black px-2 py-0.5 rounded-full uppercase">NEW</span>
+            </div>
+            <p className="text-xs text-slate-300 mt-0.5">
+              Use the Multi-Student Batch Attendance Generator to configure 50 working days, customize attendance % (100% = 0 absences), and export Master Register PDFs.
+            </p>
+          </div>
+        </div>
+
+        <Link
+          to="/bulk-attendance"
+          className="px-4 py-2 rounded-xl text-xs font-bold bg-amber-400 hover:bg-amber-300 text-slate-950 transition flex items-center space-x-1.5 shrink-0 shadow-sm"
+        >
+          <span>Open Bulk Batch Generator</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </Link>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

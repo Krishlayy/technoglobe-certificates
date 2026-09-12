@@ -8,6 +8,7 @@ import { NewStudentPage } from './pages/NewStudentPage';
 import { StudentDetailPage } from './pages/StudentDetailPage';
 import { CoursesPage } from './pages/CoursesPage';
 import { AttendancePage } from './pages/AttendancePage';
+import { BulkAttendancePage } from './pages/BulkAttendancePage';
 import { DailyLogsPage } from './pages/DailyLogsPage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { CertificatesPage } from './pages/CertificatesPage';
@@ -51,6 +52,7 @@ export function App() {
             <Route path="students/:id" element={<StudentDetailPage />} />
             <Route path="courses" element={<CoursesPage />} />
             <Route path="attendance" element={<AttendancePage />} />
+            <Route path="bulk-attendance" element={<BulkAttendancePage />} />
             <Route path="daily-logs" element={<DailyLogsPage />} />
             <Route path="projects" element={<ProjectsPage />} />
             <Route path="certificates" element={<CertificatesPage />} />

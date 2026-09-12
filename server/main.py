@@ -703,6 +703,195 @@ def save_attendance(id: int, item: AttendanceItem, user = Depends(get_current_us
     return {"success": True}
 
 # -------------------------------------------------------------
+# 9B. Bulk & Multi-Student Batch Attendance Engine (50+ Students)
+# -------------------------------------------------------------
+class BulkAttendanceStudentItem(BaseModel):
+    full_name: str
+    father_mother_name: Optional[str] = "Father Name"
+    roll_no: Optional[str] = None
+    college_name: Optional[str] = "Poddar College, Bharatpur"
+    degree: Optional[str] = "BCA"
+    branch: Optional[str] = "Computer Science"
+    attendance_pct: float = 100.0
+
+class BulkAttendanceRequest(BaseModel):
+    institution_id: int = 1  # 1: TechnoGlobe, 2: Poddar College
+    course_track: str = "DA"  # DA, DM, FS, AI, CS, CC, JV, BI, AD, or Custom
+    custom_track_name: Optional[str] = None
+    total_days: int = 50
+    start_date: str = "2026-06-01"
+    start_time: str = "10:00 AM"
+    end_time: str = "01:30 PM"
+    daily_hours: float = 3.5
+    mentor_id: Optional[int] = 1
+    mentor_name: Optional[str] = None
+    mentor_designation: Optional[str] = None
+    students: List[BulkAttendanceStudentItem]
+
+@app.post("/api/attendance/bulk-generate-preview")
+def bulk_generate_attendance_preview(req: BulkAttendanceRequest):
+    """
+    Computes day-by-day attendance schedules for all students in the batch and returns JSON preview data.
+    """
+    if not req.students:
+        raise HTTPException(status_code=400, detail="Student roster cannot be empty.")
+    
+    working_days = pdf_service.compute_batch_working_days(req.start_date, req.total_days)
+    topics = pdf_service.get_batch_track_topics(req.course_track, req.total_days)
+    inst = pdf_service.resolve_institution_profile(req.institution_id)
+    
+    students_data = [
+        pdf_service.compute_batch_student_attendance(
+            s.dict(), working_days, topics, req.start_time, req.end_time, req.daily_hours
+        )
+        for s in req.students
+    ]
+
+    return {
+        "institution": inst,
+        "batch_meta": {
+            "course_track": req.course_track,
+            "custom_track_name": req.custom_track_name or f"Course-Based Internship ({req.course_track})",
+            "total_days": req.total_days,
+            "start_date": req.start_date,
+            "end_date": working_days[-1]["date"] if working_days else req.start_date,
+            "start_time": req.start_time,
+            "end_time": req.end_time,
+            "daily_hours": req.daily_hours,
+            "total_students": len(students_data)
+        },
+        "working_days": working_days,
+        "students": students_data
+    }
+
+@app.post("/api/attendance/bulk-generate-pdf")
+def bulk_generate_attendance_pdf(req: BulkAttendanceRequest):
+    """
+    Generates and returns Master Batch Attendance Register (Landscape A4 PDF).
+    """
+    if not req.students:
+        raise HTTPException(status_code=400, detail="Student roster cannot be empty.")
+    
+    batch_meta = req.dict(exclude={"students"})
+    students_list = [s.dict() for s in req.students]
+    
+    filepath = pdf_service.generate_master_batch_attendance_pdf(batch_meta, students_list)
+    return FileResponse(filepath, media_type="application/pdf", filename=os.path.basename(filepath))
+
+@app.post("/api/attendance/bulk-generate-zip")
+def bulk_generate_attendance_zip(req: BulkAttendanceRequest):
+    """
+    Generates and returns complete Batch Attendance ZIP Archive.
+    """
+    if not req.students:
+        raise HTTPException(status_code=400, detail="Student roster cannot be empty.")
+    
+    batch_meta = req.dict(exclude={"students"})
+    students_list = [s.dict() for s in req.students]
+    
+    zip_path = pdf_service.generate_batch_attendance_zip_bundle(batch_meta, students_list)
+    return FileResponse(zip_path, media_type="application/zip", filename=os.path.basename(zip_path))
+
+@app.post("/api/attendance/bulk-enroll-and-save")
+def bulk_enroll_students(req: BulkAttendanceRequest, user = Depends(get_current_user)):
+    """
+    Bulk enrolls all students from the batch into the system database.
+    Creates Student, Internship, Compliance, Projects, and daily Attendance records for each student.
+    """
+    if not req.students:
+        raise HTTPException(status_code=400, detail="Student roster cannot be empty.")
+    
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Track / Course resolution
+    track = req.course_track.upper()
+    cursor.execute("SELECT * FROM courses WHERE code = ?", (track,))
+    c_row = cursor.fetchone()
+    if not c_row:
+        cursor.execute("SELECT * FROM courses ORDER BY id ASC LIMIT 1")
+        c_row = cursor.fetchone()
+    c_row = dict(c_row)
+    course_id = c_row["id"]
+    course_title = req.custom_track_name or c_row["title"]
+
+    mentor_id = req.mentor_id or 1
+
+    working_days = pdf_service.compute_batch_working_days(req.start_date, req.total_days)
+    end_date = working_days[-1]["date"] if working_days else req.start_date
+    topics = pdf_service.get_batch_track_topics(req.course_track, req.total_days)
+
+    enrolled_ids = []
+
+    for s_idx, stu in enumerate(req.students, 1):
+        clean_name = stu.full_name.strip()
+        father = stu.father_mother_name.strip() if stu.father_mother_name else "Father Name"
+        email = f"{clean_name.lower().replace(' ', '.')}_{s_idx}@poddar.edu"
+        college = stu.college_name or "Poddar College, Bharatpur"
+        deg = stu.degree or "BCA"
+        branch = stu.branch or "Computer Science"
+
+        cursor.execute("""
+        INSERT INTO students (
+            full_name, father_mother_name, dob, gender, mobile, email, address, city, state,
+            college_name, degree, branch, semester_year, academic_session, is_demo
+        ) VALUES (?, ?, '2004-06-15', 'Male', ?, ?, 'Campus Roster', 'Bharatpur', 'Rajasthan', ?, ?, ?, '6th Semester', '2025-2026', 0)
+        """, (clean_name, father, f"98290{s_idx:05d}", email, college, deg, branch))
+        student_id = cursor.lastrowid
+
+        cursor.execute("""
+        INSERT INTO internships (
+            student_id, course_id, batch_id, mentor_id, institution_id, internship_title, internship_type,
+            start_date, end_date, total_days, total_training_hours, mode, status, is_locked
+        ) VALUES (?, ?, 1, ?, ?, ?, 'Course-Based Internship', ?, ?, ?, ?, 'Offline', 'IN_PROGRESS', 0)
+        """, (
+            student_id, course_id, mentor_id, req.institution_id, course_title,
+            req.start_date, end_date, req.total_days, int(req.total_days * req.daily_hours)
+        ))
+        internship_id = cursor.lastrowid
+
+        cursor.execute("""
+        INSERT INTO compliance_records (
+            internship_id, university_name, department, approval_status,
+            required_duration, required_hours, required_attendance_pct, checklist_json
+        ) VALUES (?, ?, ?, 'APPROVED', ?, ?, 75.0, '{}')
+        """, (internship_id, college, f"Department of {branch}", f"{req.total_days // 6} Weeks", int(req.total_days * req.daily_hours)))
+
+        cursor.execute("""
+        INSERT INTO projects (internship_id, project_title, fields_json, status)
+        VALUES (?, ?, '{}', 'IN_PROGRESS')
+        """, (internship_id, f"{c_row['name']} Capstone Project"))
+
+        # Compute student schedule and insert attendance
+        computed = pdf_service.compute_batch_student_attendance(
+            stu.dict(), working_days, topics, req.start_time, req.end_time, req.daily_hours
+        )
+        for r in computed["records"]:
+            cursor.execute("""
+            INSERT INTO attendance (internship_id, date, day_of_week, start_time, end_time, total_hours, topic_covered, status, student_signed, mentor_signed, remarks)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 'Batch attendance logged.')
+            """, (internship_id, r["date"], r["day_of_week"], r["start_time"], r["end_time"], r["total_hours"], r["topic_covered"], r["status"]))
+
+        enrolled_ids.append(internship_id)
+
+    conn.commit()
+    conn.close()
+
+    log_audit("BULK_BATCH_ENROLLED", "BATCH", 1, {
+        "total_students": len(enrolled_ids),
+        "institution_id": req.institution_id,
+        "track": req.course_track,
+        "total_days": req.total_days
+    })
+
+    return {
+        "success": True,
+        "enrolled_count": len(enrolled_ids),
+        "internship_ids": enrolled_ids,
+        "message": f"Successfully enrolled {len(enrolled_ids)} students with {req.total_days} days attendance roster."
+    }
+
+# -------------------------------------------------------------
 # 10. Daily Logs CRUD
 # -------------------------------------------------------------
 class DailyLogItem(BaseModel):

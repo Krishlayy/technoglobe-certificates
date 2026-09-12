@@ -3,13 +3,14 @@ import { NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, Users, UserPlus, CalendarCheck, BookOpen, 
   FolderKanban, Award, ShieldCheck, Settings, History, FileText,
-  GraduationCap, Database, LayoutTemplate, Wand2
+  GraduationCap, Database, LayoutTemplate, Wand2, Layers
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
   const navItems = [
     { to: "/", icon: LayoutDashboard, label: "Admin Dashboard", end: true },
     { to: "/wizard", icon: Wand2, label: "Step-by-Step Generator", isSpecial: true },
+    { to: "/bulk-attendance", icon: Layers, label: "Bulk Batch Attendance (50+)", isSpecial: true },
     { to: "/students", icon: Users, label: "Student Directory" },
     { to: "/students/new", icon: UserPlus, label: "Register New Student" },
     { to: "/courses", icon: GraduationCap, label: "Course Curriculums" },

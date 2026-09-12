@@ -342,5 +342,93 @@ export const api = {
       throw new Error(err.detail || 'Failed to quickly generate internship documentation package');
     }
     return res.json();
+  },
+
+  // Bulk & Multi-Student Batch Attendance Engine (50+ Students)
+  bulkAttendancePreview: async (data: {
+    institution_id: number;
+    course_track: string;
+    custom_track_name?: string;
+    total_days: number;
+    start_date: string;
+    start_time?: string;
+    end_time?: string;
+    daily_hours?: number;
+    mentor_id?: number;
+    students: Array<{
+      full_name: string;
+      father_mother_name?: string;
+      roll_no?: string;
+      college_name?: string;
+      degree?: string;
+      branch?: string;
+      attendance_pct: number;
+    }>;
+  }) => {
+    const res = await fetch(`${API_BASE}/attendance/bulk-generate-preview`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to generate bulk attendance preview');
+    }
+    return res.json();
+  },
+
+  downloadMasterAttendancePdf: async (data: any) => {
+    const res = await fetch(`${API_BASE}/attendance/bulk-generate-pdf`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to generate Master Batch Attendance PDF');
+    }
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Master_Batch_Attendance_Register_${data.total_days}Days.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  },
+
+  downloadBatchAttendanceZip: async (data: any) => {
+    const res = await fetch(`${API_BASE}/attendance/bulk-generate-zip`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to generate Batch Attendance ZIP Package');
+    }
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Batch_Attendance_Package_${data.total_days}Days_${data.students?.length || 0}Students.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  },
+
+  bulkEnrollStudents: async (data: any) => {
+    const res = await fetch(`${API_BASE}/attendance/bulk-enroll-and-save`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to bulk enroll students');
+    }
+    return res.json();
   }
 };
