@@ -726,6 +726,8 @@ class BulkAttendanceRequest(BaseModel):
     mentor_id: Optional[int] = 1
     mentor_name: Optional[str] = None
     mentor_designation: Optional[str] = None
+    selected_day: Optional[int] = 1
+    layout_mode: Optional[str] = "1_page_per_day"  # "1_page_per_day" or "2_pages_per_day"
     students: List[BulkAttendanceStudentItem]
 
 @app.post("/api/attendance/bulk-generate-preview")
@@ -758,7 +760,8 @@ def bulk_generate_attendance_preview(req: BulkAttendanceRequest):
             "start_time": req.start_time,
             "end_time": req.end_time,
             "daily_hours": req.daily_hours,
-            "total_students": len(students_data)
+            "total_students": len(students_data),
+            "layout_mode": req.layout_mode or "1_page_per_day"
         },
         "working_days": working_days,
         "students": students_data
@@ -778,10 +781,41 @@ def bulk_generate_attendance_pdf(req: BulkAttendanceRequest):
     filepath = pdf_service.generate_master_batch_attendance_pdf(batch_meta, students_list)
     return FileResponse(filepath, media_type="application/pdf", filename=os.path.basename(filepath))
 
+@app.post("/api/attendance/daily-day-pdf")
+def generate_daily_day_pdf(req: BulkAttendanceRequest):
+    """
+    Generates and returns official A4 Portrait Daily Attendance Sheet for a single day (e.g. Day 1).
+    """
+    if not req.students:
+        raise HTTPException(status_code=400, detail="Student roster cannot be empty.")
+    
+    batch_meta = req.dict(exclude={"students"})
+    students_list = [s.dict() for s in req.students]
+    day_num = req.selected_day or 1
+    layout = req.layout_mode or "1_page_per_day"
+    
+    filepath = pdf_service.generate_daily_day_attendance_pdf(day_num, batch_meta, students_list, layout_mode=layout)
+    return FileResponse(filepath, media_type="application/pdf", filename=os.path.basename(filepath))
+
+@app.post("/api/attendance/daily-book-pdf")
+def generate_daily_book_pdf(req: BulkAttendanceRequest):
+    """
+    Generates and returns All-Days Daily Batch Attendance Register Book PDF (A4 format).
+    """
+    if not req.students:
+        raise HTTPException(status_code=400, detail="Student roster cannot be empty.")
+    
+    batch_meta = req.dict(exclude={"students"})
+    students_list = [s.dict() for s in req.students]
+    layout = req.layout_mode or "1_page_per_day"
+    
+    filepath = pdf_service.generate_all_daily_batch_attendance_book_pdf(batch_meta, students_list, layout_mode=layout)
+    return FileResponse(filepath, media_type="application/pdf", filename=os.path.basename(filepath))
+
 @app.post("/api/attendance/bulk-generate-zip")
 def bulk_generate_attendance_zip(req: BulkAttendanceRequest):
     """
-    Generates and returns complete Batch Attendance ZIP Archive.
+    Generates and returns complete Batch Attendance ZIP Archive (All Daily Sheets + Master Book + Matrix + CSV).
     """
     if not req.students:
         raise HTTPException(status_code=400, detail="Student roster cannot be empty.")
@@ -1892,6 +1926,164 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
         "zip_url": f"/api/documents/{internship_id}/package-zip",
         "cert_pdf_url": f"/api/documents/{internship_id}/certificate/pdf",
         "report_pdf_url": f"/api/documents/{internship_id}/consolidated/pdf"
+    }
+
+# -------------------------------------------------------------
+# 14.5 Bulk Attendance Management & Day-Wise Daily Sheets
+# -------------------------------------------------------------
+class BulkAttendanceStudent(BaseModel):
+    full_name: str
+    father_mother_name: Optional[str] = "Father Name"
+    roll_no: Optional[str] = ""
+    college_name: Optional[str] = "Poddar College, Bharatpur"
+    degree: Optional[str] = "BCA"
+    branch: Optional[str] = "Computer Science"
+    attendance_pct: float = 100.0
+
+class BulkAttendanceRequest(BaseModel):
+    institution_id: Optional[int] = 1
+    course_track: str = "DA"
+    custom_track_name: Optional[str] = None
+    total_days: int = 50
+    start_date: str = "2026-06-01"
+    start_time: str = "10:00 AM"
+    end_time: str = "01:30 PM"
+    daily_hours: float = 3.5
+    mentor_id: Optional[int] = 1
+    selected_day: Optional[int] = 1
+    layout_mode: Optional[str] = "1_page_per_day"
+    students: List[BulkAttendanceStudent]
+
+@app.post("/api/attendance/bulk-generate-preview")
+def bulk_generate_attendance_preview(req: BulkAttendanceRequest):
+    track_code = req.course_track.upper()
+    working_days = pdf_service.compute_batch_working_days(req.start_date, req.total_days)
+    topics = pdf_service.get_batch_track_topics(track_code, req.total_days)
+    
+    inst = pdf_service.resolve_institution_profile(req.institution_id or 1)
+
+    students_list = [s.dict() for s in req.students]
+    computed_students = [
+        pdf_service.compute_batch_student_attendance(s, working_days, topics, req.start_time, req.end_time, req.daily_hours)
+        for s in students_list
+    ]
+
+    return {
+        "institution": inst,
+        "course_track": track_code,
+        "custom_track_name": req.custom_track_name or f"Course-Based Internship ({track_code})",
+        "total_days": req.total_days,
+        "start_date": req.start_date,
+        "working_days": working_days,
+        "topics": topics,
+        "students": computed_students
+    }
+
+@app.post("/api/attendance/bulk-generate-pdf")
+def bulk_generate_master_attendance_pdf(req: BulkAttendanceRequest):
+    students_list = [s.dict() for s in req.students]
+    pdf_path = pdf_service.generate_master_batch_attendance_pdf(req.dict(), students_list)
+    if not os.path.exists(pdf_path):
+        raise HTTPException(status_code=500, detail="Failed to generate Master PDF")
+    return FileResponse(pdf_path, media_type="application/pdf", filename=os.path.basename(pdf_path))
+
+@app.post("/api/attendance/daily-day-pdf")
+def generate_daily_day_attendance_pdf_route(req: BulkAttendanceRequest):
+    students_list = [s.dict() for s in req.students]
+    day_num = req.selected_day or 1
+    layout_mode = req.layout_mode or "1_page_per_day"
+    pdf_path = pdf_service.generate_daily_day_attendance_pdf(day_num, req.dict(), students_list, layout_mode=layout_mode)
+    if not os.path.exists(pdf_path):
+        raise HTTPException(status_code=500, detail="Failed to generate Daily Day Sheet PDF")
+    return FileResponse(pdf_path, media_type="application/pdf", filename=os.path.basename(pdf_path))
+
+@app.post("/api/attendance/daily-book-pdf")
+def generate_daily_book_attendance_pdf_route(req: BulkAttendanceRequest):
+    students_list = [s.dict() for s in req.students]
+    layout_mode = req.layout_mode or "1_page_per_day"
+    pdf_path = pdf_service.generate_all_daily_batch_attendance_book_pdf(req.dict(), students_list, layout_mode=layout_mode)
+    if not os.path.exists(pdf_path):
+        raise HTTPException(status_code=500, detail="Failed to generate Daily Attendance Register Book PDF")
+    return FileResponse(pdf_path, media_type="application/pdf", filename=os.path.basename(pdf_path))
+
+@app.post("/api/attendance/bulk-generate-zip")
+def bulk_generate_attendance_zip(req: BulkAttendanceRequest):
+    students_list = [s.dict() for s in req.students]
+    zip_path = pdf_service.generate_batch_attendance_zip_bundle(req.dict(), students_list)
+    if not os.path.exists(zip_path):
+        raise HTTPException(status_code=500, detail="Failed to generate Attendance ZIP bundle")
+    return FileResponse(zip_path, media_type="application/zip", filename=os.path.basename(zip_path))
+
+@app.post("/api/attendance/bulk-enroll-and-save")
+def bulk_enroll_and_save_students(req: BulkAttendanceRequest, user = Depends(get_current_user)):
+    conn = get_db()
+    cursor = conn.cursor()
+
+    track = req.course_track.upper()
+    cursor.execute("SELECT id, name FROM courses WHERE code = ?", (track,))
+    c_row = cursor.fetchone()
+    course_id = c_row["id"] if c_row else 1
+    course_name = c_row["name"] if c_row else "Data Analytics"
+
+    working_days = pdf_service.compute_batch_working_days(req.start_date, req.total_days)
+    topics = pdf_service.get_batch_track_topics(track, req.total_days)
+    end_date = working_days[-1]["date"] if working_days else req.start_date
+
+    inst_id = req.institution_id or 1
+    cursor.execute("SELECT * FROM institutions WHERE id = ?", (inst_id,))
+    inst = dict(cursor.fetchone() or {})
+    mentor_id = req.mentor_id or 1
+
+    enrolled_ids = []
+    for idx, s in enumerate(req.students, 1):
+        clean_name = s.full_name.strip()
+        email = f"{clean_name.lower().replace(' ', '.')}{idx}@example.com"
+        cursor.execute("""
+        INSERT INTO students (
+            full_name, father_mother_name, dob, gender, mobile, email, address, city, state,
+            college_name, degree, branch, semester_year, academic_session, is_demo
+        ) VALUES (?, ?, '2004-05-15', 'Male', '9876543210', ?, 'Bharatpur, Rajasthan', 'Bharatpur', 'Rajasthan',
+                  ?, ?, ?, 'VI Semester', '2025-2026', 0)
+        """, (clean_name, s.father_mother_name or "Father Name", email, s.college_name or "Poddar College, Bharatpur", s.degree or "BCA", s.branch or "CS"))
+        student_id = cursor.lastrowid
+
+        cursor.execute("""
+        INSERT INTO internships (
+            student_id, course_id, batch_id, mentor_id, institution_id, internship_title, internship_type,
+            start_date, end_date, total_days, total_training_hours, mode, status, is_locked
+        ) VALUES (?, ?, 1, ?, ?, ?, 'Course-Based Internship', ?, ?, ?, ?, 'Offline', 'IN_PROGRESS', 0)
+        """, (student_id, course_id, mentor_id, inst_id, req.custom_track_name or course_name, req.start_date, end_date, req.total_days, req.total_days * req.daily_hours))
+        internship_id = cursor.lastrowid
+        enrolled_ids.append(internship_id)
+
+        # Compute attendance
+        stu_computed = pdf_service.compute_batch_student_attendance(s.dict(), working_days, topics, req.start_time, req.end_time, req.daily_hours)
+        for rec in stu_computed["records"]:
+            cursor.execute("""
+            INSERT INTO attendance (internship_id, date, day_of_week, start_time, end_time, total_hours, topic_covered, status, student_signed, mentor_signed)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                internship_id, rec["date"], rec["day_of_week"], rec["start_time"], rec["end_time"],
+                rec["hours"], rec["topic"], rec["status"],
+                1 if rec["status"] == "PRESENT" else 0,
+                1
+            ))
+
+    conn.commit()
+    conn.close()
+
+    log_audit("BULK_ENROLL", "BATCH", 1, {
+        "track": track,
+        "institution_id": inst_id,
+        "count": len(enrolled_ids),
+        "total_days": req.total_days
+    })
+
+    return {
+        "success": True,
+        "enrolled_count": len(enrolled_ids),
+        "internship_ids": enrolled_ids,
+        "message": f"Successfully enrolled {len(enrolled_ids)} students and recorded day-wise attendance for {req.total_days} days."
     }
 
 # -------------------------------------------------------------

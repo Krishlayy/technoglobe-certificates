@@ -4,7 +4,7 @@ import {
   Users, Calendar, Clock, Download, FileText, CheckCircle2, 
   Sparkles, Sliders, Plus, Trash2, ArrowRight, Building2, 
   RefreshCw, CheckSquare, Layers, FileSpreadsheet, Archive,
-  ShieldCheck, AlertCircle, Award, UserCheck, X
+  ShieldCheck, AlertCircle, Award, UserCheck, X, BookOpen, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -59,21 +59,27 @@ export const BulkAttendancePage: React.FC = () => {
   const [dailyHours, setDailyHours] = useState<number>(3.5);
   const [mentorId, setMentorId] = useState<number>(1);
 
-  // 3. Students list
+  // 3. Daily Day-Wise Sheet Configuration (1 or 2 pages per day)
+  const [selectedDay, setSelectedDay] = useState<number>(1);
+  const [layoutMode, setLayoutMode] = useState<'1_page_per_day' | '2_pages_per_day'>('1_page_per_day');
+
+  // 4. Students list
   const [students, setStudents] = useState<BatchStudent[]>([]);
 
-  // 4. View Mode: 'roster' | 'preview'
-  const [activeTab, setActiveTab] = useState<'roster' | 'preview'>('roster');
+  // 5. View Mode: 'roster' | 'daily_sheet' | 'matrix_preview'
+  const [activeTab, setActiveTab] = useState<'roster' | 'daily_sheet' | 'matrix_preview'>('daily_sheet');
 
-  // 5. Preview response state
+  // 6. Preview response state
   const [previewData, setPreviewData] = useState<any>(null);
   const [loadingPreview, setLoadingPreview] = useState<boolean>(false);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState<boolean>(false);
+  const [isGeneratingDailyBook, setIsGeneratingDailyBook] = useState<boolean>(false);
+  const [isGeneratingDayPdf, setIsGeneratingDayPdf] = useState<boolean>(false);
+  const [isGeneratingMatrixPdf, setIsGeneratingMatrixPdf] = useState<boolean>(false);
   const [isGeneratingZip, setIsGeneratingZip] = useState<boolean>(false);
   const [isEnrolling, setIsEnrolling] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
 
-  // 6. Bulk Quick Paste Modal State
+  // 7. Bulk Quick Paste Modal State
   const [showPasteModal, setShowPasteModal] = useState<boolean>(false);
   const [pasteText, setPasteText] = useState<string>('');
 
@@ -188,7 +194,30 @@ export const BulkAttendancePage: React.FC = () => {
     setStatusMessage({ type: 'success', text: `Successfully imported ${parsedList.length} students from pasted text!` });
   };
 
-  const fetchLivePreview = async () => {
+  const getCommonPayload = () => ({
+    institution_id: institutionId,
+    course_track: courseTrack,
+    custom_track_name: courseTrack === 'CUSTOM' ? customTrackName : undefined,
+    total_days: Number(totalDays),
+    start_date: startDate,
+    start_time: startTime,
+    end_time: endTime,
+    daily_hours: Number(dailyHours),
+    mentor_id: mentorId,
+    selected_day: Number(selectedDay),
+    layout_mode: layoutMode,
+    students: students.map(s => ({
+      full_name: s.full_name,
+      father_mother_name: s.father_mother_name,
+      roll_no: s.roll_no,
+      college_name: s.college_name,
+      degree: s.degree,
+      branch: s.branch,
+      attendance_pct: Number(s.attendance_pct)
+    }))
+  });
+
+  const fetchLivePreview = async (targetTab?: 'daily_sheet' | 'matrix_preview') => {
     if (students.length === 0) {
       setStatusMessage({ type: 'error', text: 'Please add at least one student to generate attendance.' });
       return;
@@ -196,30 +225,10 @@ export const BulkAttendancePage: React.FC = () => {
     setLoadingPreview(true);
     setStatusMessage(null);
     try {
-      const payload = {
-        institution_id: institutionId,
-        course_track: courseTrack,
-        custom_track_name: courseTrack === 'CUSTOM' ? customTrackName : undefined,
-        total_days: Number(totalDays),
-        start_date: startDate,
-        start_time: startTime,
-        end_time: endTime,
-        daily_hours: Number(dailyHours),
-        mentor_id: mentorId,
-        students: students.map(s => ({
-          full_name: s.full_name,
-          father_mother_name: s.father_mother_name,
-          roll_no: s.roll_no,
-          college_name: s.college_name,
-          degree: s.degree,
-          branch: s.branch,
-          attendance_pct: Number(s.attendance_pct)
-        }))
-      };
-      const data = await api.bulkAttendancePreview(payload);
+      const data = await api.bulkAttendancePreview(getCommonPayload());
       setPreviewData(data);
-      setActiveTab('preview');
-      setStatusMessage({ type: 'success', text: `Generated day-wise schedule for ${data.students.length} students across ${data.working_days.length} working days!` });
+      if (targetTab) setActiveTab(targetTab);
+      setStatusMessage({ type: 'success', text: `Calculated day-wise schedule for ${data.students.length} students across ${data.working_days.length} working days!` });
     } catch (e: any) {
       setStatusMessage({ type: 'error', text: e.message || 'Failed to generate preview' });
     } finally {
@@ -227,65 +236,55 @@ export const BulkAttendancePage: React.FC = () => {
     }
   };
 
-  const handleDownloadMasterPdf = async () => {
+  // 1. Download Single Day Sheet (Day X A4 PDF)
+  const handleDownloadDayPdf = async () => {
     if (students.length === 0) return;
-    setIsGeneratingPdf(true);
+    setIsGeneratingDayPdf(true);
     try {
-      const payload = {
-        institution_id: institutionId,
-        course_track: courseTrack,
-        custom_track_name: courseTrack === 'CUSTOM' ? customTrackName : undefined,
-        total_days: Number(totalDays),
-        start_date: startDate,
-        start_time: startTime,
-        end_time: endTime,
-        daily_hours: Number(dailyHours),
-        mentor_id: mentorId,
-        students: students.map(s => ({
-          full_name: s.full_name,
-          father_mother_name: s.father_mother_name,
-          roll_no: s.roll_no,
-          college_name: s.college_name,
-          degree: s.degree,
-          branch: s.branch,
-          attendance_pct: Number(s.attendance_pct)
-        }))
-      };
-      await api.downloadMasterAttendancePdf(payload);
-      setStatusMessage({ type: 'success', text: 'Master Batch Attendance Register PDF downloaded successfully!' });
+      await api.downloadDailyDayPdf(getCommonPayload());
+      setStatusMessage({ type: 'success', text: `Daily Attendance Sheet for Day ${selectedDay} (A4 PDF) downloaded successfully!` });
     } catch (e: any) {
-      setStatusMessage({ type: 'error', text: e.message || 'Failed to download PDF' });
+      setStatusMessage({ type: 'error', text: e.message || 'Failed to download Day PDF' });
     } finally {
-      setIsGeneratingPdf(false);
+      setIsGeneratingDayPdf(false);
     }
   };
 
+  // 2. Download Complete All-Days Daily Register Book (A4 PDF - 1 or 2 pages per day)
+  const handleDownloadDailyBookPdf = async () => {
+    if (students.length === 0) return;
+    setIsGeneratingDailyBook(true);
+    try {
+      await api.downloadDailyBookPdf(getCommonPayload());
+      setStatusMessage({ type: 'success', text: `All-Days Daily Attendance Register Book (${totalDays} Days, A4 Format) downloaded successfully!` });
+    } catch (e: any) {
+      setStatusMessage({ type: 'error', text: e.message || 'Failed to download Daily Book PDF' });
+    } finally {
+      setIsGeneratingDailyBook(false);
+    }
+  };
+
+  // 3. Download Master Matrix PDF (Landscape A4)
+  const handleDownloadMatrixPdf = async () => {
+    if (students.length === 0) return;
+    setIsGeneratingMatrixPdf(true);
+    try {
+      await api.downloadMasterAttendancePdf(getCommonPayload());
+      setStatusMessage({ type: 'success', text: 'Master Batch Attendance Matrix (Landscape PDF) downloaded successfully!' });
+    } catch (e: any) {
+      setStatusMessage({ type: 'error', text: e.message || 'Failed to download Matrix PDF' });
+    } finally {
+      setIsGeneratingMatrixPdf(false);
+    }
+  };
+
+  // 4. Download Complete ZIP Package
   const handleDownloadZip = async () => {
     if (students.length === 0) return;
     setIsGeneratingZip(true);
     try {
-      const payload = {
-        institution_id: institutionId,
-        course_track: courseTrack,
-        custom_track_name: courseTrack === 'CUSTOM' ? customTrackName : undefined,
-        total_days: Number(totalDays),
-        start_date: startDate,
-        start_time: startTime,
-        end_time: endTime,
-        daily_hours: Number(dailyHours),
-        mentor_id: mentorId,
-        students: students.map(s => ({
-          full_name: s.full_name,
-          father_mother_name: s.father_mother_name,
-          roll_no: s.roll_no,
-          college_name: s.college_name,
-          degree: s.degree,
-          branch: s.branch,
-          attendance_pct: Number(s.attendance_pct)
-        }))
-      };
-      await api.downloadBatchAttendanceZip(payload);
-      setStatusMessage({ type: 'success', text: `Complete Batch ZIP Package (${students.length} individual PDFs + Master PDF + CSV) downloaded!` });
+      await api.downloadBatchAttendanceZip(getCommonPayload());
+      setStatusMessage({ type: 'success', text: `Complete Batch ZIP Package (All ${totalDays} Daily Sheets + Master Book + Matrix + CSV) downloaded!` });
     } catch (e: any) {
       setStatusMessage({ type: 'error', text: e.message || 'Failed to download ZIP bundle' });
     } finally {
@@ -293,6 +292,7 @@ export const BulkAttendancePage: React.FC = () => {
     }
   };
 
+  // 5. Bulk Enroll to Database
   const handleBulkEnroll = async () => {
     if (students.length === 0) return;
     if (!window.confirm(`Are you sure you want to enroll all ${students.length} students into the system database? This will create complete student profiles and day-wise attendance records.`)) {
@@ -300,27 +300,7 @@ export const BulkAttendancePage: React.FC = () => {
     }
     setIsEnrolling(true);
     try {
-      const payload = {
-        institution_id: institutionId,
-        course_track: courseTrack,
-        custom_track_name: courseTrack === 'CUSTOM' ? customTrackName : undefined,
-        total_days: Number(totalDays),
-        start_date: startDate,
-        start_time: startTime,
-        end_time: endTime,
-        daily_hours: Number(dailyHours),
-        mentor_id: mentorId,
-        students: students.map(s => ({
-          full_name: s.full_name,
-          father_mother_name: s.father_mother_name,
-          roll_no: s.roll_no,
-          college_name: s.college_name,
-          degree: s.degree,
-          branch: s.branch,
-          attendance_pct: Number(s.attendance_pct)
-        }))
-      };
-      const res = await api.bulkEnrollStudents(payload);
+      const res = await api.bulkEnrollStudents(getCommonPayload());
       setStatusMessage({ type: 'success', text: res.message || `Enrolled ${res.enrolled_count} students successfully!` });
     } catch (e: any) {
       setStatusMessage({ type: 'error', text: e.message || 'Failed to enroll students' });
@@ -329,11 +309,14 @@ export const BulkAttendancePage: React.FC = () => {
     }
   };
 
+  // Calculations
   const avgAttendance = students.length > 0 
     ? (students.reduce((sum, s) => sum + Number(s.attendance_pct || 0), 0) / students.length).toFixed(1)
     : '0';
 
   const count100 = students.filter(s => Number(s.attendance_pct) === 100).length;
+
+  const currentDayInfo = previewData?.working_days?.[selectedDay - 1];
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -344,14 +327,14 @@ export const BulkAttendancePage: React.FC = () => {
           <div>
             <div className="flex items-center space-x-2 text-indigo-400 text-xs font-bold uppercase tracking-wider mb-1">
               <Layers className="w-4 h-4" />
-              <span>Multi-Student Batch Generator</span>
+              <span>Day-Wise Daily Attendance Sheets (1–2 Sheets per Day)</span>
               <span className="bg-amber-400 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-extrabold">NEW</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">
-              Bulk Batch Attendance Generator (50+ Students)
+              Bulk Batch Daily Attendance Generator (50+ Students)
             </h1>
             <p className="text-sm text-slate-300 mt-1 max-w-3xl">
-              Configure day-wise attendance for 50 or more students across any customizable timeline (50 days, 36 days, 60 days). Configure individual attendance percentages (100% = 0 absences) with dual institutional branding for TechnoGlobe and Poddar College, Bharatpur.
+              Generate official A4 day-wise attendance sheets (1 or 2 sheets per day) for 50+ students across all 50 days with daily practical topics, verified student signatures, mentor signs, and Nitin Sir's seal/stamp for TechnoGlobe & Poddar College.
             </p>
           </div>
 
@@ -428,7 +411,7 @@ export const BulkAttendancePage: React.FC = () => {
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-slate-600 bg-white/80 p-2.5 rounded-lg border border-slate-100">
               <div><span className="font-semibold text-slate-700">Seal:</span> Digital Gold Seal</div>
-              <div><span className="font-semibold text-slate-700">Ref Code:</span> TG/BPT/BATCH</div>
+              <div><span className="font-semibold text-slate-700">Ref Code:</span> TG/BPT/DAILY-ATT</div>
               <div><span className="font-semibold text-slate-700">Theme:</span> Deep Navy & Gold</div>
               <div><span className="font-semibold text-slate-700">Signatory:</span> Nitin Sir</div>
             </div>
@@ -460,18 +443,18 @@ export const BulkAttendancePage: React.FC = () => {
             <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-slate-600 bg-white/80 p-2.5 rounded-lg border border-slate-100">
               <div><span className="font-semibold text-slate-700">Seal:</span> Physical Ink Stamp Box</div>
               <div><span className="font-semibold text-slate-700">Watermark:</span> Poddar Crest</div>
-              <div><span className="font-semibold text-slate-700">Ref Code:</span> PCTM/BPT/BATCH</div>
+              <div><span className="font-semibold text-slate-700">Ref Code:</span> PCTM/BPT/DAILY-ATT</div>
               <div><span className="font-semibold text-slate-700">Signatory:</span> Nitin Sir</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 2. Batch Timeline & Schedule Configuration */}
+      {/* 2. Batch Track, Timeline & Layout Mode */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
         <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 flex items-center space-x-2">
           <Calendar className="w-4 h-4 text-indigo-600" />
-          <span>Step 2: Batch Track & Working Days Configuration</span>
+          <span>Step 2: Batch Schedule & Daily Sheet Layout Mode</span>
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -503,7 +486,7 @@ export const BulkAttendancePage: React.FC = () => {
           {/* Number of Working Days */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-700">Working Days</label>
+              <label className="text-xs font-bold text-slate-700">Total Working Days</label>
               <span className="text-xs font-extrabold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
                 {totalDays} Days
               </span>
@@ -532,6 +515,39 @@ export const BulkAttendancePage: React.FC = () => {
             </div>
           </div>
 
+          {/* Daily Sheet Layout Mode (1 page vs 2 pages per day) */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-700">A4 Daily Sheet Layout Mode</label>
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                type="button"
+                onClick={() => setLayoutMode('1_page_per_day')}
+                className={`px-2 py-2 rounded-lg text-[11px] font-bold border transition text-center ${
+                  layoutMode === '1_page_per_day'
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                1 Page / Day
+                <div className="text-[9px] font-normal opacity-90">Compact A4</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setLayoutMode('2_pages_per_day')}
+                className={`px-2 py-2 rounded-lg text-[11px] font-bold border transition text-center ${
+                  layoutMode === '2_pages_per_day'
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                2 Pages / Day
+                <div className="text-[9px] font-normal opacity-90">Spacious (25+25)</div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2 border-t border-slate-100">
           {/* Start Date */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-700">Start Date</label>
@@ -539,13 +555,10 @@ export const BulkAttendancePage: React.FC = () => {
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full text-xs font-medium px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full text-xs font-medium px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-md"
             />
-            <p className="text-[10px] text-slate-500">Skips Sundays automatically</p>
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2 border-t border-slate-100">
           {/* Timings */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-700">Daily Session Timings</label>
@@ -566,21 +579,6 @@ export const BulkAttendancePage: React.FC = () => {
                 className="w-1/2 text-xs px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-md"
               />
             </div>
-          </div>
-
-          {/* Daily Hours */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700">Daily Hours Logged</label>
-            <input
-              type="number"
-              step="0.5"
-              min="1"
-              max="8"
-              value={dailyHours}
-              onChange={(e) => setDailyHours(Number(e.target.value))}
-              className="w-full text-xs px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-md"
-            />
-            <p className="text-[10px] text-slate-500">Total: {totalDays * dailyHours} structured training hrs</p>
           </div>
 
           {/* Supervising Mentor */}
@@ -607,11 +605,28 @@ export const BulkAttendancePage: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Main Roster & Preview Tabs */}
+      {/* 3. Main Views (Daily Sheet Preview vs Roster Editor vs Master Matrix) */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        {/* Navigation Tabs & Bulk Actions */}
+        {/* Tab Switcher & Presets */}
         <div className="bg-slate-50 p-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Tab 1: Daily Day Sheet */}
+            <button
+              onClick={() => {
+                setActiveTab('daily_sheet');
+                if (!previewData) fetchLivePreview('daily_sheet');
+              }}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center space-x-2 ${
+                activeTab === 'daily_sheet'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>Daily Day Sheet (A4 Sheet View)</span>
+            </button>
+
+            {/* Tab 2: Student Roster Editor */}
             <button
               onClick={() => setActiveTab('roster')}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center space-x-2 ${
@@ -621,20 +636,23 @@ export const BulkAttendancePage: React.FC = () => {
               }`}
             >
               <Users className="w-3.5 h-3.5" />
-              <span>Student Roster Editor ({students.length})</span>
+              <span>Edit Student Roster ({students.length})</span>
             </button>
 
+            {/* Tab 3: Master Matrix Preview */}
             <button
-              onClick={fetchLivePreview}
-              disabled={loadingPreview}
+              onClick={() => {
+                setActiveTab('matrix_preview');
+                if (!previewData) fetchLivePreview('matrix_preview');
+              }}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center space-x-2 ${
-                activeTab === 'preview'
+                activeTab === 'matrix_preview'
                   ? 'bg-indigo-600 text-white shadow-sm'
                   : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
               }`}
             >
-              {loadingPreview ? <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-600" /> : <Calendar className="w-3.5 h-3.5 text-indigo-600" />}
-              <span>Live Day-Wise Matrix Preview</span>
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Full Master Matrix (D1..D{totalDays})</span>
             </button>
           </div>
 
@@ -650,23 +668,9 @@ export const BulkAttendancePage: React.FC = () => {
 
             <button
               onClick={() => setAllAttendance(100)}
-              className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition flex items-center space-x-1"
+              className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition"
             >
-              <span>💯 Set All 100%</span>
-            </button>
-
-            <button
-              onClick={() => setAllAttendance(95)}
-              className="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition"
-            >
-              Set 95%
-            </button>
-
-            <button
-              onClick={randomizeAttendance}
-              className="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition"
-            >
-              🎲 Randomize (90-100%)
+              💯 Set All 100%
             </button>
 
             <button
@@ -676,18 +680,199 @@ export const BulkAttendancePage: React.FC = () => {
               <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-600" />
               <span>Paste 50 Names</span>
             </button>
-
-            <button
-              onClick={handleAddStudent}
-              className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-900 hover:bg-slate-800 text-white transition flex items-center space-x-1"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add</span>
-            </button>
           </div>
         </div>
 
-        {/* Tab 1: Student Roster Grid */}
+        {/* TAB 1: DAILY DAY SHEET (A4 SINGLE DAY VIEW) */}
+        {activeTab === 'daily_sheet' && (
+          <div className="p-5 space-y-4">
+            {/* Day Selector Bar */}
+            <div className="p-4 bg-slate-900 text-white rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => setSelectedDay(Math.max(1, selectedDay - 1))}
+                  disabled={selectedDay <= 1}
+                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 disabled:opacity-40 transition"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <div className="text-center">
+                  <span className="text-[10px] uppercase font-bold text-amber-400">Inspecting Day</span>
+                  <div className="text-lg font-black text-white">
+                    Day {selectedDay} <span className="text-xs font-normal text-slate-400">of {totalDays}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedDay(Math.min(totalDays, selectedDay + 1))}
+                  disabled={selectedDay >= totalDays}
+                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 disabled:opacity-40 transition"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Day Slider */}
+              <div className="flex-1 max-w-md mx-2">
+                <input
+                  type="range"
+                  min={1}
+                  max={totalDays}
+                  value={selectedDay}
+                  onChange={(e) => setSelectedDay(Number(e.target.value))}
+                  className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-400"
+                />
+                <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                  <span>Day 1 (Start)</span>
+                  <span>Day {Math.round(totalDays / 2)}</span>
+                  <span>Day {totalDays} (Final)</span>
+                </div>
+              </div>
+
+              {/* Day Quick Download Button */}
+              <button
+                onClick={handleDownloadDayPdf}
+                disabled={isGeneratingDayPdf || students.length === 0}
+                className="px-4 py-2 rounded-lg text-xs font-bold bg-amber-400 hover:bg-amber-300 text-slate-950 transition flex items-center space-x-1.5 shadow-sm disabled:opacity-50"
+              >
+                {isGeneratingDayPdf ? <RefreshCw className="w-3.5 h-3.5 animate-spin text-slate-950" /> : <Download className="w-3.5 h-3.5 text-slate-950" />}
+                <span>Download Day {selectedDay} Sheet (PDF)</span>
+              </button>
+            </div>
+
+            {/* Simulated A4 Daily Sheet Preview */}
+            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-300 shadow-inner">
+              <div className="bg-white max-w-4xl mx-auto p-8 rounded-xl shadow-md border border-slate-200 text-slate-800 space-y-4">
+                {/* Header in Sheet */}
+                <div className="text-center pb-3 border-b-2 border-indigo-900 space-y-0.5">
+                  <h2 className="text-base font-black text-slate-900 uppercase tracking-wide">
+                    {institutionId === 2 ? 'PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT' : 'TECHNOGLOBE IT SOLUTIONS PVT. LTD.'}
+                  </h2>
+                  <p className="text-xs font-bold text-indigo-700">
+                    {institutionId === 2 ? 'PODDAR COLLEGE — BHARATPUR, RAJASTHAN' : 'TECHNOGLOBE – BHARATPUR CENTRE'}
+                  </p>
+                  <p className="text-[10px] text-slate-500">
+                    {institutionId === 2 ? 'Bharatpur, Rajasthan' : 'Bharatpur Centre, Rajasthan'} | Official Daily Batch Attendance Sheet
+                  </p>
+                </div>
+
+                {/* Day Banner & Metadata */}
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1.5 text-xs">
+                  <div className="flex items-center justify-between font-bold text-slate-800">
+                    <span className="text-indigo-950 uppercase tracking-wider text-xs">
+                      Daily Attendance Register — Day {selectedDay} of {totalDays}
+                    </span>
+                    <span className="text-slate-600">
+                      Date: {currentDayInfo ? `${currentDayInfo.date} (${currentDayInfo.day_of_week})` : startDate}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-[11px] text-slate-600 pt-1 border-t border-slate-200">
+                    <div><span className="font-semibold text-slate-800">Program:</span> {courseTrack}</div>
+                    <div><span className="font-semibold text-slate-800">Timing:</span> {startTime} - {endTime} ({dailyHours}h)</div>
+                    <div><span className="font-semibold text-slate-800">Mentor:</span> {mentorId === 1 ? 'Prof. Krishlay Sharma' : 'Prof. Rahul Bhatnagar'}</div>
+                  </div>
+                  <div className="text-[11px] bg-indigo-50/70 p-2 rounded border border-indigo-100">
+                    <span className="font-bold text-indigo-950">Today's Topic & Practical Lab:</span>{' '}
+                    <span className="text-indigo-800 font-medium">
+                      {previewData ? (previewData.students[0]?.records[selectedDay - 1]?.topic_covered || 'Practical Lab Activity') : 'Advanced Topic / Practical Activity'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Roster for Day X */}
+                <div className="overflow-x-auto rounded-lg border border-slate-200">
+                  <table className="w-full text-left border-collapse text-[11px]">
+                    <thead>
+                      <tr className="bg-slate-900 text-white font-bold text-[10px]">
+                        <th className="py-1.5 px-2 w-8 text-center">#</th>
+                        <th className="py-1.5 px-2 w-24">Roll / ID</th>
+                        <th className="py-1.5 px-2 min-w-[140px]">Student Full Name</th>
+                        <th className="py-1.5 px-2 w-28">Father's Name</th>
+                        <th className="py-1.5 px-2 w-20 text-center">Status</th>
+                        <th className="py-1.5 px-2 w-24 text-center">Student Signature</th>
+                        <th className="py-1.5 px-2 w-20 text-center">Mentor Sign</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {students.slice(0, layoutMode === '2_pages_per_day' ? 25 : 50).map((stu, sIdx) => {
+                        const targetAtt = stu.attendance_pct;
+                        const is100 = targetAtt === 100;
+                        let isPresentOnThisDay = true;
+                        if (!is100 && previewData) {
+                          const stuRec = previewData.students[sIdx]?.records[selectedDay - 1];
+                          isPresentOnThisDay = stuRec?.short_status === 'P';
+                        }
+
+                        return (
+                          <tr key={stu.id} className="hover:bg-slate-50/60">
+                            <td className="py-1 px-2 text-center text-slate-400 font-mono text-[10px]">{sIdx + 1}</td>
+                            <td className="py-1 px-2 font-mono text-[10px] text-slate-600">{stu.roll_no}</td>
+                            <td className="py-1 px-2 font-bold text-slate-800">{stu.full_name}</td>
+                            <td className="py-1 px-2 text-slate-600">{stu.father_mother_name}</td>
+                            <td className="py-1 px-2 text-center">
+                              {isPresentOnThisDay ? (
+                                <span className="font-extrabold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px]">
+                                  PRESENT
+                                </span>
+                              ) : (
+                                <span className="font-extrabold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded text-[10px]">
+                                  LEAVE
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-1 px-2 text-center italic text-slate-500 text-[10px]">
+                              {isPresentOnThisDay ? 'Verified (Signed)' : 'On Leave'}
+                            </td>
+                            <td className="py-1 px-2 text-center italic text-slate-500 text-[10px]">
+                              {isPresentOnThisDay ? 'Verified' : 'Approved'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {layoutMode === '2_pages_per_day' && students.length > 25 && (
+                  <p className="text-center text-[10px] text-slate-400 italic">
+                    (Showing Students 1 to 25 for Page 1 of Day {selectedDay}. Students 26 to 50 appear on Page 2).
+                  </p>
+                )}
+
+                {/* Signature Box in Sheet */}
+                <div className="grid grid-cols-3 gap-3 pt-3 border-t border-slate-200 text-center text-xs">
+                  <div className="p-3 bg-slate-50 rounded border border-slate-200 space-y-1">
+                    <span className="font-bold text-slate-800 text-[11px]">Supervising Faculty</span>
+                    <div className="pt-4 text-[10px] text-slate-500">
+                      <b>{mentorId === 1 ? 'Prof. Krishlay Sharma' : 'Prof. Rahul Bhatnagar'}</b><br/>
+                      (Verified Signature)
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-slate-50 rounded border border-slate-200 space-y-1">
+                    <span className="font-bold text-slate-800 text-[11px]">Institutional Seal</span>
+                    <div className="pt-2 text-[10px] text-slate-500">
+                      {institutionId === 2 ? (
+                        <span className="font-mono text-[9px] text-slate-600">[ OFFICIAL COLLEGE SEAL ]<br/>(Apply Ink Stamp)</span>
+                      ) : (
+                        <span className="font-bold text-[9px] text-amber-800">★ TECHNOGLOBE SEAL ★<br/>ISO 9001:2015</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-slate-50 rounded border border-slate-200 space-y-1">
+                    <span className="font-bold text-slate-800 text-[11px]">Authorized Signatory</span>
+                    <div className="pt-4 text-[10px] text-slate-500">
+                      <b>Nitin Sir</b><br/>
+                      (Centre Head & Signatory)
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: EDIT STUDENT ROSTER */}
         {activeTab === 'roster' && (
           <div className="p-4 space-y-4">
             {/* Summary Strip */}
@@ -705,12 +890,12 @@ export const BulkAttendancePage: React.FC = () => {
                 <p className="text-xl font-black text-blue-800">{avgAttendance}%</p>
               </div>
               <div className="p-3 bg-indigo-50 rounded-xl border border-indigo-200">
-                <span className="text-[10px] font-bold uppercase text-indigo-600">Total Working Days</span>
+                <span className="text-[10px] font-bold uppercase text-indigo-600">Total Scheduled Days</span>
                 <p className="text-xl font-black text-indigo-800">{totalDays} Days</p>
               </div>
             </div>
 
-            {/* Students Table */}
+            {/* Table */}
             <div className="overflow-x-auto rounded-xl border border-slate-200">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
@@ -816,135 +1001,124 @@ export const BulkAttendancePage: React.FC = () => {
           </div>
         )}
 
-        {/* Tab 2: Live Day-Wise Matrix Preview */}
-        {activeTab === 'preview' && (
+        {/* TAB 3: FULL MASTER MATRIX */}
+        {activeTab === 'matrix_preview' && (
           <div className="p-4 space-y-4">
             {previewData ? (
-              <>
-                <div className="p-4 bg-slate-900 text-white rounded-xl flex flex-wrap items-center justify-between gap-4">
-                  <div>
-                    <h3 className="text-sm font-bold">
-                      {previewData.institution.full_name} — Master Attendance Register Preview
-                    </h3>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      Batch: {previewData.batch_meta.custom_track_name} | {previewData.working_days.length} Working Days ({previewData.batch_meta.start_date} to {previewData.batch_meta.end_date})
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-3 text-xs">
-                    <span className="flex items-center space-x-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span><span>P = Present</span></span>
-                    <span className="flex items-center space-x-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span><span>L = Leave</span></span>
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto rounded-xl border border-slate-200 max-h-[500px]">
-                  <table className="w-full text-left border-collapse text-[11px]">
-                    <thead className="sticky top-0 z-10">
-                      <tr className="bg-slate-900 text-white font-bold">
-                        <th className="py-2 px-2.5 w-8 text-center border-r border-slate-700">#</th>
-                        <th className="py-2 px-2.5 w-24 border-r border-slate-700">Roll No</th>
-                        <th className="py-2 px-2.5 min-w-[140px] border-r border-slate-700">Student Name</th>
-                        {previewData.working_days.map((d: any) => (
-                          <th key={d.day_number} className="py-1 px-1.5 text-center min-w-[28px] border-r border-slate-700 text-[10px]">
-                            D{d.day_number}
-                            <div className="text-[8px] font-normal text-slate-400">{d.short_date}</div>
-                          </th>
-                        ))}
-                        <th className="py-2 px-2 text-center w-12 border-r border-slate-700">Pres</th>
-                        <th className="py-2 px-2 text-center w-12 border-r border-slate-700">Leave</th>
-                        <th className="py-2 px-2 text-center w-12 border-r border-slate-700">Hours</th>
-                        <th className="py-2 px-2 text-center w-14">Att %</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      {previewData.students.map((stu: any, sIdx: number) => (
-                        <tr key={sIdx} className="hover:bg-slate-50 transition">
-                          <td className="py-1.5 px-2 text-center text-slate-400 font-mono text-[10px] border-r border-slate-200">{sIdx + 1}</td>
-                          <td className="py-1.5 px-2 font-mono text-[10px] text-slate-600 border-r border-slate-200">{stu.roll_no}</td>
-                          <td className="py-1.5 px-2 font-bold text-slate-800 border-r border-slate-200">{stu.full_name}</td>
-                          {stu.records.map((r: any, rIdx: number) => (
-                            <td key={rIdx} className="py-1 px-1 text-center border-r border-slate-200">
-                              {r.short_status === 'P' ? (
-                                <span className="font-extrabold text-emerald-600">P</span>
-                              ) : (
-                                <span className="font-extrabold text-amber-600">L</span>
-                              )}
-                            </td>
-                          ))}
-                          <td className="py-1.5 px-2 text-center font-bold text-slate-800 border-r border-slate-200">{stu.present_days}</td>
-                          <td className="py-1.5 px-2 text-center text-slate-600 border-r border-slate-200">{stu.leave_days}</td>
-                          <td className="py-1.5 px-2 text-center text-slate-600 border-r border-slate-200">{stu.total_hours_logged}h</td>
-                          <td className="py-1.5 px-2 text-center font-bold">
-                            <span className={stu.attendance_pct_actual >= 90 ? 'text-emerald-700' : 'text-amber-700'}>
-                              {stu.attendance_pct_actual}%
-                            </span>
-                          </td>
-                        </tr>
+              <div className="overflow-x-auto rounded-xl border border-slate-200 max-h-[500px]">
+                <table className="w-full text-left border-collapse text-[11px]">
+                  <thead className="sticky top-0 z-10">
+                    <tr className="bg-slate-900 text-white font-bold">
+                      <th className="py-2 px-2.5 w-8 text-center border-r border-slate-700">#</th>
+                      <th className="py-2 px-2.5 w-24 border-r border-slate-700">Roll No</th>
+                      <th className="py-2 px-2.5 min-w-[140px] border-r border-slate-700">Student Name</th>
+                      {previewData.working_days.map((d: any) => (
+                        <th key={d.day_number} className="py-1 px-1.5 text-center min-w-[28px] border-r border-slate-700 text-[10px]">
+                          D{d.day_number}
+                          <div className="text-[8px] font-normal text-slate-400">{d.short_date}</div>
+                        </th>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
+                      <th className="py-2 px-2 text-center w-12 border-r border-slate-700">Pres</th>
+                      <th className="py-2 px-2 text-center w-12 border-r border-slate-700">Leave</th>
+                      <th className="py-2 px-2 text-center w-12 border-r border-slate-700">Hours</th>
+                      <th className="py-2 px-2 text-center w-14">Att %</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {previewData.students.map((stu: any, sIdx: number) => (
+                      <tr key={sIdx} className="hover:bg-slate-50 transition">
+                        <td className="py-1.5 px-2 text-center text-slate-400 font-mono text-[10px] border-r border-slate-200">{sIdx + 1}</td>
+                        <td className="py-1.5 px-2 font-mono text-[10px] text-slate-600 border-r border-slate-200">{stu.roll_no}</td>
+                        <td className="py-1.5 px-2 font-bold text-slate-800 border-r border-slate-200">{stu.full_name}</td>
+                        {stu.records.map((r: any, rIdx: number) => (
+                          <td key={rIdx} className="py-1 px-1 text-center border-r border-slate-200">
+                            {r.short_status === 'P' ? (
+                              <span className="font-extrabold text-emerald-600">P</span>
+                            ) : (
+                              <span className="font-extrabold text-amber-600">L</span>
+                            )}
+                          </td>
+                        ))}
+                        <td className="py-1.5 px-2 text-center font-bold text-slate-800 border-r border-slate-200">{stu.present_days}</td>
+                        <td className="py-1.5 px-2 text-center text-slate-600 border-r border-slate-200">{stu.leave_days}</td>
+                        <td className="py-1.5 px-2 text-center text-slate-600 border-r border-slate-200">{stu.total_hours_logged}h</td>
+                        <td className="py-1.5 px-2 text-center font-bold">
+                          <span className={stu.attendance_pct_actual >= 90 ? 'text-emerald-700' : 'text-amber-700'}>
+                            {stu.attendance_pct_actual}%
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : (
-              <div className="p-12 text-center space-y-3">
-                <Calendar className="w-10 h-10 text-slate-300 mx-auto" />
-                <h3 className="font-bold text-slate-700 text-sm">No Preview Generated Yet</h3>
-                <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                  Click the button below to compute day-by-day attendance schedules for all {students.length} students.
-                </p>
+              <div className="p-8 text-center space-y-2">
                 <button
-                  onClick={fetchLivePreview}
-                  disabled={loadingPreview}
-                  className="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 shadow-sm"
+                  onClick={() => fetchLivePreview('matrix_preview')}
+                  className="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg shadow-sm"
                 >
-                  Generate Live Day-Wise Matrix
+                  Load Master Matrix Preview
                 </button>
               </div>
             )}
           </div>
         )}
 
-        {/* 4. Action Bar (Download Master PDF / Complete ZIP / Enroll to Database) */}
+        {/* 4. Action Bar with Complete Download Options */}
         <div className="bg-slate-900 p-5 text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <span className="text-xs text-slate-400">Ready to download & issue batch documentation:</span>
+            <span className="text-xs text-slate-400">Download Official Batch Registers:</span>
             <div className="text-sm font-bold text-white flex items-center space-x-2 mt-0.5">
               <span>{students.length} Students</span>
               <span>•</span>
               <span>{totalDays} Working Days</span>
               <span>•</span>
+              <span>{layoutMode === '1_page_per_day' ? '1 Page/Day' : '2 Pages/Day'}</span>
+              <span>•</span>
               <span>{institutionId === 2 ? 'Poddar College' : 'TechnoGlobe'}</span>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Download Master PDF */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Download All Days Daily Book PDF (A4) */}
             <button
-              onClick={handleDownloadMasterPdf}
-              disabled={isGeneratingPdf || students.length === 0}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-white hover:bg-slate-100 text-slate-900 transition flex items-center space-x-2 shadow-sm disabled:opacity-50"
+              onClick={handleDownloadDailyBookPdf}
+              disabled={isGeneratingDailyBook || students.length === 0}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-500 hover:bg-indigo-400 text-white transition flex items-center space-x-2 shadow-sm disabled:opacity-50"
             >
-              {isGeneratingPdf ? <RefreshCw className="w-4 h-4 animate-spin text-slate-900" /> : <FileText className="w-4 h-4 text-indigo-600" />}
-              <span>Download Master Register (Landscape PDF)</span>
+              {isGeneratingDailyBook ? <RefreshCw className="w-4 h-4 animate-spin text-white" /> : <BookOpen className="w-4 h-4 text-white" />}
+              <span>Download All {totalDays} Days Daily Book (A4 PDF)</span>
             </button>
 
-            {/* Download Complete ZIP */}
+            {/* Download Master Matrix PDF (Landscape) */}
+            <button
+              onClick={handleDownloadMatrixPdf}
+              disabled={isGeneratingMatrixPdf || students.length === 0}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-white hover:bg-slate-100 text-slate-900 transition flex items-center space-x-2 shadow-sm disabled:opacity-50"
+            >
+              {isGeneratingMatrixPdf ? <RefreshCw className="w-4 h-4 animate-spin text-slate-900" /> : <FileText className="w-4 h-4 text-indigo-600" />}
+              <span>Master Matrix (Landscape PDF)</span>
+            </button>
+
+            {/* Download Complete ZIP Package */}
             <button
               onClick={handleDownloadZip}
               disabled={isGeneratingZip || students.length === 0}
               className="px-4 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 transition flex items-center space-x-2 shadow-md disabled:opacity-50"
             >
               {isGeneratingZip ? <RefreshCw className="w-4 h-4 animate-spin text-slate-950" /> : <Archive className="w-4 h-4 text-slate-950" />}
-              <span>Download Complete Batch ZIP (All PDFs + CSV)</span>
+              <span>Download Complete ZIP (All Daily PDFs + Matrix + CSV)</span>
             </button>
 
             {/* Enroll to DB */}
             <button
               onClick={handleBulkEnroll}
               disabled={isEnrolling || students.length === 0}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white transition flex items-center space-x-2 shadow-md disabled:opacity-50"
+              className="px-3.5 py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center space-x-1.5 disabled:opacity-50"
             >
-              {isEnrolling ? <RefreshCw className="w-4 h-4 animate-spin text-white" /> : <UserCheck className="w-4 h-4 text-white" />}
-              <span>Save & Enroll to Database</span>
+              {isEnrolling ? <RefreshCw className="w-3.5 h-3.5 animate-spin text-white" /> : <UserCheck className="w-3.5 h-3.5 text-slate-300" />}
+              <span>Enroll to DB</span>
             </button>
           </div>
         </div>

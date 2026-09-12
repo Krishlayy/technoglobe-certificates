@@ -2291,12 +2291,230 @@ def generate_individual_batch_student_attendance_pdf(student_data: dict, batch_m
     doc.build(story, canvasmaker=NumberedCanvas)
     return filepath
 
-def generate_batch_attendance_zip_bundle(batch_meta: dict, students_list: list) -> str:
+def build_daily_day_story_elements(day_num: int, total_days: int, day_info: dict, topic: str, students: list, batch_meta: dict, inst: dict, layout_mode: str = "1_page_per_day") -> list:
     """
-    Generates a complete Batch Attendance ZIP Bundle containing:
-    1. Master Batch Attendance Register PDF (Landscape A4)
-    2. Batch Attendance Summary & Day-Wise Roster CSV
-    3. All individual Student Attendance Sheet PDFs (Portrait A4)
+    Builds ReportLab flowable elements for a single daily attendance sheet (Day X of N).
+    Supports '1_page_per_day' (compact 1 sheet) and '2_pages_per_day' (2 sheets per day).
+    """
+    is_poddar = (inst["code"] == "PODDAR")
+    track_code = batch_meta.get("course_track", "DA").upper()
+    track_title = batch_meta.get("custom_track_name") or batch_meta.get("track_title") or f"Course-Based Internship ({track_code})"
+    start_time = batch_meta.get("start_time", "10:00 AM")
+    end_time = batch_meta.get("end_time", "01:30 PM")
+    daily_hours = float(batch_meta.get("daily_hours", 3.5))
+    mentor_name = batch_meta.get("mentor_name") or ("Prof. Krishlay Sharma" if batch_meta.get("mentor_id") == 1 else "Prof. Rahul Bhatnagar")
+    mentor_desig = batch_meta.get("mentor_designation") or "Professor & Internship Mentor"
+    signatory_name = inst.get("signatory_name", "Nitin Sir")
+    signatory_desig = inst.get("signatory_designation", "Centre Head & Authorized Signatory")
+
+    inst_primary = colors.HexColor(inst["primary_color"])
+    inst_secondary = colors.HexColor(inst["secondary_color"])
+
+    styles = getSampleStyleSheet()
+    org_title_style = ParagraphStyle('D_OrgTitle', fontName='Helvetica-Bold', fontSize=10.5, leading=13, textColor=inst_primary, alignment=1)
+    centre_style = ParagraphStyle('D_Centre', fontName='Helvetica-Bold', fontSize=8, leading=10, textColor=inst_secondary, alignment=1)
+    addr_style = ParagraphStyle('D_Addr', fontName='Helvetica', fontSize=6.5, leading=8.5, textColor=MUTED, alignment=1)
+    banner_style = ParagraphStyle('D_Banner', fontName='Helvetica-Bold', fontSize=9, leading=11, textColor=inst_primary, alignment=1)
+    
+    meta_style = ParagraphStyle('D_Meta', fontName='Helvetica', fontSize=7, leading=9, textColor=DARK)
+    meta_bold = ParagraphStyle('D_MetaBold', fontName='Helvetica-Bold', fontSize=7, leading=9, textColor=DARK)
+    topic_style = ParagraphStyle('D_Topic', fontName='Helvetica-Bold', fontSize=7.5, leading=9.5, textColor=inst_primary)
+
+    # Typography sizing based on layout mode
+    is_compact = (layout_mode == "1_page_per_day")
+    cell_fsize = 5.8 if is_compact else 7.0
+    cell_lead = 7.2 if is_compact else 9.0
+    pad_v = 0.8 if is_compact else 2.2
+
+    tbl_hdr = ParagraphStyle('D_THdr', fontName='Helvetica-Bold', fontSize=cell_fsize, leading=cell_lead, textColor=colors.white, alignment=1)
+    tbl_cell = ParagraphStyle('D_TCell', fontName='Helvetica', fontSize=cell_fsize, leading=cell_lead, textColor=DARK, alignment=0)
+    tbl_cell_c = ParagraphStyle('D_TCellC', fontName='Helvetica', fontSize=cell_fsize, leading=cell_lead, textColor=DARK, alignment=1)
+    tbl_p = ParagraphStyle('D_TP', fontName='Helvetica-Bold', fontSize=cell_fsize, leading=cell_lead, textColor=colors.HexColor("#15803D"), alignment=1)
+    tbl_l = ParagraphStyle('D_TL', fontName='Helvetica-Bold', fontSize=cell_fsize, leading=cell_lead, textColor=colors.HexColor("#D97706"), alignment=1)
+    tbl_sig = ParagraphStyle('D_TSig', fontName='Helvetica-Oblique', fontSize=cell_fsize, leading=cell_lead, textColor=colors.HexColor("#334155"), alignment=1)
+
+    story = []
+
+    # 1. Institutional Header
+    logo_path = os.path.join(os.path.dirname(__file__), inst["logo_path"])
+    if os.path.exists(logo_path):
+        if is_poddar:
+            logo_img = RLImage(logo_path, width=14 * mm, height=14 * mm, hAlign='CENTER')
+        else:
+            logo_img = RLImage(logo_path, width=28 * mm, height=10 * mm, hAlign='CENTER')
+    else:
+        logo_img = Paragraph("<b>INSTITUTION</b>", org_title_style)
+
+    hdr_text = [
+        Paragraph(inst["full_name"].upper(), org_title_style),
+        Spacer(1, 0.5 * mm),
+        Paragraph(inst["centre_name"], centre_style),
+        Spacer(1, 0.5 * mm),
+        Paragraph(f"{inst['address']} | Daily Batch Attendance Sheet", addr_style)
+    ]
+    hdr_table = Table([[logo_img, hdr_text]], colWidths=[32 * mm, 158 * mm])
+    hdr_table.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('ALIGN', (0,0), (0,0), 'CENTER'),
+        ('LEFTPADDING', (0,0), (-1,-1), 0),
+        ('RIGHTPADDING', (0,0), (-1,-1), 0),
+        ('TOPPADDING', (0,0), (-1,-1), 0),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 0),
+    ]))
+    story.append(hdr_table)
+    story.append(Spacer(1, 1 * mm))
+    story.append(HRFlowable(width="100%", thickness=1.2, color=inst_primary, spaceAfter=2, spaceBefore=0))
+
+    # 2. Daily Document Banner & Ref Grid
+    doc_ref = f"{inst['doc_prefix']}/DAILY-ATT/{track_code}/{day_num:02d}"
+    day_date_str = f"{day_info['date']} ({day_info['day_of_week']})"
+
+    story.append(Paragraph(f"DAILY BATCH ATTENDANCE SHEET — DAY {day_num:02d} OF {total_days:02d}", banner_style))
+    story.append(Spacer(1, 1 * mm))
+
+    meta_rows = [
+        [
+            Paragraph(f"<b>Batch Program:</b> {track_title}", meta_style),
+            Paragraph(f"<b>Date:</b> {day_date_str}", meta_style),
+            Paragraph(f"<b>Timing:</b> {start_time} - {end_time} ({daily_hours}h)", meta_style)
+        ],
+        [
+            Paragraph(f"<b>Faculty Mentor:</b> {mentor_name}", meta_style),
+            Paragraph(f"<b>Ref No:</b> {doc_ref}", meta_style),
+            Paragraph(f"<b>Total Enrolled:</b> {len(students)} Students", meta_style)
+        ],
+        [
+            Paragraph(f"<b>Today's Practical Module & Topic:</b> <font color='{inst['primary_color']}'><b>{topic}</b></font>", topic_style),
+            Paragraph("", meta_style),
+            Paragraph("", meta_style)
+        ]
+    ]
+    meta_tbl = Table(meta_rows, colWidths=[70 * mm, 60 * mm, 60 * mm])
+    meta_tbl.setStyle(TableStyle([
+        ('SPAN', (0,2), (2,2)),
+        ('BOX', (0,0), (-1,-1), 0.4, BORDER_COLOR),
+        ('BACKGROUND', (0,0), (-1,-1), BG_LIGHT),
+        ('TOPPADDING', (0,0), (-1,-1), 1.2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1.2),
+        ('LEFTPADDING', (0,0), (-1,-1), 3),
+        ('RIGHTPADDING', (0,0), (-1,-1), 3),
+    ]))
+    story.append(meta_tbl)
+    story.append(Spacer(1, 1.5 * mm))
+
+    # 3. Student Roster Table for this specific Day
+    tbl_headers = [
+        Paragraph("<b>#</b>", tbl_hdr),
+        Paragraph("<b>Roll / ID</b>", tbl_hdr),
+        Paragraph("<b>Student Full Name</b>", tbl_hdr),
+        Paragraph("<b>Father's Name</b>", tbl_hdr),
+        Paragraph("<b>Degree / Branch</b>", tbl_hdr),
+        Paragraph("<b>Status</b>", tbl_hdr),
+        Paragraph("<b>Candidate Sig</b>", tbl_hdr),
+        Paragraph("<b>Mentor Sig</b>", tbl_hdr)
+    ]
+
+    col_widths = [6 * mm, 22 * mm, 48 * mm, 36 * mm, 20 * mm, 18 * mm, 22 * mm, 18 * mm]
+
+    def build_student_table_chunk(chunk_students, start_idx):
+        t_data = [tbl_headers]
+        for s_idx, stu in enumerate(chunk_students, start_idx):
+            # Find record for this day
+            day_rec = None
+            if "records" in stu and len(stu["records"]) >= day_num:
+                day_rec = stu["records"][day_num - 1]
+            
+            status_str = day_rec.get("status", "PRESENT") if day_rec else "PRESENT"
+            is_present = (status_str == "PRESENT")
+
+            status_para = Paragraph("<b>PRESENT</b>", tbl_p) if is_present else Paragraph("<b>LEAVE</b>", tbl_l)
+            cand_sig = Paragraph("Verified (Signed)", tbl_sig) if is_present else Paragraph("On Leave", tbl_l)
+            mentor_sig = Paragraph("Verified", tbl_sig) if is_present else Paragraph("Approved", tbl_l)
+
+            t_data.append([
+                Paragraph(str(s_idx), tbl_cell_c),
+                Paragraph(stu.get("roll_no", f"STU-{s_idx:03d}"), tbl_cell),
+                Paragraph(f"<b>{stu.get('full_name', 'Student Name')}</b>", tbl_cell),
+                Paragraph(stu.get("father_mother_name", "Father Name"), tbl_cell),
+                Paragraph(f"{stu.get('degree', 'BCA')} {stu.get('branch', 'CS')[:4]}", tbl_cell),
+                status_para,
+                cand_sig,
+                mentor_sig
+            ])
+
+        t = Table(t_data, colWidths=col_widths, repeatRows=1)
+        t.setStyle(TableStyle([
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('BACKGROUND', (0,0), (-1,0), inst_primary),
+            ('INNERGRID', (0,0), (-1,-1), 0.35, BORDER_COLOR),
+            ('BOX', (0,0), (-1,-1), 0.6, inst_primary),
+            ('TOPPADDING', (0,0), (-1,-1), pad_v),
+            ('BOTTOMPADDING', (0,0), (-1,-1), pad_v),
+            ('LEFTPADDING', (0,0), (-1,-1), 1.5),
+            ('RIGHTPADDING', (0,0), (-1,-1), 1.5),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, BG_LIGHT])
+        ]))
+        return t
+
+    # 4. Signatures Section
+    sig_lbl = ParagraphStyle('D_SigLbl', fontName='Helvetica-Bold', fontSize=6.5 if is_compact else 7.5, leading=8.5, alignment=1, textColor=DARK)
+    sig_sub = ParagraphStyle('D_SigSub', fontName='Helvetica', fontSize=6.0 if is_compact else 7.0, leading=7.5, alignment=1, textColor=MUTED)
+
+    if is_poddar:
+        stamp_box = Paragraph("<b>[ OFFICIAL COLLEGE SEAL ]</b><br/><i>(Physical Ink Stamp)</i>", sig_sub)
+    else:
+        stamp_box = Paragraph("<b>★ TECHNOGLOBE SEAL ★</b><br/><font color='#B45309'><b>BHARATPUR CENTRE</b></font>", sig_sub)
+
+    sig_data = [
+        [
+            Paragraph("<b>SUPERVISING FACULTY</b>", sig_lbl),
+            Paragraph("<b>INSTITUTIONAL SEAL</b>", sig_lbl),
+            Paragraph("<b>AUTHORIZED SIGNATORY</b>", sig_lbl)
+        ],
+        [
+            Paragraph(f"<br/><br/>_________________________<br/><b>{mentor_name}</b><br/>{mentor_desig}", sig_sub),
+            stamp_box,
+            Paragraph(f"<br/><br/>_________________________<br/><b>{signatory_name}</b><br/>{signatory_desig}", sig_sub)
+        ]
+    ]
+    sig_table = Table(sig_data, colWidths=[65 * mm, 60 * mm, 65 * mm])
+    sig_table.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('BOX', (0,0), (-1,-1), 0.4, BORDER_COLOR),
+        ('BACKGROUND', (0,0), (-1,-1), BG_LIGHT),
+        ('TOPPADDING', (0,0), (-1,-1), 2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+    ]))
+
+    if is_compact or len(students) <= 25:
+        # All students on 1 single sheet
+        story.append(build_student_table_chunk(students, 1))
+        story.append(Spacer(1, 1.5 * mm))
+        story.append(sig_table)
+    else:
+        # 2 pages per day: Page 1 (1..25), Page 2 (26..50)
+        chunk_1 = students[:25]
+        chunk_2 = students[25:]
+        story.append(build_student_table_chunk(chunk_1, 1))
+        story.append(PageBreak())
+
+        # Page 2 header
+        p2_header = [
+            Paragraph(f"<b>{inst['full_name']} — DAILY ATTENDANCE (DAY {day_num:02d} CONTINUED)</b>", meta_bold),
+            Spacer(1, 1 * mm)
+        ]
+        story.extend(p2_header)
+        story.append(build_student_table_chunk(chunk_2, 26))
+        story.append(Spacer(1, 3 * mm))
+        story.append(sig_table)
+
+    return story
+
+
+def generate_daily_day_attendance_pdf(day_number: int, batch_meta: dict, students_list: list, layout_mode: str = "1_page_per_day") -> str:
+    """
+    Generates official A4 Portrait Daily Attendance Sheet for a specific single day (e.g. Day 1).
     """
     inst_id = batch_meta.get("institution_id", 1)
     inst = resolve_institution_profile(inst_id)
@@ -2315,21 +2533,129 @@ def generate_batch_attendance_zip_bundle(batch_meta: dict, students_list: list) 
         for s in students_list
     ]
 
-    # 1. Master PDF
-    master_pdf_path = generate_master_batch_attendance_pdf(batch_meta, students_list)
+    day_idx = max(0, min(total_days - 1, day_number - 1))
+    day_info = working_days[day_idx]
+    day_topic = topics[day_idx]
 
-    # 2. Summary CSV
+    now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+    clean_org = "PODDAR" if inst["code"] == "PODDAR" else "TECHNOGLOBE"
+    clean_track = re.sub(r'[^A-Za-z0-9_]', '_', track_code)
+    filename = f"Daily_Attendance_Sheet_{clean_org}_{clean_track}_Day_{day_number:02d}_{now_str}.pdf"
+    filepath = os.path.join(GENERATED_DIR, filename)
+
+    doc = SimpleDocTemplate(
+        filepath,
+        pagesize=A4,
+        rightMargin=10 * mm,
+        leftMargin=10 * mm,
+        topMargin=8 * mm,
+        bottomMargin=10 * mm
+    )
+
+    story = build_daily_day_story_elements(
+        day_number, total_days, day_info, day_topic, computed_students, batch_meta, inst, layout_mode
+    )
+
+    doc.build(story, canvasmaker=NumberedCanvas)
+    return filepath
+
+
+def generate_all_daily_batch_attendance_book_pdf(batch_meta: dict, students_list: list, layout_mode: str = "1_page_per_day") -> str:
+    """
+    Generates the complete All-Days Daily Batch Attendance Register Book (e.g. Day 1 to Day 50)
+    bundled into a single comprehensive A4 PDF (1 or 2 pages per day).
+    """
+    inst_id = batch_meta.get("institution_id", 1)
+    inst = resolve_institution_profile(inst_id)
+    track_code = batch_meta.get("course_track", "DA").upper()
+    total_days = int(batch_meta.get("total_days", 50))
+    start_date = batch_meta.get("start_date", "2026-06-01")
+    start_time = batch_meta.get("start_time", "10:00 AM")
+    end_time = batch_meta.get("end_time", "01:30 PM")
+    daily_hours = float(batch_meta.get("daily_hours", 3.5))
+
+    working_days = compute_batch_working_days(start_date, total_days)
+    topics = get_batch_track_topics(track_code, total_days)
+
+    computed_students = [
+        compute_batch_student_attendance(s, working_days, topics, start_time, end_time, daily_hours)
+        for s in students_list
+    ]
+
+    now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+    clean_org = "PODDAR" if inst["code"] == "PODDAR" else "TECHNOGLOBE"
+    clean_track = re.sub(r'[^A-Za-z0-9_]', '_', track_code)
+    filename = f"ALL_DAYS_DAILY_ATTENDANCE_BOOK_{clean_org}_{clean_track}_{total_days}Days_{now_str}.pdf"
+    filepath = os.path.join(GENERATED_DIR, filename)
+
+    doc = SimpleDocTemplate(
+        filepath,
+        pagesize=A4,
+        rightMargin=10 * mm,
+        leftMargin=10 * mm,
+        topMargin=8 * mm,
+        bottomMargin=10 * mm
+    )
+
+    story = []
+    for d_num in range(1, total_days + 1):
+        d_idx = d_num - 1
+        d_info = working_days[d_idx]
+        d_topic = topics[d_idx]
+
+        day_story = build_daily_day_story_elements(
+            d_num, total_days, d_info, d_topic, computed_students, batch_meta, inst, layout_mode
+        )
+        story.extend(day_story)
+        if d_num < total_days:
+            story.append(PageBreak())
+
+    doc.build(story, canvasmaker=NumberedCanvas)
+    return filepath
+
+
+def generate_batch_attendance_zip_bundle(batch_meta: dict, students_list: list) -> str:
+    """
+    Generates an all-inclusive Complete Batch Attendance ZIP Bundle containing:
+    1. Complete All-Days Daily Attendance Register Book PDF (A4 Format)
+    2. Master Batch Attendance Matrix Register PDF (Landscape A4)
+    3. Batch Attendance Summary CSV Matrix
+    4. Individual Daily Attendance Sheet PDFs for every single day (Day_01.pdf ... Day_50.pdf)
+    5. Individual Student Attendance Sheet PDFs (05_Attendance_Sheet_{roll}_{name}.pdf)
+    """
+    inst_id = batch_meta.get("institution_id", 1)
+    inst = resolve_institution_profile(inst_id)
+    track_code = batch_meta.get("course_track", "DA").upper()
+    total_days = int(batch_meta.get("total_days", 50))
+    start_date = batch_meta.get("start_date", "2026-06-01")
+    start_time = batch_meta.get("start_time", "10:00 AM")
+    end_time = batch_meta.get("end_time", "01:30 PM")
+    daily_hours = float(batch_meta.get("daily_hours", 3.5))
+
+    working_days = compute_batch_working_days(start_date, total_days)
+    topics = get_batch_track_topics(track_code, total_days)
+
+    computed_students = [
+        compute_batch_student_attendance(s, working_days, topics, start_time, end_time, daily_hours)
+        for s in students_list
+    ]
+
+    # 1. Complete All-Days Daily Register Book PDF
+    daily_book_pdf_path = generate_all_daily_batch_attendance_book_pdf(batch_meta, students_list, layout_mode="1_page_per_day")
+
+    # 2. Master Landscape Matrix PDF
+    master_matrix_pdf_path = generate_master_batch_attendance_pdf(batch_meta, students_list)
+
+    # 3. Summary CSV Matrix
     csv_filename = f"00_Batch_Attendance_Matrix_{inst['code']}_{track_code}_{total_days}Days.csv"
     csv_path = os.path.join(GENERATED_DIR, csv_filename)
     with open(csv_path, mode="w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        # Header row
         header = ["S.No", "Roll_No", "Student_Name", "Father_Name", "College", "Degree_Branch", "Target_Pct", "Actual_Pct", "Total_Days", "Present_Days", "Leave_Days", "Total_Hours"]
         for d in working_days:
             header.append(f"Day_{d['day_number']}_{d['short_date']}")
         writer.writerow(header)
 
-        # Student rows
         for idx, stu in enumerate(computed_students, 1):
             row = [
                 idx, stu["roll_no"], stu["full_name"], stu["father_mother_name"], stu["college_name"],
@@ -2340,25 +2666,41 @@ def generate_batch_attendance_zip_bundle(batch_meta: dict, students_list: list) 
                 row.append(r["short_status"])
             writer.writerow(row)
 
-    # 3. Individual PDFs
+    # 4. Individual Daily Sheets for each day (Day 01 .. Day N)
+    daily_day_pdf_paths = []
+    for d_num in range(1, total_days + 1):
+        d_path = generate_daily_day_attendance_pdf(d_num, batch_meta, students_list, layout_mode="1_page_per_day")
+        daily_day_pdf_paths.append((d_num, d_path))
+
+    # 5. Individual Student Attendance Sheets (Per Student)
     individual_pdf_paths = []
     for stu in computed_students:
         ind_path = generate_individual_batch_student_attendance_pdf(stu, batch_meta)
         individual_pdf_paths.append((stu["full_name"], stu["roll_no"], ind_path))
 
-    # 4. Zip Bundle
+    # 6. Archive everything into ZIP Bundle
     now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-    zip_filename = f"BATCH_ATTENDANCE_{inst['code']}_{track_code}_{len(computed_students)}STUDENTS_{total_days}DAYS_{now_str}.zip"
+    zip_filename = f"BATCH_COMPLETE_ATTENDANCE_{inst['code']}_{track_code}_{len(computed_students)}STUDENTS_{total_days}DAYS_{now_str}.zip"
     zip_path = os.path.join(GENERATED_DIR, zip_filename)
 
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zip_file:
-        zip_file.write(master_pdf_path, arcname="00_MASTER_BATCH_ATTENDANCE_REGISTER.pdf")
+        zip_file.write(daily_book_pdf_path, arcname="00_ALL_DAYS_DAILY_ATTENDANCE_REGISTER_BOOK.pdf")
+        zip_file.write(master_matrix_pdf_path, arcname="00_MASTER_BATCH_ATTENDANCE_MATRIX.pdf")
         zip_file.write(csv_path, arcname="00_BATCH_ATTENDANCE_SUMMARY_MATRIX.csv")
+
+        # Daily Day Sheets
+        for d_num, d_path in daily_day_pdf_paths:
+            arc_name = f"Daily_Day_Attendance_Sheets/Daily_Attendance_Day_{d_num:02d}.pdf"
+            if os.path.exists(d_path):
+                zip_file.write(d_path, arcname=arc_name)
+
+        # Individual Student Sheets
         for s_name, s_roll, p_path in individual_pdf_paths:
             clean_name = re.sub(r'[^A-Za-z0-9_]', '_', s_name)
-            arc_name = f"Individual_Attendance_Sheets/05_Attendance_Sheet_{s_roll}_{clean_name}.pdf"
+            arc_name = f"Individual_Student_Sheets/05_Attendance_Sheet_{s_roll}_{clean_name}.pdf"
             if os.path.exists(p_path):
                 zip_file.write(p_path, arcname=arc_name)
 
     return zip_path
+
 

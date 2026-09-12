@@ -398,6 +398,48 @@ export const api = {
     window.URL.revokeObjectURL(url);
   },
 
+  downloadDailyDayPdf: async (data: any) => {
+    const res = await fetch(`${API_BASE}/attendance/daily-day-pdf`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to generate Daily Day Attendance Sheet PDF');
+    }
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Daily_Attendance_Sheet_Day_${String(data.selected_day || 1).padStart(2, '0')}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  },
+
+  downloadDailyBookPdf: async (data: any) => {
+    const res = await fetch(`${API_BASE}/attendance/daily-book-pdf`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to generate All-Days Daily Register Book PDF');
+    }
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `All_Days_Daily_Attendance_Book_${data.total_days}Days_${data.students?.length || 0}Students.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  },
+
   downloadBatchAttendanceZip: async (data: any) => {
     const res = await fetch(`${API_BASE}/attendance/bulk-generate-zip`, {
       method: 'POST',
@@ -412,7 +454,7 @@ export const api = {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Batch_Attendance_Package_${data.total_days}Days_${data.students?.length || 0}Students.zip`;
+    a.download = `Batch_Complete_Attendance_Package_${data.total_days}Days_${data.students?.length || 0}Students.zip`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
