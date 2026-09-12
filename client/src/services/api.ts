@@ -472,5 +472,17 @@ export const api = {
       throw new Error(err.detail || 'Failed to bulk enroll students');
     }
     return res.json();
+  },
+
+  resetDatabase: async () => {
+    const res = await fetch(`${API_BASE}/system/reset-database`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to reset database');
+    }
+    return res.json();
   }
 };

@@ -1939,6 +1939,7 @@ class BulkAttendanceStudent(BaseModel):
     degree: Optional[str] = "BCA"
     branch: Optional[str] = "Computer Science"
     attendance_pct: float = 100.0
+    day_overrides: Optional[Dict[str, str]] = None
 
 class BulkAttendanceRequest(BaseModel):
     institution_id: Optional[int] = 1
@@ -2085,6 +2086,26 @@ def bulk_enroll_and_save_students(req: BulkAttendanceRequest, user = Depends(get
         "internship_ids": enrolled_ids,
         "message": f"Successfully enrolled {len(enrolled_ids)} students and recorded day-wise attendance for {req.total_days} days."
     }
+
+@app.post("/api/system/reset-database")
+def reset_database_route(user = Depends(get_current_user)):
+    conn = get_db()
+    cur = conn.cursor()
+    tables_to_clear = [
+        "attendance", "daily_logs", "weekly_reports", "projects", "evaluations",
+        "feedback", "certificates", "compliance_records", "internships", "students", "audit_logs"
+    ]
+    for t in tables_to_clear:
+        try:
+            cur.execute(f"DELETE FROM {t}")
+        except Exception:
+            pass
+    conn.commit()
+    conn.close()
+
+    init_db()
+    seed()
+    return {"success": True, "message": "Database reset to clean initial state successfully."}
 
 # -------------------------------------------------------------
 # 15. Centre Settings & Asset Uploads

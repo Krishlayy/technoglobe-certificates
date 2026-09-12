@@ -4,7 +4,8 @@ import {
   Users, Calendar, Clock, Download, FileText, CheckCircle2, 
   Sparkles, Sliders, Plus, Trash2, ArrowRight, Building2, 
   RefreshCw, CheckSquare, Layers, FileSpreadsheet, Archive,
-  ShieldCheck, AlertCircle, Award, UserCheck, X, BookOpen, ChevronLeft, ChevronRight
+  ShieldCheck, AlertCircle, Award, UserCheck, X, BookOpen, ChevronLeft, ChevronRight,
+  RotateCcw, AlertTriangle
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -17,6 +18,7 @@ interface BatchStudent {
   degree: string;
   branch: string;
   attendance_pct: number;
+  day_overrides?: Record<number, 'PRESENT' | 'LEAVE'>;
 }
 
 const SAMPLE_NAMES = [
@@ -83,6 +85,10 @@ export const BulkAttendancePage: React.FC = () => {
   const [showPasteModal, setShowPasteModal] = useState<boolean>(false);
   const [pasteText, setPasteText] = useState<string>('');
 
+  // 8. Reset Database Confirmation Modal State
+  const [showResetDbModal, setShowResetDbModal] = useState<boolean>(false);
+  const [isResettingDb, setIsResettingDb] = useState<boolean>(false);
+
   // Initialize with 50 sample students on first render
   useEffect(() => {
     loadSampleStudents(50, 100);
@@ -111,17 +117,23 @@ export const BulkAttendancePage: React.FC = () => {
   };
 
   const setAllAttendance = (pct: number) => {
-    setStudents(prev => prev.map(s => ({ ...s, attendance_pct: pct })));
+    setStudents(prev => prev.map(s => ({ ...s, attendance_pct: pct, day_overrides: undefined })));
     setStatusMessage({ type: 'info', text: `All ${students.length} students set to ${pct}% attendance.` });
+    if (previewData) {
+      setTimeout(() => fetchLivePreview(), 50);
+    }
   };
 
   const randomizeAttendance = () => {
     setStudents(prev => prev.map(s => {
-      const pcts = [100, 100, 95, 95, 92, 90, 88, 100, 96, 94];
+      const pcts = [100, 100, 96, 94, 92, 90, 88, 100, 98, 95];
       const randomPct = pcts[Math.floor(Math.random() * pcts.length)];
-      return { ...s, attendance_pct: randomPct };
+      return { ...s, attendance_pct: randomPct, day_overrides: undefined };
     }));
     setStatusMessage({ type: 'info', text: `Randomized attendance realistically (88% - 100%) across ${students.length} students.` });
+    if (previewData) {
+      setTimeout(() => fetchLivePreview(), 50);
+    }
   };
 
   const handleAddStudent = () => {
@@ -147,6 +159,93 @@ export const BulkAttendancePage: React.FC = () => {
 
   const handleUpdateStudent = (id: string, field: keyof BatchStudent, value: any) => {
     setStudents(students.map(s => s.id === id ? { ...s, [field]: value } : s));
+  };
+
+  // Toggle a single student's attendance on any specific day (e.g. Day X)
+  const toggleStudentDay = (studentIdx: number, dayNumber: number) => {
+    const updatedStudents = [...students];
+    const stu = { ...updatedStudents[studentIdx] };
+    const overrides = { ...(stu.day_overrides || {}) };
+
+    let currentStatus = 'PRESENT';
+    if (overrides[dayNumber]) {
+      currentStatus = overrides[dayNumber];
+    } else if (previewData?.students?.[studentIdx]?.records?.[dayNumber - 1]) {
+      currentStatus = previewData.students[studentIdx].records[dayNumber - 1].status;
+    } else if (stu.attendance_pct < 100) {
+      currentStatus = 'PRESENT';
+    }
+
+    const nextStatus: 'PRESENT' | 'LEAVE' = currentStatus === 'PRESENT' ? 'LEAVE' : 'PRESENT';
+    overrides[dayNumber] = nextStatus;
+    stu.day_overrides = overrides;
+
+    // Update live previewData in memory immediately for instant UI feedback
+    if (previewData?.students?.[studentIdx]) {
+      const updatedPreview = { ...previewData };
+      const stuRecs = [...updatedPreview.students[studentIdx].records];
+      if (stuRecs[dayNumber - 1]) {
+        stuRecs[dayNumber - 1] = {
+          ...stuRecs[dayNumber - 1],
+          status: nextStatus === 'PRESENT' ? 'PRESENT' : 'AUTHORIZED LEAVE',
+          short_status: nextStatus === 'PRESENT' ? 'P' : 'L',
+          student_signed: nextStatus === 'PRESENT' ? 'Verified (Signed)' : 'On Leave',
+          mentor_signed: nextStatus === 'PRESENT' ? 'Verified (Signed)' : 'Approved Leave'
+        };
+        updatedPreview.students[studentIdx].records = stuRecs;
+        const pCount = stuRecs.filter((r: any) => r.short_status === 'P').length;
+        const lCount = stuRecs.length - pCount;
+        const newPct = Number(((pCount / stuRecs.length) * 100).toFixed(1));
+        updatedPreview.students[studentIdx].present_days = pCount;
+        updatedPreview.students[studentIdx].leave_days = lCount;
+        updatedPreview.students[studentIdx].attendance_pct_actual = newPct;
+        updatedPreview.students[studentIdx].total_hours_logged = Number((pCount * dailyHours).toFixed(1));
+        stu.attendance_pct = newPct;
+        setPreviewData(updatedPreview);
+      }
+    }
+
+    updatedStudents[studentIdx] = stu;
+    setStudents(updatedStudents);
+  };
+
+  // Set all students on Day X to PRESENT or LEAVE
+  const setAllStudentsOnDay = (dayNumber: number, status: 'PRESENT' | 'LEAVE') => {
+    const updated = students.map((s) => {
+      const overrides = { ...(s.day_overrides || {}) };
+      overrides[dayNumber] = status;
+      return { ...s, day_overrides: overrides };
+    });
+    setStudents(updated);
+
+    if (previewData) {
+      const updatedPreview = { ...previewData };
+      updatedPreview.students.forEach((stu: any, sIdx: number) => {
+        if (stu.records[dayNumber - 1]) {
+          stu.records[dayNumber - 1].status = status === 'PRESENT' ? 'PRESENT' : 'AUTHORIZED LEAVE';
+          stu.records[dayNumber - 1].short_status = status === 'PRESENT' ? 'P' : 'L';
+          stu.records[dayNumber - 1].student_signed = status === 'PRESENT' ? 'Verified (Signed)' : 'On Leave';
+          stu.records[dayNumber - 1].mentor_signed = status === 'PRESENT' ? 'Verified (Signed)' : 'Approved Leave';
+          const pCount = stu.records.filter((r: any) => r.short_status === 'P').length;
+          stu.present_days = pCount;
+          stu.leave_days = stu.records.length - pCount;
+          stu.attendance_pct_actual = Number(((pCount / stu.records.length) * 100).toFixed(1));
+          stu.total_hours_logged = Number((pCount * dailyHours).toFixed(1));
+          updated[sIdx].attendance_pct = stu.attendance_pct_actual;
+        }
+      });
+      setPreviewData(updatedPreview);
+    }
+    setStatusMessage({ type: 'success', text: `Marked all students as ${status} on Day ${dayNumber}.` });
+  };
+
+  // Reset student custom day overrides
+  const resetStudentOverrides = (studentIdx: number) => {
+    const updated = [...students];
+    delete updated[studentIdx].day_overrides;
+    setStudents(updated);
+    setStatusMessage({ type: 'info', text: `Cleared custom day overrides for ${updated[studentIdx].full_name}.` });
+    fetchLivePreview();
   };
 
   const handleProcessPaste = () => {
@@ -213,7 +312,8 @@ export const BulkAttendancePage: React.FC = () => {
       college_name: s.college_name,
       degree: s.degree,
       branch: s.branch,
-      attendance_pct: Number(s.attendance_pct)
+      attendance_pct: Number(s.attendance_pct),
+      day_overrides: s.day_overrides || undefined
     }))
   });
 
@@ -309,13 +409,26 @@ export const BulkAttendancePage: React.FC = () => {
     }
   };
 
+  // 6. Database Clean Reset Handler
+  const handleResetDatabase = async () => {
+    setIsResettingDb(true);
+    try {
+      await api.resetDatabase();
+      setStatusMessage({ type: 'success', text: 'System database has been reset to clean initial state successfully.' });
+      setShowResetDbModal(false);
+    } catch (e: any) {
+      setStatusMessage({ type: 'error', text: e.message || 'Failed to reset database' });
+    } finally {
+      setIsResettingDb(false);
+    }
+  };
+
   // Calculations
   const avgAttendance = students.length > 0 
     ? (students.reduce((sum, s) => sum + Number(s.attendance_pct || 0), 0) / students.length).toFixed(1)
     : '0';
 
   const count100 = students.filter(s => Number(s.attendance_pct) === 100).length;
-
   const currentDayInfo = previewData?.working_days?.[selectedDay - 1];
 
   return (
@@ -334,11 +447,19 @@ export const BulkAttendancePage: React.FC = () => {
               Bulk Batch Daily Attendance Generator (50+ Students)
             </h1>
             <p className="text-sm text-slate-300 mt-1 max-w-3xl">
-              Generate official A4 day-wise attendance sheets (1 or 2 sheets per day) for 50+ students across all 50 days with daily practical topics, verified student signatures, mentor signs, and Nitin Sir's seal/stamp for TechnoGlobe & Poddar College.
+              Generate official A4 day-wise attendance sheets (1 or 2 sheets per day) for 50+ students across all 50 days with customizable attendance per student, instant click-to-toggle attendance marks, and Nitin Sir's seal/stamp for TechnoGlobe & Poddar College.
             </p>
           </div>
 
-          <div className="flex items-center space-x-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <button
+              onClick={() => setShowResetDbModal(true)}
+              className="px-3.5 py-2 text-xs font-bold text-rose-300 hover:text-rose-100 bg-rose-950/70 hover:bg-rose-900 rounded-lg border border-rose-800 transition flex items-center space-x-1.5 shadow-sm"
+              title="Reset Database to Clean Initial State"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-rose-400" />
+              <span>Reset DB</span>
+            </button>
             <Link
               to="/attendance"
               className="px-4 py-2 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-800 rounded-lg border border-slate-700 transition"
@@ -739,6 +860,30 @@ export const BulkAttendancePage: React.FC = () => {
               </button>
             </div>
 
+            {/* Quick Actions Bar on Sheet */}
+            <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-slate-100 rounded-xl text-xs text-slate-700 border border-slate-200">
+              <div className="flex items-center space-x-2">
+                <span className="font-bold text-slate-800">Quick Day {selectedDay} Actions:</span>
+                <button
+                  type="button"
+                  onClick={() => setAllStudentsOnDay(selectedDay, 'PRESENT')}
+                  className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shadow-xs transition"
+                >
+                  ✓ Mark All Present on Day {selectedDay}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAllStudentsOnDay(selectedDay, 'LEAVE')}
+                  className="px-2.5 py-1 rounded-md bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold shadow-xs transition"
+                >
+                  ⊘ Mark All Leave on Day {selectedDay}
+                </button>
+              </div>
+              <span className="text-[11px] text-slate-500 font-medium italic">
+                💡 Tip: Click any student's status button below to toggle between Present and Leave for Day {selectedDay}.
+              </span>
+            </div>
+
             {/* Simulated A4 Daily Sheet Preview */}
             <div className="bg-slate-50 p-6 rounded-2xl border border-slate-300 shadow-inner">
               <div className="bg-white max-w-4xl mx-auto p-8 rounded-xl shadow-md border border-slate-200 text-slate-800 space-y-4">
@@ -778,7 +923,7 @@ export const BulkAttendancePage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Roster for Day X */}
+                {/* Roster for Day X with Clickable Status Toggles */}
                 <div className="overflow-x-auto rounded-lg border border-slate-200">
                   <table className="w-full text-left border-collapse text-[11px]">
                     <thead>
@@ -787,42 +932,46 @@ export const BulkAttendancePage: React.FC = () => {
                         <th className="py-1.5 px-2 w-24">Roll / ID</th>
                         <th className="py-1.5 px-2 min-w-[140px]">Student Full Name</th>
                         <th className="py-1.5 px-2 w-28">Father's Name</th>
-                        <th className="py-1.5 px-2 w-20 text-center">Status</th>
+                        <th className="py-1.5 px-2 w-24 text-center">Status (Click to toggle)</th>
                         <th className="py-1.5 px-2 w-24 text-center">Student Signature</th>
                         <th className="py-1.5 px-2 w-20 text-center">Mentor Sign</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
                       {students.slice(0, layoutMode === '2_pages_per_day' ? 25 : 50).map((stu, sIdx) => {
-                        const targetAtt = stu.attendance_pct;
-                        const is100 = targetAtt === 100;
                         let isPresentOnThisDay = true;
-                        if (!is100 && previewData) {
-                          const stuRec = previewData.students[sIdx]?.records[selectedDay - 1];
-                          isPresentOnThisDay = stuRec?.short_status === 'P';
+                        if (stu.day_overrides && stu.day_overrides[selectedDay]) {
+                          isPresentOnThisDay = (stu.day_overrides[selectedDay] === 'PRESENT');
+                        } else if (previewData?.students?.[sIdx]?.records?.[selectedDay - 1]) {
+                          isPresentOnThisDay = (previewData.students[sIdx].records[selectedDay - 1].short_status === 'P');
+                        } else if (stu.attendance_pct < 100) {
+                          isPresentOnThisDay = true;
                         }
 
                         return (
-                          <tr key={stu.id} className="hover:bg-slate-50/60">
-                            <td className="py-1 px-2 text-center text-slate-400 font-mono text-[10px]">{sIdx + 1}</td>
-                            <td className="py-1 px-2 font-mono text-[10px] text-slate-600">{stu.roll_no}</td>
-                            <td className="py-1 px-2 font-bold text-slate-800">{stu.full_name}</td>
-                            <td className="py-1 px-2 text-slate-600">{stu.father_mother_name}</td>
-                            <td className="py-1 px-2 text-center">
-                              {isPresentOnThisDay ? (
-                                <span className="font-extrabold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px]">
-                                  PRESENT
-                                </span>
-                              ) : (
-                                <span className="font-extrabold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded text-[10px]">
-                                  LEAVE
-                                </span>
-                              )}
+                          <tr key={stu.id} className="hover:bg-slate-50/80 transition">
+                            <td className="py-1.5 px-2 text-center text-slate-400 font-mono text-[10px]">{sIdx + 1}</td>
+                            <td className="py-1.5 px-2 font-mono text-[10px] text-slate-600">{stu.roll_no}</td>
+                            <td className="py-1.5 px-2 font-bold text-slate-800">{stu.full_name}</td>
+                            <td className="py-1.5 px-2 text-slate-600">{stu.father_mother_name}</td>
+                            <td className="py-1.5 px-2 text-center">
+                              <button
+                                type="button"
+                                onClick={() => toggleStudentDay(sIdx, selectedDay)}
+                                className={`font-extrabold px-2.5 py-0.5 rounded-full text-[10px] transition shadow-2xs flex items-center justify-center mx-auto cursor-pointer hover:scale-105 active:scale-95 ${
+                                  isPresentOnThisDay 
+                                    ? 'text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300' 
+                                    : 'text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300'
+                                }`}
+                                title={`Click to toggle ${stu.full_name}'s status on Day ${selectedDay}`}
+                              >
+                                <span>{isPresentOnThisDay ? '✓ PRESENT' : '⊘ LEAVE'}</span>
+                              </button>
                             </td>
-                            <td className="py-1 px-2 text-center italic text-slate-500 text-[10px]">
+                            <td className="py-1.5 px-2 text-center italic text-slate-500 text-[10px]">
                               {isPresentOnThisDay ? 'Verified (Signed)' : 'On Leave'}
                             </td>
-                            <td className="py-1 px-2 text-center italic text-slate-500 text-[10px]">
+                            <td className="py-1.5 px-2 text-center italic text-slate-500 text-[10px]">
                               {isPresentOnThisDay ? 'Verified' : 'Approved'}
                             </td>
                           </tr>
@@ -914,6 +1063,7 @@ export const BulkAttendancePage: React.FC = () => {
                   {students.map((stu, index) => {
                     const presentCount = Math.max(1, Math.round(totalDays * (stu.attendance_pct / 100)));
                     const is100 = stu.attendance_pct === 100;
+                    const hasOverrides = stu.day_overrides && Object.keys(stu.day_overrides).length > 0;
 
                     return (
                       <tr key={stu.id} className="hover:bg-slate-50/80 transition">
@@ -946,42 +1096,96 @@ export const BulkAttendancePage: React.FC = () => {
                           <span className="text-[11px] text-slate-600 font-semibold">{stu.degree} - {stu.branch}</span>
                         </td>
                         <td className="py-2 px-3">
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="range"
-                              min={50}
-                              max={100}
-                              step={1}
-                              value={stu.attendance_pct}
-                              onChange={(e) => handleUpdateStudent(stu.id, 'attendance_pct', Number(e.target.value))}
-                              className="w-24 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                            />
-                            <input
-                              type="number"
-                              min={50}
-                              max={100}
-                              value={stu.attendance_pct}
-                              onChange={(e) => handleUpdateStudent(stu.id, 'attendance_pct', Math.min(100, Math.max(0, Number(e.target.value))))}
-                              className={`w-14 px-1.5 py-0.5 text-center font-bold rounded border ${
-                                is100
-                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                                  : stu.attendance_pct >= 90
-                                  ? 'bg-blue-50 text-blue-800 border-blue-300'
-                                  : 'bg-amber-50 text-amber-800 border-amber-300'
-                              }`}
-                            />
-                            <span className="text-[11px] font-bold text-slate-500">%</span>
-                            {is100 && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-extrabold uppercase">
-                                Full
-                              </span>
+                          <div className="flex flex-col space-y-1.5">
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="range"
+                                min={50}
+                                max={100}
+                                step={1}
+                                value={stu.attendance_pct}
+                                onChange={(e) => handleUpdateStudent(stu.id, 'attendance_pct', Number(e.target.value))}
+                                className="w-20 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                              />
+                              <input
+                                type="number"
+                                min={50}
+                                max={100}
+                                value={stu.attendance_pct}
+                                onChange={(e) => handleUpdateStudent(stu.id, 'attendance_pct', Math.min(100, Math.max(0, Number(e.target.value))))}
+                                className={`w-14 px-1.5 py-0.5 text-center font-bold rounded border text-xs ${
+                                  is100
+                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                    : stu.attendance_pct >= 90
+                                    ? 'bg-blue-50 text-blue-800 border-blue-300'
+                                    : 'bg-amber-50 text-amber-800 border-amber-300'
+                                }`}
+                              />
+                              <span className="text-[11px] font-bold text-slate-500">%</span>
+
+                              {/* Individual student preset chips */}
+                              <div className="flex items-center space-x-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateStudent(stu.id, 'attendance_pct', 100)}
+                                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition ${stu.attendance_pct === 100 ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                                  title="Set to 100% (0 Leaves)"
+                                >
+                                  100%
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateStudent(stu.id, 'attendance_pct', 95)}
+                                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition ${stu.attendance_pct === 95 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                                  title="Set to 95%"
+                                >
+                                  95%
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateStudent(stu.id, 'attendance_pct', 90)}
+                                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition ${stu.attendance_pct === 90 ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                                  title="Set to 90%"
+                                >
+                                  90%
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Overrides badge if days were manually toggled */}
+                            {hasOverrides && (
+                              <div className="flex items-center space-x-2 text-[10px]">
+                                <span className="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-200 font-semibold">
+                                  {Object.keys(stu.day_overrides!).length} Custom Day Changes
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => resetStudentOverrides(index)}
+                                  className="text-slate-400 hover:text-rose-600 underline"
+                                >
+                                  Reset
+                                </button>
+                              </div>
                             )}
                           </div>
                         </td>
                         <td className="py-2 px-3 text-center">
-                          <span className={`font-bold ${is100 ? 'text-emerald-700' : 'text-slate-700'}`}>
-                            {presentCount} / {totalDays}d
-                          </span>
+                          <div className="flex items-center justify-center space-x-1">
+                            <input
+                              type="number"
+                              min={1}
+                              max={totalDays}
+                              value={presentCount}
+                              onChange={(e) => {
+                                const pDays = Math.min(totalDays, Math.max(1, Number(e.target.value)));
+                                const calcPct = Number(((pDays / totalDays) * 100).toFixed(1));
+                                handleUpdateStudent(stu.id, 'attendance_pct', calcPct);
+                              }}
+                              className="w-12 px-1 py-0.5 text-center font-bold text-slate-800 bg-white border border-slate-300 rounded text-xs"
+                              title="Enter exact present days"
+                            />
+                            <span className="text-slate-500 font-medium text-[11px]">/ {totalDays}d</span>
+                          </div>
                         </td>
                         <td className="py-2 px-3 text-center">
                           <button
@@ -1001,9 +1205,18 @@ export const BulkAttendancePage: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 3: FULL MASTER MATRIX */}
+        {/* TAB 3: FULL MASTER MATRIX WITH CLICKABLE CELLS */}
         {activeTab === 'matrix_preview' && (
           <div className="p-4 space-y-4">
+            <div className="p-3 bg-slate-100 rounded-xl text-xs text-slate-700 flex flex-wrap items-center justify-between gap-2 border border-slate-200">
+              <span className="font-bold text-slate-800">
+                Interactive Master Attendance Matrix:
+              </span>
+              <span className="text-[11px] text-slate-500 italic">
+                💡 Click any cell (P / L) to toggle that student's status for that day instantly.
+              </span>
+            </div>
+
             {previewData ? (
               <div className="overflow-x-auto rounded-xl border border-slate-200 max-h-[500px]">
                 <table className="w-full text-left border-collapse text-[11px]">
@@ -1030,15 +1243,25 @@ export const BulkAttendancePage: React.FC = () => {
                         <td className="py-1.5 px-2 text-center text-slate-400 font-mono text-[10px] border-r border-slate-200">{sIdx + 1}</td>
                         <td className="py-1.5 px-2 font-mono text-[10px] text-slate-600 border-r border-slate-200">{stu.roll_no}</td>
                         <td className="py-1.5 px-2 font-bold text-slate-800 border-r border-slate-200">{stu.full_name}</td>
-                        {stu.records.map((r: any, rIdx: number) => (
-                          <td key={rIdx} className="py-1 px-1 text-center border-r border-slate-200">
-                            {r.short_status === 'P' ? (
-                              <span className="font-extrabold text-emerald-600">P</span>
-                            ) : (
-                              <span className="font-extrabold text-amber-600">L</span>
-                            )}
-                          </td>
-                        ))}
+                        {stu.records.map((r: any, rIdx: number) => {
+                          const isP = r.short_status === 'P';
+                          return (
+                            <td key={rIdx} className="py-1 px-1 text-center border-r border-slate-200">
+                              <button
+                                type="button"
+                                onClick={() => toggleStudentDay(sIdx, r.day_number)}
+                                className={`w-5 h-5 rounded text-[10px] font-extrabold transition flex items-center justify-center mx-auto cursor-pointer hover:scale-110 active:scale-95 shadow-2xs ${
+                                  isP 
+                                    ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300' 
+                                    : 'bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300'
+                                }`}
+                                title={`Click to toggle ${stu.full_name} on Day ${r.day_number} (Currently ${isP ? 'Present' : 'Leave'})`}
+                              >
+                                {isP ? 'P' : 'L'}
+                              </button>
+                            </td>
+                          );
+                        })}
                         <td className="py-1.5 px-2 text-center font-bold text-slate-800 border-r border-slate-200">{stu.present_days}</td>
                         <td className="py-1.5 px-2 text-center text-slate-600 border-r border-slate-200">{stu.leave_days}</td>
                         <td className="py-1.5 px-2 text-center text-slate-600 border-r border-slate-200">{stu.total_hours_logged}h</td>
@@ -1168,6 +1391,47 @@ export const BulkAttendancePage: React.FC = () => {
                   Import Roster Now
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Database Confirmation Modal */}
+      {showResetDbModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 space-y-4">
+            <div className="flex items-start space-x-3">
+              <div className="p-3 bg-rose-100 text-rose-700 rounded-xl shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">Reset System Database</h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  This will purge all test students, internships, attendance records, and certificates from the database, and restore clean initial institutional profiles and courses.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-rose-50 p-3 rounded-xl border border-rose-200 text-rose-900 text-xs font-medium">
+              ⚠️ Are you sure you want to proceed? This operation will remove all test records.
+            </div>
+
+            <div className="flex items-center justify-end space-x-2 pt-2">
+              <button
+                onClick={() => setShowResetDbModal(false)}
+                disabled={isResettingDb}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleResetDatabase}
+                disabled={isResettingDb}
+                className="px-5 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition flex items-center space-x-1.5 shadow-sm disabled:opacity-50"
+              >
+                {isResettingDb ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                <span>Yes, Reset Database</span>
+              </button>
             </div>
           </div>
         </div>

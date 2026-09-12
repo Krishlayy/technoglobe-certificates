@@ -9,6 +9,7 @@ cloudflared.exe
 server/generated/*.pdf
 server/generated/*.zip
 server/generated/*.png
+server/generated/*.csv
 report_pages_inspection/
 *.db
 !server/generated/.gitkeep

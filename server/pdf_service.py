@@ -1791,8 +1791,17 @@ def compute_batch_working_days(start_date_str: str, total_days: int) -> list:
 def compute_batch_student_attendance(student: dict, working_days: list, topics: list, start_time="10:00 AM", end_time="01:30 PM", daily_hours=3.5) -> dict:
     total_days = len(working_days)
     att_pct = float(student.get("attendance_pct", 100.0))
-    
-    if att_pct >= 100.0:
+    day_overrides = student.get("day_overrides") or {}
+    # Convert keys in day_overrides to strings/ints for safe lookup
+    clean_overrides = {}
+    if isinstance(day_overrides, dict):
+        for k, v in day_overrides.items():
+            try:
+                clean_overrides[int(k)] = str(v).upper()
+            except Exception:
+                clean_overrides[k] = str(v).upper()
+
+    if att_pct >= 100.0 and not clean_overrides:
         present_count = total_days
         leave_count = 0
         leave_indices = set()
@@ -1813,10 +1822,21 @@ def compute_batch_student_attendance(student: dict, working_days: list, topics: 
                 cur += 1
 
     records = []
+    final_present_count = 0
+    final_leave_count = 0
+
     for idx, day in enumerate(working_days):
-        if idx in leave_indices:
+        day_num = day["day_number"]
+        # Check override first, otherwise use calculated schedule
+        is_leave = (idx in leave_indices)
+        if day_num in clean_overrides:
+            ov = clean_overrides[day_num]
+            is_leave = (ov in ("L", "LEAVE", "AUTHORIZED LEAVE", "ABSENT"))
+
+        if is_leave:
+            final_leave_count += 1
             records.append({
-                "day_number": day["day_number"],
+                "day_number": day_num,
                 "date": day["date"],
                 "day_of_week": day["day_of_week"],
                 "short_date": day["short_date"],
@@ -1830,8 +1850,9 @@ def compute_batch_student_attendance(student: dict, working_days: list, topics: 
                 "mentor_signed": "Approved Leave"
             })
         else:
+            final_present_count += 1
             records.append({
-                "day_number": day["day_number"],
+                "day_number": day_num,
                 "date": day["date"],
                 "day_of_week": day["day_of_week"],
                 "short_date": day["short_date"],
@@ -1845,8 +1866,8 @@ def compute_batch_student_attendance(student: dict, working_days: list, topics: 
                 "mentor_signed": "Verified (Signed)"
             })
 
-    actual_pct = round((present_count / total_days) * 100.0, 1)
-    total_hours_logged = round(present_count * daily_hours, 1)
+    actual_pct = round((final_present_count / total_days) * 100.0, 1) if total_days > 0 else 100.0
+    total_hours_logged = round(final_present_count * daily_hours, 1)
 
     return {
         "full_name": student.get("full_name", "Student Name"),
@@ -1858,9 +1879,10 @@ def compute_batch_student_attendance(student: dict, working_days: list, topics: 
         "attendance_pct_target": att_pct,
         "attendance_pct_actual": actual_pct,
         "total_days": total_days,
-        "present_days": present_count,
-        "leave_days": leave_count,
+        "present_days": final_present_count,
+        "leave_days": final_leave_count,
         "total_hours_logged": total_hours_logged,
+        "day_overrides": clean_overrides,
         "records": records
     }
 
