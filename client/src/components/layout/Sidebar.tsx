@@ -3,12 +3,20 @@ import { NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, Users, UserPlus, CalendarCheck, BookOpen, 
   FolderKanban, Award, ShieldCheck, Settings, History, FileText,
-  GraduationCap, Database, LayoutTemplate, Wand2, Layers, Sun
+  GraduationCap, Database, LayoutTemplate, Wand2, Layers, Sun, RefreshCw, ArrowLeftRight
 } from 'lucide-react';
 import { useInstitution } from '../../contexts/InstitutionContext';
 
 export const Sidebar: React.FC = () => {
-  const { activeInstitution, isPoddar, isPoswal } = useInstitution();
+  const { activeInstitution, isPoddar, isPoswal, selectInstitution } = useInstitution();
+
+  const handleToggleInstitution = () => {
+    if (isPoddar) {
+      selectInstitution(2);
+    } else {
+      selectInstitution(1);
+    }
+  };
 
   const navItems = [
     { to: "/", icon: LayoutDashboard, label: "Admin Dashboard", end: true },
@@ -31,22 +39,44 @@ export const Sidebar: React.FC = () => {
   return (
     <aside className="no-print w-64 bg-white border-r border-slate-200 min-h-[calc(100vh-4rem)] flex flex-col justify-between p-4 shrink-0 shadow-sm">
       <div className="space-y-1">
-        {/* Active Workspace Header Badge */}
-        <div className={`px-3 py-2.5 rounded-xl mb-3 border text-left ${
+        {/* Interactive Active Workspace Card with Switch Action */}
+        <div className={`p-3 rounded-xl mb-3 border text-left shadow-xs transition-all ${
           isPoddar 
-            ? 'bg-blue-50/70 border-blue-200 text-blue-950' 
-            : 'bg-amber-50/70 border-amber-200 text-amber-950'
+            ? 'bg-blue-50/80 border-blue-200 text-blue-950 ring-1 ring-blue-300/40' 
+            : 'bg-amber-50/80 border-amber-200 text-amber-950 ring-1 ring-amber-300/40'
         }`}>
-          <div className="flex items-center space-x-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-            {isPoddar ? <GraduationCap className="w-3.5 h-3.5 text-blue-600" /> : <Sun className="w-3.5 h-3.5 text-amber-600" />}
-            <span>Active Portal</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              {isPoddar ? <GraduationCap className="w-3.5 h-3.5 text-blue-600" /> : <Sun className="w-3.5 h-3.5 text-amber-600" />}
+              <span>Active Portal</span>
+            </div>
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase ${
+              isPoddar ? 'bg-blue-200 text-blue-900' : 'bg-amber-200 text-amber-900'
+            }`}>
+              {isPoddar ? 'Option 1' : 'Option 2'}
+            </span>
           </div>
-          <div className="text-xs font-bold text-slate-900 mt-0.5 truncate">
+
+          <div className="text-xs font-bold text-slate-900 mt-1 truncate">
             {activeInstitution.name}
           </div>
-          <div className="text-[10px] text-slate-500 truncate">
+          <div className="text-[10px] text-slate-500 truncate mt-0.5">
             {isPoddar ? 'Authority: Nitin Agarwal' : 'Authority: Madhuvan Gurjar'}
           </div>
+
+          {/* Quick Switch Action Button inside Sidebar */}
+          <button
+            onClick={handleToggleInstitution}
+            className={`w-full mt-2 py-1.5 px-2 rounded-lg text-[11px] font-bold flex items-center justify-center space-x-1.5 transition-all cursor-pointer shadow-xs border ${
+              isPoddar
+                ? 'bg-white hover:bg-amber-100 text-amber-900 border-amber-300 hover:border-amber-400'
+                : 'bg-white hover:bg-blue-100 text-blue-900 border-blue-300 hover:border-blue-400'
+            }`}
+            title="Switch Institution Workspace"
+          >
+            <RefreshCw className="w-3 h-3" />
+            <span>{isPoddar ? 'Switch to Poswal Devs ☀️' : 'Switch to Poddar College 🎓'}</span>
+          </button>
         </div>
 
         <div className="px-3 py-1">
@@ -98,21 +128,12 @@ export const Sidebar: React.FC = () => {
         </nav>
       </div>
 
-      {/* Compliance / Notice Card */}
-      <div className={`mt-6 p-3 rounded-lg border text-[11px] leading-relaxed text-left ${
-        isPoddar ? 'bg-blue-50/70 border-blue-200 text-blue-950' : 'bg-amber-50/70 border-amber-200 text-amber-950'
-      }`}>
-        <div className="flex items-center space-x-1.5 font-bold mb-1">
-          <ShieldCheck className={`w-3.5 h-3.5 ${isPoddar ? 'text-blue-700' : 'text-amber-700'}`} />
-          <span>{isPoddar ? 'Academic Compliance' : 'Industrial Compliance'}</span>
+      {/* Footer Info */}
+      <div className="pt-4 border-t border-slate-100 space-y-2">
+        <div className="text-[10px] text-slate-400 text-center font-mono">
+          Internal Management Portal v3.0
         </div>
-        <p className="text-[10px] text-slate-600">
-          {isPoddar 
-            ? 'Poddar College official records. Documents require physical ink stamp and signature of Nitin Agarwal (Authority).'
-            : 'Poswal Developers solar credentials (GST: 08ABIFP2454N1ZQ | MSME: UDYAM-RJ-06-0052498). Authorized by Madhuvan Singh Gurjar.'}
-        </p>
       </div>
     </aside>
   );
 };
-

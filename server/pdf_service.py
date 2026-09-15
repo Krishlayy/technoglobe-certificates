@@ -1217,16 +1217,16 @@ def generate_completion_certificate(internship_id: int) -> str:
         # Poswal Developers Letterhead Banner & Header
         c.setFont("Helvetica-Bold", 8)
         c.setFillColor(DARK)
-        c.drawString(16 * mm, height - 18 * mm, f"GST NO. {prof['gst_no']}")
-        c.drawCentredString(width / 2.0, height - 18 * mm, "!! Shri Ganeshay Namah !!")
-        c.drawRightString(width - 16 * mm, height - 18 * mm, f"Mob. {prof['phone']}")
+        c.drawString(16 * mm, height - 17.5 * mm, f"GST NO. {prof['gst_no']}")
+        c.drawCentredString(width / 2.0, height - 17.5 * mm, "!! Shri Ganeshay Namah !!")
+        c.drawRightString(width - 16 * mm, height - 17.5 * mm, f"Mob. {prof['phone']}")
 
         logo_full_path = os.path.join(os.path.dirname(__file__), prof["logo_path"])
         if os.path.exists(logo_full_path):
             logo_w = 64 * mm
             logo_h = 13.5 * mm
             logo_x = (width - logo_w) / 2.0
-            logo_y = height - 33 * mm
+            logo_y = height - 32.5 * mm
             c.drawImage(logo_full_path, logo_x, logo_y, width=logo_w, height=logo_h, mask='auto', preserveAspectRatio=True)
         else:
             c.setFont("Helvetica-Bold", 18)
@@ -1235,97 +1235,102 @@ def generate_completion_certificate(internship_id: int) -> str:
 
         c.setFont("Helvetica", 7.8)
         c.setFillColor(DARK)
-        c.drawCentredString(width / 2.0, height - 37 * mm, prof["address"])
+        c.drawCentredString(width / 2.0, height - 36.5 * mm, prof["address"])
 
         c.setFont("Helvetica-Bold", 7)
         c.setFillColor(colors.HexColor("#475569"))
-        c.drawCentredString(width / 2.0, height - 40.5 * mm, f"MSME Udyam: {prof['msme_no']} • Solar Energy Generation & Industrial Infrastructure")
+        c.drawCentredString(width / 2.0, height - 40 * mm, f"MSME Udyam: {prof['msme_no']} • Solar Energy Generation & Industrial Infrastructure")
     else:
         # Poddar College Official Header
         poddar_logo_path = os.path.join(os.path.dirname(__file__), "poddar_logo.png")
         if os.path.exists(poddar_logo_path):
-            logo_size = 20 * mm
+            logo_size = 18 * mm
             logo_x = (width - logo_size) / 2.0
-            logo_y = height - 32 * mm
+            logo_y = height - 30.5 * mm
             c.drawImage(poddar_logo_path, logo_x, logo_y, width=logo_size, height=logo_size, mask='auto', preserveAspectRatio=True)
 
-        c.setFont("Helvetica-Bold", 12.5)
+        c.setFont("Helvetica-Bold", 13)
         c.setFillColor(c_primary)
-        c.drawCentredString(width / 2.0, height - 36.5 * mm, "PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT")
+        c.drawCentredString(width / 2.0, height - 35.5 * mm, "PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT")
 
         c.setFont("Helvetica", 7.8)
         c.setFillColor(MUTED)
-        c.drawCentredString(width / 2.0, height - 40 * mm, f"Bharatpur, Rajasthan | Contact: {prof['phone']} | Email: {prof['email']} | Web: {prof['website']}")
+        c.drawCentredString(width / 2.0, height - 39.5 * mm, f"Bharatpur, Rajasthan | Contact: {prof['phone']} | Email: {prof['email']} | Web: {prof['website']}")
 
     # Gold / Accent Separator Line
     c.setStrokeColor(c_accent)
     c.setLineWidth(1.2)
-    c.line(45 * mm, height - 43 * mm, width - 45 * mm, height - 43 * mm)
+    c.line(45 * mm, height - 42.5 * mm, width - 45 * mm, height - 42.5 * mm)
 
-    # Certificate Title (Centered & Bold)
+    # -------------------------------------------------------------------------
+    # Centered & Vertically Balanced Certificate Content ("Centrise & Midlise")
+    # -------------------------------------------------------------------------
     cert_title = "CERTIFICATE OF INDUSTRIAL TRAINING" if is_poswal else "CERTIFICATE OF INTERNSHIP COMPLETION"
-    c.setFont("Helvetica-Bold", 19)
+    c.setFont("Helvetica-Bold", 20)
     c.setFillColor(c_primary)
-    c.drawCentredString(width / 2.0, height - 51.5 * mm, cert_title)
+    c.drawCentredString(width / 2.0, height - 56.0 * mm, cert_title)
 
-    c.setFont("Helvetica-Oblique", 10.5)
+    c.setFont("Helvetica-Oblique", 11)
     c.setFillColor(DARK)
-    c.drawCentredString(width / 2.0, height - 58 * mm, "This is to certify that")
+    c.drawCentredString(width / 2.0, height - 66.0 * mm, "This is to certify that")
 
-    # Student Name (Large, Ultra-Bold, Centered, Standout)
-    c.setFont("Helvetica-Bold", 24)
+    # Student Name (Large, Ultra-Bold, Standout)
+    c.setFont("Helvetica-Bold", 25)
     c.setFillColor(c_primary if is_poswal else c_secondary)
-    c.drawCentredString(width / 2.0, height - 68 * mm, it["student_name"].upper())
+    c.drawCentredString(width / 2.0, height - 79.5 * mm, it["student_name"].upper())
 
     # Decorative Underline with Accent Wings
-    name_w = c.stringWidth(it["student_name"].upper(), "Helvetica-Bold", 24)
+    name_w = c.stringWidth(it["student_name"].upper(), "Helvetica-Bold", 25)
     c.setStrokeColor(c_accent)
-    c.setLineWidth(1.6)
-    c.line((width - name_w) / 2.0 - 12*mm, height - 70.5 * mm, (width + name_w) / 2.0 + 12*mm, height - 70.5 * mm)
+    c.setLineWidth(1.8)
+    c.line((width - name_w) / 2.0 - 15 * mm, height - 83.0 * mm, (width + name_w) / 2.0 + 15 * mm, height - 83.0 * mm)
 
     # Micro Security Line
-    c.setFont("Helvetica-Bold", 4.2)
+    c.setFont("Helvetica-Bold", 4.5)
     c.setFillColor(colors.HexColor("#475569"))
     if is_poswal:
         sec_line = f"• POSWAL DEVELOPERS • GST: {prof['gst_no']} • MSME: {prof['msme_no']} • SOLAR POWER TRAINING • AUTHENTIC CREDENTIAL •"
     else:
         sec_line = "• PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT • BHARATPUR, RAJASTHAN • AUTHENTIC ACADEMIC CREDENTIAL •"
-    c.drawCentredString(width / 2.0, height - 72.8 * mm, sec_line)
+    c.drawCentredString(width / 2.0, height - 85.8 * mm, sec_line)
 
     # Student College / Academic Details (Centered)
-    c.setFont("Helvetica", 10)
+    c.setFont("Helvetica", 10.8)
     c.setFillColor(DARK)
     acad_text = f"Student of {it['college_name']} | {it['degree']} ({it['branch']}) | Session: {it['academic_session']}"
-    c.drawCentredString(width / 2.0, height - 77 * mm, acad_text)
+    c.drawCentredString(width / 2.0, height - 95.0 * mm, acad_text)
 
     # Completion Body Text (Centered & Balanced)
-    c.setFont("Helvetica", 10)
+    c.setFont("Helvetica", 10.5)
+    c.setFillColor(DARK)
     training_desc = "has successfully completed the comprehensive course-based industrial training program in" if is_poswal else "has successfully completed the course-based internship program in"
-    c.drawCentredString(width / 2.0, height - 84 * mm, training_desc)
+    c.drawCentredString(width / 2.0, height - 105.0 * mm, training_desc)
 
-    # Course Title Highlight
-    c.setFont("Helvetica-Bold", 14)
+    # Course Title Highlight (Bold, Crisp Primary Color)
+    c.setFont("Helvetica-Bold", 15.5)
     c.setFillColor(c_primary)
-    c.drawCentredString(width / 2.0, height - 91 * mm, it["course_title"])
+    c.drawCentredString(width / 2.0, height - 116.0 * mm, it["course_title"])
 
     # Duration & Dates
-    c.setFont("Helvetica", 9.6)
+    c.setFont("Helvetica", 10)
     c.setFillColor(DARK)
     dur_line = f"conducted from {it['start_date']} to {it['end_date']} covering a total curriculum duration of {it['duration_weeks']} Weeks ({it['total_training_hours']} Training Hours)."
-    c.drawCentredString(width / 2.0, height - 97.5 * mm, dur_line)
+    c.drawCentredString(width / 2.0, height - 126.5 * mm, dur_line)
 
     # Capstone / Project
     cap_title = pf.get('project_title') or it.get('internship_title') or "Applied Practical Implementation"
-    c.setFont("Helvetica-BoldOblique", 9.6)
+    c.setFont("Helvetica-BoldOblique", 10)
     c.setFillColor(c_secondary)
-    c.drawCentredString(width / 2.0, height - 104 * mm, f"Practical Specialization / Capstone: \"{cap_title}\"")
+    c.drawCentredString(width / 2.0, height - 136.5 * mm, f"Practical Specialization / Capstone: \"{cap_title}\"")
 
     # Performance Statement
-    c.setFont("Helvetica", 9.2)
+    c.setFont("Helvetica", 9.5)
     c.setFillColor(DARK)
-    c.drawCentredString(width / 2.0, height - 110.5 * mm, "During the training tenure, the candidate demonstrated exemplary diligence, academic discipline, and technical proficiency.")
+    c.drawCentredString(width / 2.0, height - 146.0 * mm, "During the training tenure, the candidate demonstrated exemplary diligence, academic discipline, and technical proficiency.")
 
-    # 3. Bottom Row: QR Code Box (Left), Physical Ink Stamp Box (Center), Dual Signatures (Right)
+    # -------------------------------------------------------------------------
+    # 3. Bottom Row: QR Verification (Left), Physical Seal (Center), Dual Signatures (Right)
+    # -------------------------------------------------------------------------
     sem_text = it.get("semester_year") or "6th Semester"
     deg_text = it.get("degree") or "BCA"
 
@@ -1337,64 +1342,66 @@ def generate_completion_certificate(internship_id: int) -> str:
         "cert": cert_num,
         "name": it['student_name'],
         "course": it['course_name'],
-        "sem": f"{deg_text} ({sem_text})",
-        "college": it['college_name'],
-        "ver_id": ver_code,
-        "date": issue_date,
-        "sig": sig
+        "sig": sig[:10]
     })
     qr_payload_str = f"{base_url}/verify?{params}"
 
     # Left: QR Verification Container Box
     box_x = 16 * mm
-    box_y = 15 * mm
-    box_w = 88 * mm
-    box_h = 35 * mm
+    box_y = 14 * mm
+    box_w = 90 * mm
+    box_h = 36 * mm
     c.setStrokeColor(BORDER_COLOR)
     c.setFillColor(BG_LIGHT)
-    c.rect(box_x, box_y, box_w, box_h, fill=1, stroke=1)
+    c.roundRect(box_x, box_y, box_w, box_h, 2 * mm, fill=1, stroke=1)
 
+    # White Background Card for High-Contrast QR Scannability
+    c.setFillColor(colors.white)
+    c.setStrokeColor(BORDER_COLOR)
+    c.roundRect(box_x + 2.5 * mm, box_y + 4.5 * mm, 27 * mm, 27 * mm, 1.5 * mm, fill=1, stroke=1)
+
+    # Draw QR Code with perfect quiet zone and contrast
     qr_size = 23 * mm
     try:
         c.saveState()
         qr = QrCodeWidget(qr_payload_str)
+        qr.barBorder = 2
         b = qr.getBounds()
         qw = b[2] - b[0]
         qh = b[3] - b[1]
         d = Drawing(qr_size, qr_size, transform=[qr_size/qw, 0, 0, qr_size/qh, 0, 0])
         d.add(qr)
-        renderPDF.draw(d, c, box_x + 2.5 * mm, box_y + 8.5 * mm)
+        renderPDF.draw(d, c, box_x + 4.5 * mm, box_y + 6.5 * mm)
         c.restoreState()
     except Exception as e:
         print(f"QR drawing error: {e}")
 
-    c.setFont("Helvetica-Bold", 5.5)
+    c.setFont("Helvetica-Bold", 5.2)
     c.setFillColor(c_primary)
-    c.drawCentredString(box_x + 14 * mm, box_y + 5 * mm, "SCAN TO VERIFY")
-    c.drawCentredString(box_x + 14 * mm, box_y + 2.5 * mm, "OFFICIAL RECORD")
+    c.drawCentredString(box_x + 16.0 * mm, box_y + 2.0 * mm, "SCAN TO VERIFY RECORD")
 
-    text_x = box_x + 28 * mm
+    text_x = box_x + 31.5 * mm
     c.setFont("Helvetica-Bold", 7.2)
     c.setFillColor(c_primary)
-    c.drawString(text_x, box_y + 29.5 * mm, "OFFICIAL VERIFICATION RECORD")
+    c.drawString(text_x, box_y + 30.5 * mm, "OFFICIAL VERIFICATION RECORD")
 
     c.setFont("Helvetica", 6.8)
     c.setFillColor(DARK)
-    c.drawString(text_x, box_y + 24.5 * mm, f"Candidate: {it['student_name']}")
-    c.drawString(text_x, box_y + 20 * mm, f"Program: {it['course_name']}")
-    c.drawString(text_x, box_y + 15.5 * mm, f"Degree: {deg_text} ({sem_text})")
-    c.drawString(text_x, box_y + 11 * mm, f"Cert No: {cert_num}")
-    c.drawString(text_x, box_y + 6.5 * mm, f"Issue Date: {issue_date} • {prof.get('code', 'PCTM')}")
+    c.drawString(text_x, box_y + 25.5 * mm, f"Candidate: {it['student_name']}")
+    c.drawString(text_x, box_y + 21.0 * mm, f"Program: {it['course_name']}")
+    c.drawString(text_x, box_y + 16.5 * mm, f"Degree: {deg_text} ({sem_text})")
+    c.drawString(text_x, box_y + 12.0 * mm, f"Cert No: {cert_num}")
+    c.drawString(text_x, box_y + 7.5 * mm, f"Issue Date: {issue_date} • {prof.get('code', 'PCTM')}")
 
     c.setFont("Helvetica-Bold", 5.5)
     c.setFillColor(colors.HexColor("#059669"))
-    c.drawString(text_x, box_y + 2.5 * mm, f"✓ Cryptographic Signature: {sig[:8]}... (Authentic)")
+    c.drawString(text_x, box_y + 3.0 * mm, f"✓ Cryptographic Signature: {sig[:8]}... (Authentic)")
 
     # Center: Empty Space for Physical Ink Stamp
-    stamp_x = 110 * mm
-    stamp_y = 15 * mm
+    stamp_x = 111 * mm
+    stamp_y = 14 * mm
     stamp_w = 34 * mm
-    stamp_h = 35 * mm
+    stamp_h = 36 * mm
     c.saveState()
     c.setStrokeColor(colors.HexColor("#94A3B8"))
     c.setLineWidth(0.8)
@@ -1419,29 +1426,29 @@ def generate_completion_certificate(internship_id: int) -> str:
     sig1_x = 178 * mm
     c.setFont("Helvetica-Bold", 9)
     c.setFillColor(DARK)
-    c.drawCentredString(sig1_x, 38 * mm, trainer_name)
+    c.drawCentredString(sig1_x, 35 * mm, trainer_name)
     c.setFont("Helvetica", 8)
     c.setFillColor(MUTED)
-    c.drawCentredString(sig1_x, 34 * mm, trainer_desig)
+    c.drawCentredString(sig1_x, 31 * mm, trainer_desig)
     c.setStrokeColor(DARK)
     c.setLineWidth(0.6)
-    c.line(sig1_x - 22*mm, 42 * mm, sig1_x + 22*mm, 42 * mm)
+    c.line(sig1_x - 22*mm, 40 * mm, sig1_x + 22*mm, 40 * mm)
     c.setFont("Helvetica-Oblique", 7.2)
-    c.drawCentredString(sig1_x, 26 * mm, "Trainer / Faculty Guide")
+    c.drawCentredString(sig1_x, 23 * mm, "Trainer / Faculty Guide")
 
     # Authority Signature Line
     sig2_x = 246 * mm
     c.setFont("Helvetica-Bold", 9)
     c.setFillColor(DARK)
-    c.drawCentredString(sig2_x, 38 * mm, authority_name)
+    c.drawCentredString(sig2_x, 35 * mm, authority_name)
     c.setFont("Helvetica", 8)
     c.setFillColor(MUTED)
-    c.drawCentredString(sig2_x, 34 * mm, authority_desig)
+    c.drawCentredString(sig2_x, 31 * mm, authority_desig)
     c.setStrokeColor(DARK)
     c.setLineWidth(0.6)
-    c.line(sig2_x - 22*mm, 42 * mm, sig2_x + 22*mm, 42 * mm)
+    c.line(sig2_x - 22*mm, 40 * mm, sig2_x + 22*mm, 40 * mm)
     c.setFont("Helvetica-Oblique", 7.2)
-    c.drawCentredString(sig2_x, 26 * mm, "Authority (Authorized Signatory)")
+    c.drawCentredString(sig2_x, 23 * mm, "Authority (Authorized Signatory)")
 
     c.showPage()
     c.save()
