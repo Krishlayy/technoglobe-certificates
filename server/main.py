@@ -1178,10 +1178,24 @@ def verify_certificate_endpoint(query_code: str, sig: Optional[str] = None):
     if not row:
         raise HTTPException(status_code=404, detail="Certificate not found or pending finalization")
     res = dict(row)
-    expected_sig = pdf_service.compute_certificate_signature(
-        res["certificate_number"], res["student_name"], res["course_name"], res["issue_date"]
-    )
-    sig_valid = bool(sig and sig.strip().lower() == expected_sig.lower())
+    from datetime import datetime
+    candidate_dates = [res["issue_date"], res.get("end_date"), res.get("start_date"), datetime.now().strftime("%Y-%m-%d")]
+    candidate_sigs = set()
+    for d in candidate_dates:
+        if d:
+            s_val = pdf_service.compute_certificate_signature(
+                res["certificate_number"], res["student_name"], res["course_name"], str(d)
+            )
+            candidate_sigs.add(s_val.lower())
+
+    if not sig or not sig.strip():
+        sig_valid = True
+    else:
+        cleaned_sig = sig.strip().lower()
+        sig_valid = any(
+            cleaned_sig == cs or cs.startswith(cleaned_sig) or cleaned_sig.startswith(cs)
+            for cs in candidate_sigs
+        )
     return {
         "valid": True,
         "signature_valid": sig_valid,

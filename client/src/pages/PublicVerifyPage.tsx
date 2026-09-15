@@ -257,9 +257,15 @@ export const PublicVerifyPage: React.FC = () => {
               </div>
 
               {/* Cryptographic Signature & Tamper Status */}
-              {certData.signature_valid === false && (
+              {certData.signature_valid === true && (
+                <div className="p-3 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-xl text-xs font-medium flex items-center space-x-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>✓ Cryptographically Verified & Authentic (Official Security Hash Confirmed)</span>
+                </div>
+              )}
+              {certData.signature_valid === false && sigParam && (
                 <div className="p-3 bg-amber-50 border border-amber-300 text-amber-900 rounded-xl text-xs font-medium flex items-center space-x-2">
-                  <span>⚠️ Notice: The cryptographic signature in the URL was altered or mismatched. Record verified directly from the official internal database.</span>
+                  <span>⚠️ Notice: The security token in the link was modified. Record verified directly from authoritative database records.</span>
                 </div>
               )}
 

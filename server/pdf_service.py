@@ -1159,8 +1159,12 @@ def generate_completion_certificate(internship_id: int) -> str:
 
     cert_num = it["certificate_number"] or f"{cert_prefix}-{it['course_code']}-2026-{it['id']:04d}"
     ver_code = it["verification_code"] or f"VER-{cert_prefix}-{it['course_code']}-{it['id']:05d}"
-    raw_issue = it.get("finalized_at")
-    issue_date = raw_issue[:10] if raw_issue else datetime.now().strftime("%Y-%m-%d")
+    certs_list = ctx.get("certificates", [])
+    if certs_list and certs_list[0].get("issue_date"):
+        issue_date = certs_list[0]["issue_date"]
+    else:
+        raw_issue = it.get("finalized_at")
+        issue_date = raw_issue[:10] if raw_issue else (it.get("end_date") or datetime.now().strftime("%Y-%m-%d"))
 
     filename = f"14_Internship_Completion_Certificate_{it['student_name'].replace(' ', '_')}.pdf"
     filepath = os.path.join(GENERATED_DIR, filename)
@@ -1342,7 +1346,7 @@ def generate_completion_certificate(internship_id: int) -> str:
         "cert": cert_num,
         "name": it['student_name'],
         "course": it['course_name'],
-        "sig": sig[:10]
+        "sig": sig
     })
     qr_payload_str = f"{base_url}/verify?{params}"
 
@@ -1465,8 +1469,12 @@ def generate_experience_certificate(internship_id: int) -> str:
 
     cert_num = f"TG-BPT-EXP-2026-{it['id']:04d}"
     ver_code = f"VER-TG-EXP-{it['id']:05d}"
-    raw_issue = it.get("finalized_at")
-    issue_date = raw_issue[:10] if raw_issue else datetime.now().strftime("%Y-%m-%d")
+    certs_list = ctx.get("certificates", [])
+    if certs_list and certs_list[0].get("issue_date"):
+        issue_date = certs_list[0]["issue_date"]
+    else:
+        raw_issue = it.get("finalized_at")
+        issue_date = raw_issue[:10] if raw_issue else (it.get("end_date") or datetime.now().strftime("%Y-%m-%d"))
 
     filename = f"15_Experience_Training_Certificate_{it['student_name'].replace(' ', '_')}.pdf"
     filepath = os.path.join(GENERATED_DIR, filename)
