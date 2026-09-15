@@ -20,6 +20,7 @@ import { AuditLogsPage } from './pages/AuditLogsPage';
 import { PublicVerifyPage } from './pages/PublicVerifyPage';
 import LoginPage from './pages/LoginPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { InstitutionProvider } from './contexts/InstitutionContext';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -39,7 +40,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 export function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <InstitutionProvider>
+        <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/verify" element={<PublicVerifyPage />} />
@@ -65,6 +67,7 @@ export function App() {
           </Route>
         </Routes>
       </BrowserRouter>
+      </InstitutionProvider>
     </AuthProvider>
   );
 }

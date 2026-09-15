@@ -3,9 +3,11 @@ import { useNavigate, Link } from 'react-router-dom';
 import { UserPlus, ArrowLeft, Save, Building2, BookOpen, UserCheck, ShieldCheck, Wand2, ArrowRight } from 'lucide-react';
 import { api } from '../services/api';
 import { Course, Mentor, Batch } from '../types';
+import { useInstitution } from '../contexts/InstitutionContext';
 
 export const NewStudentPage: React.FC = () => {
   const navigate = useNavigate();
+  const { activeInstitution, institutionId, isPoswal } = useInstitution();
   const [courses, setCourses] = useState<Course[]>([]);
   const [mentors, setMentors] = useState<Mentor[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -24,16 +26,17 @@ export const NewStudentPage: React.FC = () => {
     city: 'Bharatpur',
     state: 'Rajasthan',
 
-    // Academic Details (Simplified: College fixed to Poddar College; No PRN/Roll)
-    college_name: 'Poddar College, Bharatpur',
-    degree: 'BCA',
-    branch: 'Computer Science',
+    // Academic Details
+    college_name: isPoswal ? 'Poswal Developers Training Division' : 'Poddar College, Bharatpur',
+    degree: isPoswal ? 'Diploma / B.Tech (Solar & Electrical)' : 'BCA',
+    branch: isPoswal ? 'Solar Energy Systems' : 'Computer Science',
     semester_year: '6th Semester',
     academic_session: '2025-2026',
 
     // Internship Details
+    institution_id: institutionId,
     course_id: 1,
-    mentor_id: 1,
+    mentor_id: isPoswal ? 1 : 2,
     batch_id: 1,
     internship_title: '',
     internship_type: 'Course-Based Internship',
@@ -45,7 +48,20 @@ export const NewStudentPage: React.FC = () => {
   });
 
   useEffect(() => {
-    Promise.all([api.getCourses(), api.getMentors(), api.getBatches()]).then(
+    setFormData(prev => ({
+      ...prev,
+      institution_id: institutionId,
+      college_name: isPoswal ? 'Poswal Developers Training Division' : 'Poddar College, Bharatpur',
+      degree: isPoswal ? 'Diploma / B.Tech (Solar & Electrical)' : 'BCA',
+      branch: isPoswal ? 'Solar Energy Systems' : 'Computer Science',
+      mentor_id: isPoswal ? 1 : 2
+    }));
+
+    Promise.all([
+      api.getCourses(institutionId), 
+      api.getMentors(institutionId), 
+      api.getBatches(institutionId)
+    ]).then(
       ([cData, mData, bData]) => {
         setCourses(cData);
         setMentors(mData);
@@ -62,7 +78,7 @@ export const NewStudentPage: React.FC = () => {
         }
       }
     );
-  }, []);
+  }, [institutionId]);
 
   const handleCourseChange = (courseId: number) => {
     const selectedCourse = courses.find(c => c.id === courseId);

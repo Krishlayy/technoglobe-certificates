@@ -32,8 +32,9 @@ export const api = {
   },
 
   // Dashboard
-  getDashboardStats: async () => {
-    const res = await fetch(`${API_BASE}/dashboard/stats`);
+  getDashboardStats: async (institution_id?: number) => {
+    const q = institution_id ? `?institution_id=${institution_id}` : '';
+    const res = await fetch(`${API_BASE}/dashboard/stats${q}`);
     return res.json();
   },
 
@@ -71,8 +72,9 @@ export const api = {
   },
 
   // Courses
-  getCourses: async (): Promise<Course[]> => {
-    const res = await fetch(`${API_BASE}/courses`);
+  getCourses: async (institution_id?: number): Promise<Course[]> => {
+    const q = institution_id ? `?institution_id=${institution_id}` : '';
+    const res = await fetch(`${API_BASE}/courses${q}`);
     return res.json();
   },
 
@@ -91,13 +93,15 @@ export const api = {
   },
 
   // Mentors & Batches
-  getMentors: async (): Promise<Mentor[]> => {
-    const res = await fetch(`${API_BASE}/mentors`);
+  getMentors: async (institution_id?: number): Promise<Mentor[]> => {
+    const q = institution_id ? `?institution_id=${institution_id}` : '';
+    const res = await fetch(`${API_BASE}/mentors${q}`);
     return res.json();
   },
 
-  getBatches: async (): Promise<Batch[]> => {
-    const res = await fetch(`${API_BASE}/batches`);
+  getBatches: async (institution_id?: number): Promise<Batch[]> => {
+    const q = institution_id ? `?institution_id=${institution_id}` : '';
+    const res = await fetch(`${API_BASE}/batches${q}`);
     return res.json();
   },
 
@@ -192,8 +196,9 @@ export const api = {
   },
 
   // Settings
-  getSettings: async (): Promise<CentreSettings> => {
-    const res = await fetch(`${API_BASE}/settings`, { headers: authHeaders() });
+  getSettings: async (institution_id?: number): Promise<CentreSettings> => {
+    const q = institution_id ? `?institution_id=${institution_id}` : '';
+    const res = await fetch(`${API_BASE}/settings${q}`, { headers: authHeaders() });
     return res.json();
   },
 
@@ -228,11 +233,16 @@ export const api = {
     return `${API_BASE}/documents/${internshipId}/package-zip`;
   },
 
-  getBatchPrintUrl: (internshipIds?: number[]) => {
+  getBatchPrintUrl: (internshipIds?: number[], institution_id?: number) => {
+    const params = new URLSearchParams();
     if (internshipIds && internshipIds.length > 0) {
-      return `${API_BASE}/certificates/batch-print?ids=${internshipIds.join(',')}`;
+      params.set('ids', internshipIds.join(','));
     }
-    return `${API_BASE}/certificates/batch-print`;
+    if (institution_id) {
+      params.set('institution_id', institution_id.toString());
+    }
+    const qs = params.toString();
+    return `${API_BASE}/certificates/batch-print${qs ? `?${qs}` : ''}`;
   },
 
   // Backup & Restore

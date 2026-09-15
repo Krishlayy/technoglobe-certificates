@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Settings, Building2, Save, Upload, ShieldCheck, CheckCircle2, Globe, QrCode } from 'lucide-react';
 import { api } from '../services/api';
 import { CentreSettings } from '../types';
+import { useInstitution } from '../contexts/InstitutionContext';
 
 export const CentreSettingsPage: React.FC = () => {
+  const { activeInstitution, institutionId, isPoswal } = useInstitution();
   const [settings, setSettings] = useState<CentreSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -11,12 +13,12 @@ export const CentreSettingsPage: React.FC = () => {
 
   useEffect(() => {
     loadSettings();
-  }, []);
+  }, [institutionId]);
 
   const loadSettings = async () => {
     setLoading(true);
     try {
-      const data = await api.getSettings();
+      const data = await api.getSettings(institutionId);
       setSettings(data);
     } catch (err) {
       console.error(err);
@@ -53,10 +55,10 @@ export const CentreSettingsPage: React.FC = () => {
     <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
       <div>
         <h1 className="text-2xl font-serif font-bold text-slate-900 tracking-tight">
-          Franchise Centre Configuration & Branding
+          {activeInstitution.name} Configuration & Branding
         </h1>
         <p className="text-xs text-slate-500 mt-0.5">
-          Configure official Poddar College Bharatpur centre credentials, authorized signatories, and numbering prefixes.
+          Configure official credentials, authorized signatories, and certificate numbering prefixes for {activeInstitution.fullName}.
         </p>
       </div>
 
@@ -71,17 +73,17 @@ export const CentreSettingsPage: React.FC = () => {
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center space-x-4">
             <div className="bg-white p-2 rounded-lg border border-slate-200 shadow-2xs">
-              <img src="/poddar_logo.png" alt="Official TechnoGlobe Logo" className="h-10 w-auto object-contain" />
+              <img src={activeInstitution.logo} alt={activeInstitution.name} className="h-10 w-auto object-contain" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="font-serif font-bold text-sm text-slate-900">Official Poddar College Registered Logo</span>
+                <span className="font-serif font-bold text-sm text-slate-900">Official {activeInstitution.name} Registered Logo</span>
                 <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
                   Active in All Documents
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Automatically rendered at the top of the Certificate of Completion, all 15 internship documents, and the Academic Project Report.
+                Automatically rendered at the top of the Certificate of Completion, all internship documents, and the Technical Project Report.
               </p>
             </div>
           </div>

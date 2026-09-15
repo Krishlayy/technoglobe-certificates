@@ -27,14 +27,28 @@ export interface Institution {
   name: string;
   code: string;
   full_name: string;
+  fullName?: string;
+  tagline?: string;
   address: string;
-  centre_head: string;
+  location?: string;
+  badgeText?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  gst_no?: string;
+  msme_no?: string;
+  centre_head?: string;
+  signatory_name?: string;
+  signatory_designation?: string;
   stamp_mode: string; // 'DIGITAL_BADGE' | 'EMPTY_INK_PAD_BOX'
   cert_prefix: string;
+  doc_prefix?: string;
   logo_path: string;
-  watermark_path: string;
+  logo?: string;
+  watermark_path?: string;
   primary_color: string;
   secondary_color: string;
+  accent_color?: string;
   is_active: number;
 }
 

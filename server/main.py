@@ -127,44 +127,52 @@ def get_current_user_info(user = Depends(get_current_user)):
 # 2. Dashboard Stats
 # -------------------------------------------------------------
 @app.get("/api/dashboard/stats")
-def get_dashboard_stats():
+def get_dashboard_stats(institution_id: Optional[int] = None):
     conn = get_db()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT COUNT(*) FROM students")
+    inst_filter = " WHERE i.institution_id = ?" if institution_id else ""
+    inst_param = (institution_id,) if institution_id else ()
+
+    cursor.execute(f"SELECT COUNT(DISTINCT s.id) FROM students s JOIN internships i ON s.id = i.student_id{inst_filter}", inst_param)
     total_students = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(*) FROM internships WHERE status IN ('REGISTERED', 'TRAINING', 'PROJECT_SUBMITTED')")
+    cursor.execute(f"SELECT COUNT(*) FROM internships i WHERE i.status IN ('REGISTERED', 'TRAINING', 'PROJECT_SUBMITTED', 'IN_PROGRESS')" + (" AND i.institution_id = ?" if institution_id else ""), inst_param)
     active_internships = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(*) FROM internships WHERE status IN ('COMPLETED', 'CERTIFIED')")
+    cursor.execute(f"SELECT COUNT(*) FROM internships i WHERE i.status IN ('COMPLETED', 'CERTIFIED')" + (" AND i.institution_id = ?" if institution_id else ""), inst_param)
     completed_internships = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(*) FROM internships i JOIN courses c ON i.course_id = c.id WHERE c.code = 'DA'")
+    # Top track distribution
+    track1 = 'DA' if institution_id != 2 else 'SOL-01'
+    track2 = 'DM' if institution_id != 2 else 'SOL-02'
+    cursor.execute(f"SELECT COUNT(*) FROM internships i JOIN courses c ON i.course_id = c.id WHERE c.code = ?" + (" AND i.institution_id = ?" if institution_id else ""), (track1,) + inst_param)
     da_students = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(*) FROM internships i JOIN courses c ON i.course_id = c.id WHERE c.code = 'DM'")
+    cursor.execute(f"SELECT COUNT(*) FROM internships i JOIN courses c ON i.course_id = c.id WHERE c.code = ?" + (" AND i.institution_id = ?" if institution_id else ""), (track2,) + inst_param)
     dm_students = cursor.fetchone()[0]
 
     # Attendance overall %
-    cursor.execute("""
+    cursor.execute(f"""
     SELECT 
-        SUM(CASE WHEN status = 'PRESENT' THEN 1 ELSE 0 END) as pres,
+        SUM(CASE WHEN a.status = 'PRESENT' THEN 1 ELSE 0 END) as pres,
         COUNT(*) as total
-    FROM attendance
-    """)
+    FROM attendance a
+    JOIN internships i ON a.internship_id = i.id
+    {inst_filter}
+    """, inst_param)
     att_row = cursor.fetchone()
     avg_att = (att_row[0] / att_row[1] * 100) if att_row and att_row[1] > 0 else 0.0
 
-    cursor.execute("SELECT COUNT(*) FROM internships WHERE status IN ('TRAINING', 'PROJECT_SUBMITTED') AND id NOT IN (SELECT internship_id FROM evaluations)")
+    cursor.execute(f"SELECT COUNT(*) FROM internships i WHERE i.status IN ('TRAINING', 'PROJECT_SUBMITTED', 'IN_PROGRESS') AND i.id NOT IN (SELECT internship_id FROM evaluations)" + (" AND i.institution_id = ?" if institution_id else ""), inst_param)
     pending_evals = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(*) FROM certificates WHERE is_finalized = 1")
+    cursor.execute(f"SELECT COUNT(*) FROM certificates c JOIN internships i ON c.internship_id = i.id WHERE c.is_finalized = 1" + (" AND i.institution_id = ?" if institution_id else ""), inst_param)
     certificates_generated = cursor.fetchone()[0]
 
     # Recent internships list
-    cursor.execute("""
-    SELECT i.id, i.internship_title, i.start_date, i.end_date, i.status, i.certificate_number,
+    cursor.execute(f"""
+    SELECT i.id, i.internship_title, i.start_date, i.end_date, i.status, i.certificate_number, i.institution_id,
            s.full_name as student_name, s.college_name, s.degree, s.branch,
            c.name as course_name, c.code as course_code,
            m.name as mentor_name
@@ -172,9 +180,10 @@ def get_dashboard_stats():
     JOIN students s ON i.student_id = s.id
     JOIN courses c ON i.course_id = c.id
     JOIN mentors m ON i.mentor_id = m.id
+    {inst_filter}
     ORDER BY i.id DESC
     LIMIT 10
-    """)
+    """, inst_param)
     recent_internships = [dict(r) for r in cursor.fetchall()]
 
     conn.close()
@@ -185,6 +194,8 @@ def get_dashboard_stats():
         "completed_internships": completed_internships,
         "da_students": da_students,
         "dm_students": dm_students,
+        "top_track_1_code": track1,
+        "top_track_2_code": track2,
         "avg_attendance_pct": round(avg_att, 1),
         "pending_evaluations": pending_evals,
         "certificates_generated": certificates_generated,
@@ -359,10 +370,15 @@ def create_student(req: StudentCreate, user = Depends(get_current_user)):
 # 4. Courses & Modules Management
 # -------------------------------------------------------------
 @app.get("/api/courses")
-def list_courses():
+def list_courses(institution_id: Optional[int] = None):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM courses ORDER BY id ASC")
+    if institution_id == 1:
+        cursor.execute("SELECT * FROM courses WHERE code NOT LIKE 'SOL%' ORDER BY id ASC")
+    elif institution_id == 2:
+        cursor.execute("SELECT * FROM courses WHERE code LIKE 'SOL%' ORDER BY id ASC")
+    else:
+        cursor.execute("SELECT * FROM courses ORDER BY id ASC")
     courses = [dict(r) for r in cursor.fetchall()]
     for c in courses:
         cursor.execute("SELECT * FROM course_modules WHERE course_id = ? ORDER BY module_number ASC", (c["id"],))
@@ -410,25 +426,49 @@ def update_module(id: int, req: CourseModuleUpdate, user = Depends(get_current_u
 # 5. Mentors & Batches
 # -------------------------------------------------------------
 @app.get("/api/mentors")
-def list_mentors():
+def list_mentors(institution_id: Optional[int] = None):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM mentors WHERE is_active = 1")
+    if institution_id == 1:
+        cursor.execute("SELECT * FROM mentors WHERE is_active = 1 AND name IN ('Krishlay', 'Rahul') ORDER BY id ASC")
+    elif institution_id == 2:
+        cursor.execute("SELECT * FROM mentors WHERE is_active = 1 AND name LIKE '%Mahesh%' ORDER BY id ASC")
+    else:
+        cursor.execute("SELECT * FROM mentors WHERE is_active = 1 ORDER BY id ASC")
     mentors = [dict(r) for r in cursor.fetchall()]
     conn.close()
     return mentors
 
 @app.get("/api/batches")
-def list_batches():
+def list_batches(institution_id: Optional[int] = None):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("""
-    SELECT b.*, c.name as course_name, m.name as mentor_name
-    FROM batches b
-    JOIN courses c ON b.course_id = c.id
-    LEFT JOIN mentors m ON b.mentor_id = m.id
-    ORDER BY b.id DESC
-    """)
+    if institution_id == 1:
+        cursor.execute("""
+        SELECT b.*, c.name as course_name, m.name as mentor_name
+        FROM batches b
+        JOIN courses c ON b.course_id = c.id
+        LEFT JOIN mentors m ON b.mentor_id = m.id
+        WHERE c.code NOT LIKE 'SOL%'
+        ORDER BY b.id DESC
+        """)
+    elif institution_id == 2:
+        cursor.execute("""
+        SELECT b.*, c.name as course_name, m.name as mentor_name
+        FROM batches b
+        JOIN courses c ON b.course_id = c.id
+        LEFT JOIN mentors m ON b.mentor_id = m.id
+        WHERE c.code LIKE 'SOL%'
+        ORDER BY b.id DESC
+        """)
+    else:
+        cursor.execute("""
+        SELECT b.*, c.name as course_name, m.name as mentor_name
+        FROM batches b
+        JOIN courses c ON b.course_id = c.id
+        LEFT JOIN mentors m ON b.mentor_id = m.id
+        ORDER BY b.id DESC
+        """)
     batches = [dict(r) for r in cursor.fetchall()]
     conn.close()
     return batches
@@ -1928,165 +1968,6 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
         "report_pdf_url": f"/api/documents/{internship_id}/consolidated/pdf"
     }
 
-# -------------------------------------------------------------
-# 14.5 Bulk Attendance Management & Day-Wise Daily Sheets
-# -------------------------------------------------------------
-class BulkAttendanceStudent(BaseModel):
-    full_name: str
-    father_mother_name: Optional[str] = "Father Name"
-    roll_no: Optional[str] = ""
-    college_name: Optional[str] = "Poddar College, Bharatpur"
-    degree: Optional[str] = "BCA"
-    branch: Optional[str] = "Computer Science"
-    attendance_pct: float = 100.0
-    day_overrides: Optional[Dict[str, str]] = None
-
-class BulkAttendanceRequest(BaseModel):
-    institution_id: Optional[int] = 1
-    course_track: str = "DA"
-    custom_track_name: Optional[str] = None
-    total_days: int = 50
-    start_date: str = "2026-06-01"
-    start_time: str = "10:00 AM"
-    end_time: str = "01:30 PM"
-    daily_hours: float = 3.5
-    mentor_id: Optional[int] = 1
-    selected_day: Optional[int] = 1
-    layout_mode: Optional[str] = "1_page_per_day"
-    students: List[BulkAttendanceStudent]
-
-@app.post("/api/attendance/bulk-generate-preview")
-def bulk_generate_attendance_preview(req: BulkAttendanceRequest):
-    track_code = req.course_track.upper()
-    working_days = pdf_service.compute_batch_working_days(req.start_date, req.total_days)
-    topics = pdf_service.get_batch_track_topics(track_code, req.total_days)
-    
-    inst = pdf_service.resolve_institution_profile(req.institution_id or 1)
-
-    students_list = [s.dict() for s in req.students]
-    computed_students = [
-        pdf_service.compute_batch_student_attendance(s, working_days, topics, req.start_time, req.end_time, req.daily_hours)
-        for s in students_list
-    ]
-
-    return {
-        "institution": inst,
-        "course_track": track_code,
-        "custom_track_name": req.custom_track_name or f"Course-Based Internship ({track_code})",
-        "total_days": req.total_days,
-        "start_date": req.start_date,
-        "working_days": working_days,
-        "topics": topics,
-        "students": computed_students
-    }
-
-@app.post("/api/attendance/bulk-generate-pdf")
-def bulk_generate_master_attendance_pdf(req: BulkAttendanceRequest):
-    students_list = [s.dict() for s in req.students]
-    pdf_path = pdf_service.generate_master_batch_attendance_pdf(req.dict(), students_list)
-    if not os.path.exists(pdf_path):
-        raise HTTPException(status_code=500, detail="Failed to generate Master PDF")
-    return FileResponse(pdf_path, media_type="application/pdf", filename=os.path.basename(pdf_path))
-
-@app.post("/api/attendance/daily-day-pdf")
-def generate_daily_day_attendance_pdf_route(req: BulkAttendanceRequest):
-    students_list = [s.dict() for s in req.students]
-    day_num = req.selected_day or 1
-    layout_mode = req.layout_mode or "1_page_per_day"
-    pdf_path = pdf_service.generate_daily_day_attendance_pdf(day_num, req.dict(), students_list, layout_mode=layout_mode)
-    if not os.path.exists(pdf_path):
-        raise HTTPException(status_code=500, detail="Failed to generate Daily Day Sheet PDF")
-    return FileResponse(pdf_path, media_type="application/pdf", filename=os.path.basename(pdf_path))
-
-@app.post("/api/attendance/daily-book-pdf")
-def generate_daily_book_attendance_pdf_route(req: BulkAttendanceRequest):
-    students_list = [s.dict() for s in req.students]
-    layout_mode = req.layout_mode or "1_page_per_day"
-    pdf_path = pdf_service.generate_all_daily_batch_attendance_book_pdf(req.dict(), students_list, layout_mode=layout_mode)
-    if not os.path.exists(pdf_path):
-        raise HTTPException(status_code=500, detail="Failed to generate Daily Attendance Register Book PDF")
-    return FileResponse(pdf_path, media_type="application/pdf", filename=os.path.basename(pdf_path))
-
-@app.post("/api/attendance/bulk-generate-zip")
-def bulk_generate_attendance_zip(req: BulkAttendanceRequest):
-    students_list = [s.dict() for s in req.students]
-    zip_path = pdf_service.generate_batch_attendance_zip_bundle(req.dict(), students_list)
-    if not os.path.exists(zip_path):
-        raise HTTPException(status_code=500, detail="Failed to generate Attendance ZIP bundle")
-    return FileResponse(zip_path, media_type="application/zip", filename=os.path.basename(zip_path))
-
-@app.post("/api/attendance/bulk-enroll-and-save")
-def bulk_enroll_and_save_students(req: BulkAttendanceRequest, user = Depends(get_current_user)):
-    conn = get_db()
-    cursor = conn.cursor()
-
-    track = req.course_track.upper()
-    cursor.execute("SELECT id, name FROM courses WHERE code = ?", (track,))
-    c_row = cursor.fetchone()
-    course_id = c_row["id"] if c_row else 1
-    course_name = c_row["name"] if c_row else "Data Analytics"
-
-    working_days = pdf_service.compute_batch_working_days(req.start_date, req.total_days)
-    topics = pdf_service.get_batch_track_topics(track, req.total_days)
-    end_date = working_days[-1]["date"] if working_days else req.start_date
-
-    inst_id = req.institution_id or 1
-    cursor.execute("SELECT * FROM institutions WHERE id = ?", (inst_id,))
-    inst = dict(cursor.fetchone() or {})
-    mentor_id = req.mentor_id or 1
-
-    enrolled_ids = []
-    for idx, s in enumerate(req.students, 1):
-        clean_name = s.full_name.strip()
-        email = f"{clean_name.lower().replace(' ', '.')}{idx}@example.com"
-        cursor.execute("""
-        INSERT INTO students (
-            full_name, father_mother_name, dob, gender, mobile, email, address, city, state,
-            college_name, degree, branch, semester_year, academic_session, is_demo
-        ) VALUES (?, ?, '2004-05-15', 'Male', '9876543210', ?, 'Bharatpur, Rajasthan', 'Bharatpur', 'Rajasthan',
-                  ?, ?, ?, 'VI Semester', '2025-2026', 0)
-        """, (clean_name, s.father_mother_name or "Father Name", email, s.college_name or "Poddar College, Bharatpur", s.degree or "BCA", s.branch or "CS"))
-        student_id = cursor.lastrowid
-
-        cursor.execute("""
-        INSERT INTO internships (
-            student_id, course_id, batch_id, mentor_id, institution_id, internship_title, internship_type,
-            start_date, end_date, total_days, total_training_hours, mode, status, is_locked
-        ) VALUES (?, ?, 1, ?, ?, ?, 'Course-Based Internship', ?, ?, ?, ?, 'Offline', 'IN_PROGRESS', 0)
-        """, (student_id, course_id, mentor_id, inst_id, req.custom_track_name or course_name, req.start_date, end_date, req.total_days, req.total_days * req.daily_hours))
-        internship_id = cursor.lastrowid
-        enrolled_ids.append(internship_id)
-
-        # Compute attendance
-        stu_computed = pdf_service.compute_batch_student_attendance(s.dict(), working_days, topics, req.start_time, req.end_time, req.daily_hours)
-        for rec in stu_computed["records"]:
-            cursor.execute("""
-            INSERT INTO attendance (internship_id, date, day_of_week, start_time, end_time, total_hours, topic_covered, status, student_signed, mentor_signed)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                internship_id, rec["date"], rec["day_of_week"], rec["start_time"], rec["end_time"],
-                rec["hours"], rec["topic"], rec["status"],
-                1 if rec["status"] == "PRESENT" else 0,
-                1
-            ))
-
-    conn.commit()
-    conn.close()
-
-    log_audit("BULK_ENROLL", "BATCH", 1, {
-        "track": track,
-        "institution_id": inst_id,
-        "count": len(enrolled_ids),
-        "total_days": req.total_days
-    })
-
-    return {
-        "success": True,
-        "enrolled_count": len(enrolled_ids),
-        "internship_ids": enrolled_ids,
-        "message": f"Successfully enrolled {len(enrolled_ids)} students and recorded day-wise attendance for {req.total_days} days."
-    }
-
 @app.post("/api/system/reset-database")
 def reset_database_route(user = Depends(get_current_user)):
     conn = get_db()
@@ -2128,7 +2009,31 @@ class SettingsUpdate(BaseModel):
     verification_base_url: Optional[str] = "http://192.168.0.103:8000"
 
 @app.get("/api/settings")
-def get_settings(user = Depends(get_current_user)): 
+def get_settings(institution_id: Optional[int] = None, user = Depends(get_current_user)): 
+    if institution_id == 2:
+        prof = pdf_service.resolve_institution_profile(2)
+        return {
+            "id": 2,
+            "org_name": prof["full_name"],
+            "centre_name": prof["name"],
+            "centre_code": "POSWAL-01",
+            "default_college": "Poswal Developers Technical Division, Bharatpur",
+            "address": prof["address"],
+            "phone": prof["phone"],
+            "email": prof["email"],
+            "website": prof["website"],
+            "auth_ref": f"GST: {prof['gst_no']} | MSME: {prof['msme_no']}",
+            "signatory_name": prof["signatory_name"],
+            "signatory_designation": prof["signatory_designation"],
+            "logo_url": prof["logo_path"],
+            "show_digital_signature": 0,
+            "show_digital_stamp": 0,
+            "cert_prefix": "POSWAL",
+            "doc_prefix": "POSWAL/BPT",
+            "default_required_hours": 120,
+            "default_required_attendance_pct": 75.0,
+            "verification_base_url": "https://technoglobe-certificates.onrender.com"
+        }
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM centre_settings WHERE id = 1")

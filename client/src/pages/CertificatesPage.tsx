@@ -3,19 +3,21 @@ import { Link } from 'react-router-dom';
 import { Award, ShieldCheck, Download, Printer, ExternalLink, PackageOpen, ArrowUpRight, CheckSquare, Square } from 'lucide-react';
 import { api } from '../services/api';
 import { Student } from '../types';
+import { useInstitution } from '../contexts/InstitutionContext';
 
 export const CertificatesPage: React.FC = () => {
+  const { activeInstitution, institutionId, isPoswal } = useInstitution();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   useEffect(() => {
     loadStudents();
-  }, []);
+  }, [institutionId]);
 
   const loadStudents = () => {
     setLoading(true);
-    api.getStudents().then((data) => {
+    api.getStudents({ institution_id: institutionId }).then((data) => {
       setStudents(data);
       setLoading(false);
     });
@@ -46,7 +48,7 @@ export const CertificatesPage: React.FC = () => {
   };
 
   const handleBatchPrint = (ids?: number[]) => {
-    const url = api.getBatchPrintUrl(ids);
+    const url = api.getBatchPrintUrl(ids, institutionId);
     window.open(url, '_blank');
   };
 

@@ -26,6 +26,7 @@ import {
   Sun
 } from 'lucide-react';
 import { api } from '../services/api';
+import { useInstitution } from '../contexts/InstitutionContext';
 
 interface BatchStudent {
   id: string;
@@ -71,18 +72,20 @@ const COURSE_TRACKS = [
 ];
 
 export const BulkAttendancePage: React.FC = () => {
+  const { institutionId: globalInstId, selectInstitution } = useInstitution();
+
   // 1. Institution selection (1 = Poddar College, 2 = Poswal Developers)
-  const [institutionId, setInstitutionId] = useState<number>(1);
+  const [institutionId, setInstitutionId] = useState<number>(globalInstId || 1);
 
   // 2. Batch configuration
-  const [courseTrack, setCourseTrack] = useState<string>('DA');
+  const [courseTrack, setCourseTrack] = useState<string>(globalInstId === 2 ? 'SOL-01' : 'DA');
   const [customTrackName, setCustomTrackName] = useState<string>('');
   const [totalDays, setTotalDays] = useState<number>(50);
   const [startDate, setStartDate] = useState<string>('2026-06-01');
   const [startTime, setStartTime] = useState<string>('10:00 AM');
   const [endTime, setEndTime] = useState<string>('01:30 PM');
   const [dailyHours, setDailyHours] = useState<number>(3.5);
-  const [mentorId, setMentorId] = useState<number>(2);
+  const [mentorId, setMentorId] = useState<number>(globalInstId === 2 ? 1 : 2);
 
   // 3. Daily Day-Wise Sheet Configuration (1 or 2 pages per day)
   const [selectedDay, setSelectedDay] = useState<number>(1);
@@ -112,14 +115,22 @@ export const BulkAttendancePage: React.FC = () => {
   const [showResetDbModal, setShowResetDbModal] = useState<boolean>(false);
   const [isResettingDb, setIsResettingDb] = useState<boolean>(false);
 
+  // Sync with global institution context changes
+  useEffect(() => {
+    if (globalInstId && globalInstId !== institutionId) {
+      handleInstitutionChange(globalInstId);
+    }
+  }, [globalInstId]);
+
   // Initialize with 5 students on first render
   useEffect(() => {
-    loadSampleStudents(5, 100);
+    loadSampleStudents(5, 100, institutionId);
   }, []);
 
   // When switching institution, adjust default mentor and course track
   const handleInstitutionChange = (id: number) => {
     setInstitutionId(id);
+    selectInstitution(id);
     if (id === 2) {
       // Poswal Developers -> Solar track & Mahesh Chand Saini
       setCourseTrack('SOL-01');
@@ -129,12 +140,13 @@ export const BulkAttendancePage: React.FC = () => {
       setCourseTrack('DA');
       setMentorId(2);
     }
+    loadSampleStudents(5, 100, id);
   };
 
-  const loadSampleStudents = (count = 5, defaultPct = 100) => {
+  const loadSampleStudents = (count = 5, defaultPct = 100, forInstId = institutionId) => {
     const list: BatchStudent[] = [];
-    const prefix = institutionId === 2 ? 'POSWAL-2026' : 'PCTM-2026';
-    const college = institutionId === 2 ? 'Poswal Developers Training Division' : 'Poddar College, Bharatpur';
+    const prefix = forInstId === 2 ? 'POSWAL-2026' : 'PCTM-2026';
+    const college = forInstId === 2 ? 'Poswal Developers Training Division' : 'Poddar College, Bharatpur';
 
     for (let i = 0; i < count; i++) {
       const name = SAMPLE_NAMES[i % SAMPLE_NAMES.length];
@@ -613,7 +625,11 @@ export const BulkAttendancePage: React.FC = () => {
               onChange={(e) => setCourseTrack(e.target.value)}
               className="w-full text-xs font-semibold px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
             >
-              {COURSE_TRACKS.map(t => (
+              {COURSE_TRACKS.filter(t => 
+                institutionId === 2 
+                  ? (t.code.startsWith('SOL') || t.code === 'CUSTOM') 
+                  : (!t.code.startsWith('SOL') || t.code === 'CUSTOM')
+              ).map(t => (
                 <option key={t.code} value={t.code}>
                   [{t.code}] {t.title}
                 </option>
@@ -698,9 +714,14 @@ export const BulkAttendancePage: React.FC = () => {
               onChange={(e) => setMentorId(parseInt(e.target.value))}
               className="w-full text-xs font-semibold px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
             >
-              <option value={1}>Mahesh Chand Saini (Trainer - Solar Energy & Power Systems)</option>
-              <option value={2}>Krishlay (Faculty - Computing, Data Science & AI)</option>
-              <option value={3}>Rahul (Faculty - Digital Technologies & Web Engineering)</option>
+              {institutionId === 2 ? (
+                <option value={1}>Mahesh Chand Saini (Trainer - Solar Energy & Power Systems)</option>
+              ) : (
+                <>
+                  <option value={2}>Krishlay (Faculty - Computing, Data Science & AI)</option>
+                  <option value={3}>Rahul (Faculty - Digital Technologies & Web Engineering)</option>
+                </>
+              )}
             </select>
           </div>
         </div>

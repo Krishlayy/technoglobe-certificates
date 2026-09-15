@@ -3,14 +3,20 @@ import { Link } from 'react-router-dom';
 import { Users, UserPlus, Search, Filter, ArrowUpRight, GraduationCap, Building2 } from 'lucide-react';
 import { api } from '../services/api';
 import { Student } from '../types';
+import { useInstitution } from '../contexts/InstitutionContext';
 
 export const StudentsPage: React.FC = () => {
+  const { activeInstitution, institutionId, isPoswal } = useInstitution();
   const [students, setStudents] = useState<Student[]>([]);
   const [search, setSearch] = useState('');
   const [courseFilter, setCourseFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [institutionFilter, setInstitutionFilter] = useState('');
+  const [institutionFilter, setInstitutionFilter] = useState(String(institutionId));
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setInstitutionFilter(String(institutionId));
+  }, [institutionId]);
 
   useEffect(() => {
     loadStudents();
@@ -46,7 +52,7 @@ export const StudentsPage: React.FC = () => {
             Student & Internship Directory
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Search, filter and manage registered candidates across Poddar College and Poswal Developers programs.
+            Search, filter and manage registered candidates for {activeInstitution.fullName}.
           </p>
         </div>
 
@@ -90,15 +96,29 @@ export const StudentsPage: React.FC = () => {
               className="px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
               <option value="">All Courses</option>
-              <option value="DA">Data Analytics (DA)</option>
-              <option value="DM">Digital Marketing (DM)</option>
-              <option value="FS">Full Stack Web (FS)</option>
-              <option value="AI">Python AI & ML (AI)</option>
-              <option value="CS">Cyber Security (CS)</option>
-              <option value="CC">Cloud & DevOps (CC)</option>
-              <option value="JV">Java Enterprise (JV)</option>
-              <option value="BI">Bioinformatics (BI)</option>
-              <option value="AD">Android Apps (AD)</option>
+              {institutionFilter === '2' || (institutionFilter === '' && isPoswal) ? (
+                <>
+                  <option value="SOL-01">SOL-01 Solar Fitting & Rooftop PV</option>
+                  <option value="SOL-02">SOL-02 Solar Inverter & Grid-Tie</option>
+                  <option value="SOL-03">SOL-03 Commercial PV EPC & Safety</option>
+                  <option value="SOL-04">SOL-04 Battery Energy Storage (BESS)</option>
+                  <option value="SOL-05">SOL-05 Solar Microgrid Engineering</option>
+                  <option value="SOL-06">SOL-06 Solar Pumping & Agriculture</option>
+                  <option value="SOL-07">SOL-07 Quality Auditing & Testing</option>
+                  <option value="SOL-08">SOL-08 Industrial EPC Project Mgmt</option>
+                </>
+              ) : (
+                <>
+                  <option value="DA">Data Analytics (DA)</option>
+                  <option value="DM">Digital Marketing (DM)</option>
+                  <option value="FS">Full Stack Web (FS)</option>
+                  <option value="AI">Python AI & ML (AI)</option>
+                  <option value="CS">Cyber Security (CS)</option>
+                  <option value="CC">Cloud & DevOps (CC)</option>
+                  <option value="JV">Java Enterprise (JV)</option>
+                  <option value="AD">Android Apps (AD)</option>
+                </>
+              )}
             </select>
 
             <select
@@ -155,11 +175,11 @@ export const StudentsPage: React.FC = () => {
                     <td className="py-3 px-4">
                       <div className="flex items-center space-x-1.5 mb-0.5">
                         <span className={`inline-block px-1.5 py-0.2 rounded text-[9px] font-extrabold border ${
-                          st.institution_code === 'PODDAR' || st.institution_id === 2
-                            ? 'bg-amber-100 text-amber-900 border-amber-300'
+                          st.institution_id === 2 || st.institution_code === 'POSWAL'
+                            ? 'bg-amber-100 text-amber-950 border-amber-400'
                             : 'bg-blue-100 text-blue-900 border-blue-300'
                         }`}>
-                          {st.institution_code || (st.institution_id === 2 ? 'PODDAR' : 'TG')}
+                          {st.institution_id === 2 || st.institution_code === 'POSWAL' ? 'POSWAL' : 'PODDAR'}
                         </span>
                         <span className="font-medium text-slate-800 truncate max-w-[180px]">{st.college_name}</span>
                       </div>

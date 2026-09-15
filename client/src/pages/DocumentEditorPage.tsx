@@ -7,8 +7,10 @@ import {
 import { QRCodeSVG } from 'qrcode.react';
 import { api } from '../services/api';
 import { Student, CentreSettings, Course, Mentor } from '../types';
+import { useInstitution } from '../contexts/InstitutionContext';
 
 export const DocumentEditorPage: React.FC = () => {
+  const { activeInstitution, institutionId, isPoswal } = useInstitution();
   const [searchParams] = useSearchParams();
   const [students, setStudents] = useState<Student[]>([]);
   const [settings, setSettings] = useState<CentreSettings | null>(null);
@@ -43,7 +45,11 @@ export const DocumentEditorPage: React.FC = () => {
   });
 
   useEffect(() => {
-    Promise.all([api.getStudents(), api.getSettings()]).then(([sData, settData]) => {
+    setLoading(true);
+    Promise.all([
+      api.getStudents({ institution_id: institutionId }), 
+      api.getSettings(institutionId)
+    ]).then(([sData, settData]) => {
       setStudents(sData);
       setSettings(settData);
       if (sData.length > 0) {
@@ -53,7 +59,7 @@ export const DocumentEditorPage: React.FC = () => {
       }
       setLoading(false);
     });
-  }, []);
+  }, [institutionId]);
 
   const loadStudentDetails = (sId: number, sList: Student[], sett: CentreSettings | null) => {
     const st = sList.find((s) => s.id === sId);
@@ -372,18 +378,22 @@ export const DocumentEditorPage: React.FC = () => {
         <div className="bg-slate-100/90 rounded-2xl border border-slate-300 p-6 flex flex-col items-center justify-center min-h-[820px] shadow-inner overflow-y-auto">
           {/* Certificate Landscape Preview */}
           {docType === 'certificate' ? (
-            <div className="w-full max-w-[580px] aspect-[297/210] bg-[#FAF9F5] rounded-xs border-4 border-brand-900 p-5 shadow-2xl relative flex flex-col justify-between text-center select-none">
+            <div className={`w-full max-w-[580px] aspect-[297/210] bg-[#FAF9F5] rounded-xs border-4 ${
+              isPoswal ? 'border-[#6B2222]' : 'border-slate-900'
+            } p-5 shadow-2xl relative flex flex-col justify-between text-center select-none`}>
               {/* Inner Gold Border */}
               <div className="absolute inset-1.5 border border-gold-500 pointer-events-none" />
               
               {/* Header with Official Logo */}
               <div className="space-y-0.5 mt-1 flex flex-col items-center">
-                <img src="/poddar_logo.png" alt="TechnoGlobe" className="h-7 w-auto object-contain mb-0.5" />
-                <h4 className="text-[10px] font-serif font-bold tracking-wider text-brand-700 uppercase">
-                  {settings?.centre_name || 'PODDAR COLLEGE – BHARATPUR'}
+                <img src={activeInstitution.logo} alt={activeInstitution.name} className="h-8 w-auto object-contain mb-0.5" />
+                <h4 className={`text-[10px] font-serif font-bold tracking-wider uppercase ${
+                  isPoswal ? 'text-[#6B2222]' : 'text-blue-950'
+                }`}>
+                  {settings?.org_name || activeInstitution.fullName}
                 </h4>
                 <p className="text-[7.5px] text-slate-500">
-                  {settings?.address || 'Poddar College, Bharatpur, Near SP Office, Bharatpur, Rajasthan'} | Website: {settings?.website || 'https://poddarcollege.org'}
+                  {settings?.address || activeInstitution.location} | {settings?.auth_ref || (isPoswal ? 'GST: 08ABIFP2454N1ZQ | MSME: UDYAM-RJ-06-0052498' : 'Affiliated & Certified')}
                 </p>
                 <div className="w-48 h-[1px] bg-gold-400 mx-auto mt-0.5" />
               </div>

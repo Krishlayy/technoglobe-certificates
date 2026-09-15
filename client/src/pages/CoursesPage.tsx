@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { GraduationCap, BookOpen, Clock, Edit, Save, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import { api } from '../services/api';
 import { Course, CourseModule } from '../types';
+import { useInstitution } from '../contexts/InstitutionContext';
 
 export const CoursesPage: React.FC = () => {
+  const { activeInstitution, institutionId, isPoswal } = useInstitution();
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [expandedModule, setExpandedModule] = useState<number | null>(null);
@@ -12,12 +14,12 @@ export const CoursesPage: React.FC = () => {
 
   useEffect(() => {
     loadCourses();
-  }, []);
+  }, [institutionId]);
 
   const loadCourses = async () => {
     setLoading(true);
     try {
-      const data = await api.getCourses();
+      const data = await api.getCourses(institutionId);
       setCourses(data);
       if (data.length > 0) {
         setSelectedCourse(data[0]);
@@ -78,7 +80,7 @@ export const CoursesPage: React.FC = () => {
             Course Curriculums & Module Management
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Preconfigured, industry-standard curriculums for Data Analytics and Digital Marketing. Fully editable by administrators.
+            Preconfigured, industry-standard curriculums for {activeInstitution.fullName}. Fully editable by administrators.
           </p>
         </div>
 

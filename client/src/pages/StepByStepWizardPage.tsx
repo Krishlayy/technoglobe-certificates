@@ -6,37 +6,125 @@ import {
   GraduationCap, AlertCircle, RefreshCw, Printer, Sparkles, Building2
 } from 'lucide-react';
 import { api } from '../services/api';
+import { useInstitution } from '../contexts/InstitutionContext';
 
 const COURSE_TRACKS = [
+  // --- Poswal Developers Tracks (Solar & Industrial) ---
+  {
+    code: 'SOL-01',
+    institutionId: 2,
+    title: 'Rooftop Solar PV Installation & Building Integration (BIPV)',
+    badge: 'Solar & BIPV',
+    desc: 'Civil rooftop structural evaluation, shadow modeling, monocrystalline module mounting, aluminum rail racking, waterproof roof penetrations, string sizing, and DC cable dressing.',
+    project: '50 kWp Commercial Rooftop Solar PV & Building-Integrated (BIPV) System Installation',
+    color: 'amber',
+    defaultMentor: 1
+  },
+  {
+    code: 'SOL-02',
+    institutionId: 2,
+    title: 'Solar Structure Fitting, Panel Mounting & Civil Layout',
+    badge: 'Structure Fitting',
+    desc: 'Hot-dip galvanized (HDG) mounting structure assembly, tilt angle optimization, torque specifications, foundation civil work, wind-load anchoring, and module stringing.',
+    project: '100 kWp Ground-Mounted Fixed-Tilt Solar Array Structural Layout & Alignment',
+    color: 'orange',
+    defaultMentor: 1
+  },
+  {
+    code: 'SOL-03',
+    institutionId: 2,
+    title: 'Solar Electrical Systems, Inverters & Grid-Tied Technology',
+    badge: 'Electrical & Inverter',
+    desc: 'String & central inverters, MPPT tracking, DC/AC distribution boxes, SPD surge protection, AC combiner boxes, LT panel integration, and grid synchronization.',
+    project: 'Grid-Connected 25 kW Solar Inverter & Net-Metering Synchronization Facility',
+    color: 'yellow',
+    defaultMentor: 1
+  },
+  {
+    code: 'SOL-04',
+    institutionId: 2,
+    title: 'Industrial Solar Power Plant Operations & Maintenance (O&M)',
+    badge: 'Industrial Solar O&M',
+    desc: 'Thermal imaging inspections, IV-curve tracing, degradation analysis, soiling loss mitigation, SCADA telemetry monitoring, and preventive maintenance protocols.',
+    project: 'Preventive O&M Audit & SCADA Telemetry Protocol for 500 kWp Industrial Plant',
+    color: 'emerald',
+    defaultMentor: 1
+  },
+  {
+    code: 'SOL-05',
+    institutionId: 2,
+    title: 'Solar Water Heating & Agricultural Pumping Systems',
+    badge: 'Pumps & Thermal',
+    desc: 'Evacuated tube collectors (ETC), flat plate collectors (FPC), solar VFD pump controllers, brushless DC surface/submersible pumps, and piping layout.',
+    project: '7.5 HP Solar Agricultural Irrigation Pumping & Micro-Grid Distribution',
+    color: 'teal',
+    defaultMentor: 1
+  },
+  {
+    code: 'SOL-06',
+    institutionId: 2,
+    title: 'Off-Grid Solar Energy Storage & Battery Management (BMS)',
+    badge: 'Storage & Batteries',
+    desc: 'Lithium iron phosphate (LiFePO4) & tubular lead-acid batteries, hybrid inverters, DoD optimization, charge controllers (PWM/MPPT), and battery safety.',
+    project: 'Hybrid 10 kVA Off-Grid Solar Energy Storage & Battery Management Facility',
+    color: 'sky',
+    defaultMentor: 1
+  },
+  {
+    code: 'SOL-07',
+    institutionId: 2,
+    title: 'Solar PV System Design, Load Estimation & PVsyst Simulation',
+    badge: 'PVsyst Design',
+    desc: 'Solar irradiance modeling, PVsyst & HelioScope simulation, energy yield forecasting, loss diagram assessment, single-line diagram (SLD), and BOM estimation.',
+    project: 'Comprehensive Techno-Economic PVsyst Simulation for 100 kWp Rooftop System',
+    color: 'indigo',
+    defaultMentor: 1
+  },
+  {
+    code: 'SOL-08',
+    institutionId: 2,
+    title: 'Solar Safety Standards, Electrical Earthing & Net-Metering',
+    badge: 'Safety & Metering',
+    desc: 'Chemical earthing pits, copper strip bonded grounding, lightning arrestor (ESE) design, DISCOM net-metering protocols, and IEC/IS compliance documentation.',
+    project: 'High-Integrity Earthing Grid & DISCOM Net-Metering Compliance Architecture',
+    color: 'rose',
+    defaultMentor: 1
+  },
+
+  // --- Poddar College Tracks (Academic & Professional IT) ---
   {
     code: 'DA',
+    institutionId: 1,
     title: 'Data Analytics & Business Intelligence',
     badge: 'Python & Power BI',
     desc: 'Python, Pandas, NumPy, SQL, Power BI, Advanced Excel, Data Cleaning, and Executive Reporting.',
     project: 'Retail Sales & Customer Churn Predictive Dashboard',
     color: 'blue',
-    defaultMentor: 1
+    defaultMentor: 2
   },
   {
     code: 'DM',
+    institutionId: 1,
     title: 'Digital Marketing & Growth Strategy',
     badge: 'SEO, Ads & GA4',
     desc: 'SEO, Social Media, Google Ads, Meta Ads, GA4 Web Analytics, Copywriting & AI Content Workflows.',
     project: 'Omnichannel Healthcare Clinic Growth & Lead Generation Campaign',
     color: 'purple',
-    defaultMentor: 2
+    defaultMentor: 3
   },
   {
     code: 'FS',
+    institutionId: 1,
     title: 'Full Stack Web Development (MERN)',
     badge: 'React & Node.js',
     desc: 'React.js 18, Node.js, Express.js, MongoDB Atlas, TypeScript, Tailwind CSS, REST APIs & Cloud Deployment.',
     project: 'Cloud Patient Consultation & Health Records Management Portal',
     color: 'emerald',
-    defaultMentor: 1
+    defaultMentor: 2
   },
   {
     code: 'AI',
+    institutionId: 1,
     title: 'Python AI, ML & Data Science',
     badge: 'ML & Deep Learning',
     desc: 'Python 3.11, Scikit-Learn, TensorFlow, XGBoost, Predictive Modeling, EDA & FastAPI Deployment.',
@@ -46,15 +134,17 @@ const COURSE_TRACKS = [
   },
   {
     code: 'CS',
+    institutionId: 1,
     title: 'Cyber Security & Defensive Ops',
     badge: 'Security & VAPT',
     desc: 'Kali Linux, Wireshark, Burp Suite, Network Sniffing, Vulnerability Assessment, Cryptography & Defensive Hardening.',
     project: 'Enterprise Vulnerability Assessment & Defensive Threat Mitigation',
     color: 'rose',
-    defaultMentor: 1
+    defaultMentor: 3
   },
   {
     code: 'CC',
+    institutionId: 1,
     title: 'Cloud Computing & DevOps Architecture',
     badge: 'AWS, Docker & K8s',
     desc: 'AWS EC2/VPC/S3, Docker Containerization, Kubernetes Orchestration, GitHub Actions CI/CD & Terraform IaC.',
@@ -64,36 +154,40 @@ const COURSE_TRACKS = [
   },
   {
     code: 'JV',
+    institutionId: 1,
     title: 'Java Enterprise & Spring Boot Development',
     badge: 'Spring Boot & JPA',
     desc: 'Java 17/21 LTS, Spring Boot 3, Spring Data JPA, Hibernate, MySQL, Spring Security & Microservice APIs.',
     project: 'Enterprise Banking & Financial Transaction Microservices Platform',
     color: 'amber',
-    defaultMentor: 1
+    defaultMentor: 2
   },
   {
     code: 'BI',
+    institutionId: 1,
     title: 'Bioinformatics & Computational Biology',
     badge: 'Genomics & PyMOL',
     desc: 'BioPython, Pairwise/MSA Alignment, BLAST+, NCBI Entrez APIs, Protein Structure Visualization & Genomic Data.',
     project: 'Computational Genomic Mutation Profiling & Protein Homology Modeling',
     color: 'teal',
-    defaultMentor: 1
+    defaultMentor: 2
   },
   {
     code: 'AD',
+    institutionId: 1,
     title: 'Android Mobile App Development (Kotlin)',
     badge: 'Kotlin & Compose',
     desc: 'Kotlin 1.9, Jetpack Compose, Material 3, Room SQLite Database, Retrofit 2, Coroutines, Flow & MVVM Architecture.',
     project: 'Modern Telemedicine Consultation & Health Tracking Android App',
     color: 'violet',
-    defaultMentor: 2
+    defaultMentor: 3
   }
 ];
 
 const FACULTY_MEMBERS = [
   {
     id: 1,
+    institutionId: 2,
     name: 'Mahesh Chand Saini',
     designation: 'Trainer',
     department: 'Solar Power & Industrial Engineering Division (Poswal Developers)',
@@ -102,6 +196,7 @@ const FACULTY_MEMBERS = [
   },
   {
     id: 2,
+    institutionId: 1,
     name: 'Krishlay',
     designation: 'Faculty',
     department: 'Department of Computing, Data Science & AI (Poddar College)',
@@ -110,6 +205,7 @@ const FACULTY_MEMBERS = [
   },
   {
     id: 3,
+    institutionId: 1,
     name: 'Rahul',
     designation: 'Faculty',
     department: 'Department of Digital Technologies & Web Engineering (Poddar College)',
@@ -154,6 +250,7 @@ const INSTITUTIONS = [
 ];
 
 export const StepByStepWizardPage: React.FC = () => {
+  const { institutionId: globalInstId, selectInstitution } = useInstitution();
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [generating, setGenerating] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
@@ -162,7 +259,7 @@ export const StepByStepWizardPage: React.FC = () => {
   // Form State with Sensible Autofill Defaults
   const [formData, setFormData] = useState({
     // Organization Selection: 1 = Poddar College, 2 = Poswal Developers
-    institution_id: 2,
+    institution_id: globalInstId || 1,
 
     // Step 1: Student Information
     full_name: '',
@@ -195,12 +292,17 @@ export const StepByStepWizardPage: React.FC = () => {
     mentor_remarks: 'Demonstrated exemplary technical aptitude, consistency, and professional work ethic throughout the 6-week internship.'
   });
 
-  const handleInstitutionChange = (instId: number) => {
+    const handleInstitutionChange = (instId: number) => {
+    selectInstitution(instId);
     setFormData((prev) => ({
       ...prev,
       institution_id: instId,
       college_name: instId === 2 ? 'Poswal Developers Training Division' : 'Poddar College, Bharatpur',
-      address: instId === 2 ? '214, Bapu Nagar, Bharatpur' : 'Poddar College Campus, Bharatpur'
+      degree: instId === 2 ? 'Diploma / B.Tech (Solar & Electrical)' : 'BCA',
+      branch: instId === 2 ? 'Solar Energy Systems' : 'Computer Science',
+      address: instId === 2 ? '214, Bapu Nagar, Ghana Road, Bharatpur (Raj.)' : 'Poddar College Campus, Bharatpur',
+      course_track: instId === 2 ? 'SOL-01' : 'DA',
+      mentor_id: instId === 2 ? 1 : 2
     }));
   };
 
@@ -657,7 +759,7 @@ export const StepByStepWizardPage: React.FC = () => {
               Choose Internship Specialization Track (9 Tracks Available):
             </label>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-              {COURSE_TRACKS.map((track) => {
+              {COURSE_TRACKS.filter(t => t.institutionId === formData.institution_id).map((track) => {
                 const isSelected = formData.course_track === track.code;
                 return (
                   <div
@@ -704,12 +806,12 @@ export const StepByStepWizardPage: React.FC = () => {
                 Supervising Faculty Mentor (Will Sign All 15 Documents & 28-Page Report):
               </label>
               <span className="text-[11px] text-slate-500 font-medium">
-                Authority: <b>Nitin Agarwal</b> (Authority & Authorized Signatory)
+                {formData.institution_id === 2 ? 'Authority: Madhuvan Singh Gurjar (Authority & Authorized Signatory)' : 'Authority: Nitin Agarwal (Authority & Authorized Signatory)'}
               </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {FACULTY_MEMBERS.map((faculty) => {
+              {FACULTY_MEMBERS.filter(f => f.institutionId === formData.institution_id).map((faculty) => {
                 const isSelected = formData.mentor_id === faculty.id;
                 return (
                   <div

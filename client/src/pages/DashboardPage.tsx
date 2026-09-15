@@ -8,9 +8,11 @@ import {
 import { StatCard } from '../components/common/StatCard';
 import { api } from '../services/api';
 import { Student } from '../types';
+import { useInstitution } from '../contexts/InstitutionContext';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
+  const { activeInstitution, institutionId, isPoddar, isPoswal } = useInstitution();
   const [stats, setStats] = useState<any>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [search, setSearch] = useState('');
@@ -20,14 +22,14 @@ export const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     loadDashboard();
-  }, [courseFilter, statusFilter]);
+  }, [courseFilter, statusFilter, institutionId]);
 
   const loadDashboard = async () => {
     setLoading(true);
     try {
       const [sData, stData] = await Promise.all([
-        api.getDashboardStats(),
-        api.getStudents({ search, course: courseFilter, status: statusFilter })
+        api.getDashboardStats(institutionId),
+        api.getStudents({ search, course: courseFilter, status: statusFilter, institution_id: institutionId })
       ]);
       setStats(sData);
       setStudents(stData);
@@ -40,23 +42,30 @@ export const DashboardPage: React.FC = () => {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    api.getStudents({ search, course: courseFilter, status: statusFilter }).then(setStudents);
+    api.getStudents({ search, course: courseFilter, status: statusFilter, institution_id: institutionId }).then(setStudents);
   };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Top Banner */}
-      <div className="bg-linear-to-r from-brand-700 via-brand-600 to-brand-800 rounded-2xl p-6 text-white shadow-md border border-brand-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className={`rounded-2xl p-6 text-white shadow-md border flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+        isPoswal 
+          ? 'bg-linear-to-r from-red-950 via-amber-950 to-stone-900 border-amber-900/60' 
+          : 'bg-linear-to-r from-blue-950 via-slate-900 to-blue-900 border-blue-900'
+      }`}>
         <div>
-          <div className="flex items-center space-x-2 text-gold-300 text-xs font-semibold tracking-wider uppercase mb-1">
+          <div className="flex items-center space-x-2 text-amber-300 text-xs font-semibold tracking-wider uppercase mb-1">
             <ShieldCheck className="w-4 h-4" />
-            <span>Authorized Bharatpur Franchise Portal</span>
+            <span>{activeInstitution.badgeText}</span>
           </div>
           <h1 className="text-2xl md:text-3xl font-serif font-bold text-white tracking-tight">
-            Course Internship Management System
+            {activeInstitution.fullName}
           </h1>
           <p className="text-xs md:text-sm text-slate-200 mt-1 max-w-2xl leading-relaxed">
-            Single-entry student registration, automated curriculum logbooks, mentor evaluation rubrics, institutional compliance, and one-click 15-document internship package generation.
+            {isPoswal 
+              ? 'Industrial Solar Energy & Rooftop PV Training Portal with MSME/GST registration, automated logbooks, safety compliance, and ISO/MSME verified certificates.'
+              : 'Single-entry student registration, automated curriculum logbooks, mentor evaluation rubrics, institutional compliance, and one-click 15-document internship package generation.'
+            }
           </p>
         </div>
 
@@ -70,10 +79,10 @@ export const DashboardPage: React.FC = () => {
           </Link>
           <Link
             to="/document-editor"
-            className="inline-flex items-center space-x-2 px-4 py-3 rounded-xl bg-brand-800 hover:bg-brand-900 text-gold-200 border border-brand-500 font-semibold text-xs shadow-sm transition-colors"
+            className="inline-flex items-center space-x-2 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 font-semibold text-xs shadow-sm transition-colors"
           >
-            <FileText className="w-4 h-4 text-gold-400" />
-            <span>Live Editor (50/50)</span>
+            <FileText className="w-4 h-4 text-amber-300" />
+            <span>Live Editor</span>
           </Link>
         </div>
       </div>
@@ -90,7 +99,7 @@ export const DashboardPage: React.FC = () => {
               <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-400 text-slate-950">100% Autofill</span>
             </div>
             <p className="text-xs text-slate-700 mt-0.5">
-              Enter student name once. 36-day attendance, 126 hours, curriculum logbooks, mentor rubric, and offline JSON QR certificates are automatically pre-filled and ready for instant download.
+              Enter student name once. Day-wise attendance, training hours, curriculum logbooks, mentor rubric, and offline JSON QR certificates are automatically pre-filled and ready for instant download.
             </p>
           </div>
         </div>
@@ -137,16 +146,16 @@ export const DashboardPage: React.FC = () => {
         />
 
         <StatCard
-          title="Data Analytics Track"
+          title={isPoswal ? "SOL-01 Solar Installation" : "Data Analytics Track"}
           value={stats?.da_students ?? 0}
-          subtitle="Python, SQL & Power BI"
+          subtitle={isPoswal ? "Rooftop & Ground Mounting" : "Python, SQL & Power BI"}
           icon={BarChart3}
           color="purple"
         />
         <StatCard
-          title="Digital Marketing Track"
+          title={isPoswal ? "SOL-02 Solar Inverter Systems" : "Digital Marketing Track"}
           value={stats?.dm_students ?? 0}
-          subtitle="SEO, Ads & Growth"
+          subtitle={isPoswal ? "Grid-Tie & Battery Storage" : "SEO, Ads & Growth"}
           icon={Megaphone}
           color="amber"
         />
@@ -227,8 +236,29 @@ export const DashboardPage: React.FC = () => {
               className="px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
               <option value="">All Courses</option>
-              <option value="DA">Data Analytics</option>
-              <option value="DM">Digital Marketing</option>
+              {isPoswal ? (
+                <>
+                  <option value="SOL-01">SOL-01 Solar Fitting & Rooftop PV</option>
+                  <option value="SOL-02">SOL-02 Solar Inverter & Grid-Tie</option>
+                  <option value="SOL-03">SOL-03 Commercial PV EPC & Safety</option>
+                  <option value="SOL-04">SOL-04 Battery Energy Storage (BESS)</option>
+                  <option value="SOL-05">SOL-05 Solar Microgrid Engineering</option>
+                  <option value="SOL-06">SOL-06 Solar Pumping & Agriculture</option>
+                  <option value="SOL-07">SOL-07 Quality Auditing & Testing</option>
+                  <option value="SOL-08">SOL-08 Industrial EPC Project Mgmt</option>
+                </>
+              ) : (
+                <>
+                  <option value="DA">Data Analytics</option>
+                  <option value="DM">Digital Marketing</option>
+                  <option value="FS">Full Stack Web Dev</option>
+                  <option value="AI">AI & Machine Learning</option>
+                  <option value="CS">Cyber Security</option>
+                  <option value="CC">Cloud Computing</option>
+                  <option value="JV">Java Enterprise</option>
+                  <option value="AD">Android App Dev</option>
+                </>
+              )}
             </select>
 
             <select
