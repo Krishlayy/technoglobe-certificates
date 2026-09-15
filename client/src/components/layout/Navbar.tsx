@@ -9,8 +9,8 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ 
-  centreName = "TECHNOGLOBE – BHARATPUR CENTRE",
-  centreCode = "BPT-01" 
+  centreName = "PODDAR COLLEGE – BHARATPUR",
+  centreCode = "PCTM-01" 
 }) => {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
@@ -23,14 +23,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center space-x-3">
             <Link to="/" className="flex items-center space-x-3 group">
               <div className="h-10 px-2 bg-white rounded-lg flex items-center justify-center shadow-xs group-hover:opacity-95 transition-opacity">
-                <img src="/technoglobe_logo.png" alt="TechnoGlobe Logo" className="h-7 w-auto object-contain" />
+                <img src="/poddar_logo.png" alt="Poddar College Logo" className="h-8 w-auto object-contain" />
               </div>
               <div className="flex flex-col">
                 <span className="font-serif font-bold text-base tracking-wider text-white">
-                  TECHNOGLOBE
+                  PODDAR COLLEGE
                 </span>
                 <span className="text-[10px] uppercase tracking-widest text-gold-300 font-semibold">
-                  Internship & Certificate Management
+                  Certification & Industrial Training Portal
                 </span>
               </div>
             </Link>
@@ -40,8 +40,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className="text-xs font-medium text-slate-200">
                 {centreName}
               </span>
-              <span className="px-1.5 py-0.5 rounded bg-brand-800 text-[10px] font-mono text-gold-200 border border-brand-600">
-                {centreCode}
+              <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-[10px] font-medium text-amber-300 border border-amber-500/30">
+                Partner: Poswal Developers
+              </span>
+              <span className="hidden lg:inline text-[11px] text-slate-300 pl-2">
+                📞 9414293370 | ✉️ nitin@pctm
               </span>
             </div>
           </div>

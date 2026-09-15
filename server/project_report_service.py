@@ -847,12 +847,12 @@ def build_25page_academic_project_report(internship_id: int) -> str:
     story.append(Paragraph(f"<b>DEPARTMENT OF COMPUTER SCIENCE & INFORMATION TECHNOLOGY</b>", ParagraphStyle('CoverDept', parent=body_center, fontSize=10.5, leading=14, textColor=rep_primary)))
     story.append(Paragraph(f"<b>{college_name.upper()}</b>", ParagraphStyle('CoverColl', parent=body_center, fontSize=10, leading=13, textColor=rep_secondary)))
     story.append(Spacer(1, 2 * mm))
-    collab_text = "PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT (BHARATPUR, RAJASTHAN)" if is_poddar else "IN COLLABORATION WITH TECHNOGLOBE IT SOLUTIONS PVT. LTD. (BHARATPUR REGIONAL CENTRE BPT-01)"
+    collab_text = "PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT (BHARATPUR, RAJASTHAN)" if is_poddar else "IN COLLABORATION WITH POSWAL DEVELOPERS (BHARATPUR REGIONAL DIVISION)"
     story.append(Paragraph(collab_text, ParagraphStyle('CoverCollab', parent=body_center, fontSize=7.5, leading=10, textColor=MUTED)))
     story.append(Spacer(1, 6 * mm))
     
     # Accreditation & Quality Standards Banner
-    accred_text = "<b>Academic Standards & Degree Curriculum:</b> Engineered and submitted in full compliance with university academic degree standards and laboratory guidelines." if is_poddar else "<b>Accreditation & Curriculum Standard:</b> Certified under ISO 9001:2015 Quality Management Systems. Aligned with UGC / AICTE Outcome-Based Education (OBE) Framework and National Skill Qualification Framework (NSQF Level 7)."
+    accred_text = "<b>Academic Standards & Degree Curriculum:</b> Engineered and submitted in full compliance with university academic degree standards and laboratory guidelines." if is_poddar else "<b>Accreditation & Curriculum Standard:</b> Certified under MSME UDYAM-RJ-06-0052498 & GST 08ABIFP2454N1ZQ. Aligned with National Skill Standards for Solar, Electrical & Industrial Engineering."
     accred_p = Paragraph(accred_text, ParagraphStyle('Accred', parent=body_center, fontSize=7, leading=9.5, textColor=MUTED))
     accred_box = Table([[accred_p]], colWidths=[174*mm], style=[('BOX', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#F1F5F9")), ('TOPPADDING', (0,0), (-1,-1), 4), ('BOTTOMPADDING', (0,0), (-1,-1), 4)])
     story.append(accred_box)
@@ -866,15 +866,15 @@ def build_25page_academic_project_report(internship_id: int) -> str:
     story.append(HRFlowable(width="100%", thickness=1, color=rep_accent, spaceBefore=3, spaceAfter=6))
     
     story.append(Paragraph("<b>Section 1: Candidate & Institutional Registration Matrix</b>", sec_heading))
-    host_org_name = "Poddar College of Technology & Management" if is_poddar else "TechnoGlobe IT Solutions Pvt. Ltd."
-    host_centre_name = "Poddar College Campus, Bharatpur" if is_poddar else "Bharatpur Centre (BPT-01)"
+    host_org_name = "Poddar College of Technology & Management" if is_poddar else "Poswal Developers"
+    host_centre_name = "Poddar College Campus, Bharatpur" if is_poddar else "Poswal Developers Division (Bharatpur)"
     reg_data = [
         [Paragraph("<b>Candidate Full Name:</b>", body_bold), Paragraph(student_name, body), Paragraph("<b>Enrollment / Ref No:</b>", body_bold), Paragraph(enrollment_no, body)],
         [Paragraph("<b>Father's / Mother's Name:</b>", body_bold), Paragraph(father_name, body), Paragraph("<b>Academic Degree:</b>", body_bold), Paragraph(degree, body)],
         [Paragraph("<b>Affiliated College:</b>", body_bold), Paragraph(college_name, body), Paragraph("<b>Academic Session:</b>", body_bold), Paragraph("2025-2026", body)],
         [Paragraph("<b>Internship Track:</b>", body_bold), Paragraph(course_name, body), Paragraph("<b>Training Duration:</b>", body_bold), Paragraph("6 Weeks (126 Hours)", body)],
         [Paragraph("<b>Training Tenure:</b>", body_bold), Paragraph(f"{start_date} to {end_date}", body), Paragraph("<b>Training Mode:</b>", body_bold), Paragraph("Offline Hands-on Laboratory", body)],
-        [Paragraph("<b>Supervising Faculty Mentor:</b>", body_bold), Paragraph(f"{mentor_name}<br/>({mentor_desig})", body), Paragraph("<b>Authorized Signatory:</b>", body_bold), Paragraph(f"{signatory_name} (Center Head &<br/>Authorized Signatory)" if is_poddar else f"{signatory_name} (Centre Head &<br/>Authorized Signatory)", body)],
+        [Paragraph("<b>Supervising Faculty Mentor:</b>", body_bold), Paragraph(f"{mentor_name}<br/>({mentor_desig})", body), Paragraph("<b>Authorized Signatory:</b>", body_bold), Paragraph(f"{signatory_name} (Authority)", body)],
         [Paragraph("<b>Host Training Organization:</b>", body_bold), Paragraph(host_org_name, body), Paragraph("<b>Centre Regional Code:</b>", body_bold), Paragraph(host_centre_name, body)],
     ]
     t_reg = Table(reg_data, colWidths=[42*mm, 45*mm, 42*mm, 45*mm])
@@ -883,7 +883,7 @@ def build_25page_academic_project_report(internship_id: int) -> str:
     story.append(Spacer(1, 4 * mm))
 
     story.append(Paragraph("<b>Section 2: Curriculum Authorization & Industry Compliance Statement</b>", sec_heading))
-    comp_loc = "on-site at the Poddar College computing laboratory" if is_poddar else "on-site at the TechnoGlobe Bharatpur Centre laboratory"
+    comp_loc = "on-site at the Poddar College computing laboratory" if is_poddar else "on-site at the Poswal Developers technical laboratory"
     story.append(Paragraph(f"This project dissertation report has been engineered and documented in accordance with the mandatory curriculum guidelines for <b>{degree}</b> industrial training prescribed by university regulatory bodies and academic standards. All algorithms, analytical workflows, data transformations, source code artifacts, and evaluation deliverables documented herein have been executed, reviewed, and validated {comp_loc}.", body_justify))
     story.append(Spacer(1, 2.5 * mm))
     story.append(Paragraph(f"The candidate has satisfied the minimum mandatory requirement of <b>120+ contact hours</b> (Total Completed: <b>126 Hours</b> across 36 instructional days) encompassing classroom architectural lectures, algorithmic problem-solving, live system development, unit and integration testing, and academic project defense.", body_justify))
@@ -893,7 +893,7 @@ def build_25page_academic_project_report(internship_id: int) -> str:
     if is_poddar:
         story.append(Paragraph("<b>Poddar College of Technology & Management</b> is an advanced higher education institution situated in Bharatpur, Rajasthan. The campus is equipped with specialized computing laboratories, cloud simulation sandboxes, and modern software engineering suites designed to mentor computer science and engineering undergraduates through industrial-grade capstone lifecycles.", body_justify))
     else:
-        story.append(Paragraph("<b>TechnoGlobe IT Solutions Pvt. Ltd.</b> is an ISO 9001:2015 certified premier technical education and software development enterprise operating authorized regional centers across India. The Bharatpur Regional Centre (BPT-01) is equipped with advanced enterprise computing infrastructure, cloud simulation testbeds, dedicated development sandboxes, and modern software engineering suites designed to mentor computer science and engineering undergraduates through industrial-grade capstone lifecycles.", body_justify))
+        story.append(Paragraph("<b>Poswal Developers</b> is a leading solar energy infrastructure, renewable engineering, and industrial development enterprise located in Bharatpur, Rajasthan (GST: 08ABIFP2454N1ZQ | MSME: UDYAM-RJ-06-0052498). The organization specializes in rooftop solar installations, Building Integrated Photovoltaics (BIPV), power plant engineering, and technical capacity-building training programs.", body_justify))
     story.append(Spacer(1, 4 * mm))
 
     story.append(Paragraph("<b>Section 4: Laboratory Infrastructure & Computing Sandbox</b>", sec_heading))
@@ -916,11 +916,11 @@ def build_25page_academic_project_report(internship_id: int) -> str:
     # PAGE 3: CERTIFICATE OF INTERNSHIP & PROJECT COMPLETION
     # =========================================================================
     story.append(Paragraph("<b>CERTIFICATE OF INTERNSHIP & PROJECT COMPLETION</b>", chap_heading))
-    cert_sub_title = "<b>PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT — BHARATPUR</b>" if is_poddar else "<b>TECHNOGLOBE IT SOLUTIONS PVT. LTD. — AUTHORIZED REGIONAL CENTRE</b>"
+    cert_sub_title = "<b>PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT — BHARATPUR</b>" if is_poddar else "<b>POSWAL DEVELOPERS — SOLAR ENERGY & INDUSTRIAL DIVISION</b>"
     story.append(Paragraph(cert_sub_title, title_sub))
     story.append(HRFlowable(width="100%", thickness=1, color=rep_accent, spaceBefore=3, spaceAfter=8))
 
-    cert_loc_phrase = "at Poddar College, Bharatpur." if is_poddar else "at TechnoGlobe IT Solutions Pvt. Ltd., Bharatpur Centre."
+    cert_loc_phrase = "at Poddar College, Bharatpur." if is_poddar else "at Poswal Developers Technical Training Division, Bharatpur."
     cert_text = f"This is to formally certify that <b>{student_name}</b>, daughter/son of <b>{father_name}</b>, enrolled in <b>{degree}</b> at <b>{college_name}</b> (Academic Session: 2025-2026), has successfully completed a rigorous 6-Week (126 Hours) Course-Based Internship in <b>{course_name}</b> from <b>{start_date}</b> to <b>{end_date}</b> {cert_loc_phrase}"
     story.append(Paragraph(cert_text, body_justify))
     story.append(Spacer(1, 3 * mm))

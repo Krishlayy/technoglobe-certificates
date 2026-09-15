@@ -30,12 +30,17 @@ export default function LoginPage() {
       <div className="max-w-md w-full bg-slate-800 rounded-xl shadow-2xl p-8 border border-slate-700">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <div className="bg-blue-600 p-3 rounded-full">
+            <div className="bg-amber-600 p-3 rounded-full shadow-lg">
               <ShieldCheck className="h-8 w-8 text-white" />
             </div>
           </div>
-          <h2 className="text-3xl font-bold text-white tracking-tight">TechnoGlobe</h2>
-          <p className="text-slate-400 mt-2">Certificate Management System</p>
+          <h2 className="text-3xl font-bold text-white tracking-tight">Poddar College</h2>
+          <p className="text-amber-400 font-medium text-xs uppercase tracking-widest mt-1">
+            Academic & Industrial Certification Portal
+          </p>
+          <p className="text-slate-400 text-xs mt-1">
+            Partnered with Poswal Developers (Solar Infrastructure)
+          </p>
         </div>
 
         {error && (

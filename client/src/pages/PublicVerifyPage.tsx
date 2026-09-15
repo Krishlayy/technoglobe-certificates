@@ -108,8 +108,9 @@ export const PublicVerifyPage: React.FC = () => {
                    (searchQuery && searchQuery.toUpperCase().startsWith('PCTM')) ||
                    (certParam && certParam.toUpperCase().startsWith('PCTM'));
 
-  const orgName = isPoddar ? 'Poddar College, Bharatpur' : 'TechnoGlobe IT Solutions Pvt. Ltd.';
-  const orgLogo = isPoddar ? '/poddar_logo.png' : '/technoglobe_logo.png';
+  const isPoswal = searchParams.get('cert')?.startsWith('POSWAL') || searchParams.get('ver_id')?.includes('POSWAL');
+  const orgName = isPoswal ? 'Poswal Developers' : 'Poddar College, Bharatpur';
+  const orgLogo = isPoswal ? '/poswal_logo.png' : '/poddar_logo.png';
   const orgSub = isPoddar ? 'Department of Technical & Higher Education' : 'Bharatpur Authorized Centre';
 
   return (
@@ -123,7 +124,7 @@ export const PublicVerifyPage: React.FC = () => {
             </div>
             <div>
               <div className="font-serif font-bold text-sm tracking-wide text-white leading-tight uppercase">
-                {isPoddar ? 'PODDAR COLLEGE' : 'TECHNOGLOBE'}
+                {isPoswal ? 'POSWAL DEVELOPERS' : 'PODDAR COLLEGE'}
               </div>
               <div className="text-[10px] text-amber-300 font-semibold uppercase tracking-wider">
                 {orgSub}
@@ -178,7 +179,7 @@ export const PublicVerifyPage: React.FC = () => {
                 Official Credential Verified
               </h2>
               <p className="text-xs text-amber-200 font-medium mt-0.5">
-                {isPoddar ? 'Poddar College — Bharatpur, Rajasthan (Official Credential)' : 'TechnoGlobe IT Solutions Pvt. Ltd. — Bharatpur Centre'}
+                {isPoswal ? 'Poswal Developers — Solar Power & Industrial Infrastructure (Bharatpur)' : 'Poddar College — Bharatpur, Rajasthan (Official Credential)'}
               </p>
               <div className="mt-2 inline-flex items-center space-x-1.5 px-3 py-1 bg-emerald-800/60 rounded-full border border-emerald-400/40 text-[11px] font-mono font-bold tracking-wider">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
@@ -247,10 +248,10 @@ export const PublicVerifyPage: React.FC = () => {
                     <span>Issuing Centre</span>
                   </div>
                   <div className="text-xs font-semibold text-slate-800 mt-1">
-                    {isPoddar ? 'Poddar College, Bharatpur' : 'Bharatpur Centre (TG-BPT)'}
+                    {isPoddar ? 'Poddar College, Bharatpur' : 'Poswal Developers Division, Bharatpur'}
                   </div>
                   <div className="text-[10px] text-slate-500 leading-tight">
-                    Centre Head: Nitin Sir
+                    Authority: {isPoddar ? 'Nitin Agarwal' : 'Madhuvan Singh Gurjar'}
                   </div>
                 </div>
               </div>

@@ -94,17 +94,25 @@ const COURSE_TRACKS = [
 const FACULTY_MEMBERS = [
   {
     id: 1,
-    name: 'Prof. Krishlay Sharma',
-    designation: 'Professor',
-    department: 'Department of Computer Science & Emerging Technologies',
+    name: 'Mahesh Chand Saini',
+    designation: 'Trainer',
+    department: 'Solar Power & Industrial Engineering Division (Poswal Developers)',
+    avatar: 'MS',
+    color: 'amber'
+  },
+  {
+    id: 2,
+    name: 'Krishlay',
+    designation: 'Faculty',
+    department: 'Department of Computing, Data Science & AI (Poddar College)',
     avatar: 'KS',
     color: 'blue'
   },
   {
-    id: 2,
-    name: 'Prof. Rahul Bhatnagar',
-    designation: 'Professor',
-    department: 'Department of Advanced Software Engineering & AI',
+    id: 3,
+    name: 'Rahul',
+    designation: 'Faculty',
+    department: 'Department of Digital Technologies & Web Engineering (Poddar College)',
     avatar: 'RB',
     color: 'purple'
   }
@@ -113,33 +121,33 @@ const FACULTY_MEMBERS = [
 const INSTITUTIONS = [
   {
     id: 1,
-    code: 'TG',
-    name: 'TechnoGlobe',
-    fullName: 'TechnoGlobe IT Solutions Pvt. Ltd.',
-    subTitle: 'Premier IT Training & Industrial Internship Partner',
-    location: 'Bharatpur Centre (TG-BPT), Rajasthan',
-    badge: 'ISO 9001:2015 Certified Partner',
-    stampType: 'Digital Gold Foil Seal Badge',
-    watermarkType: 'TechnoGlobe Seal Watermark',
-    centerHead: 'Nitin Sir (Centre Head)',
-    prefix: 'TG-BPT',
-    logo: '/technoglobe_logo.png',
-    borderSelected: 'border-blue-600 ring-2 ring-blue-500/20 bg-blue-50/70',
-    badgeClass: 'bg-blue-100 text-blue-800 border-blue-200'
+    code: 'PODDAR',
+    name: 'Poddar College',
+    fullName: 'Poddar College of Technology & Management',
+    subTitle: 'Department of Technical & Higher Education (Academic & Professional Credential)',
+    location: 'Bharatpur, Rajasthan | Phone: 9414293370 | Email: nitin@pctm',
+    badge: 'Poddar College Bharatpur',
+    stampType: 'Empty Box for Physical Ink Stamping',
+    watermarkType: 'Poddar College Logo Watermark',
+    centerHead: 'Nitin Agarwal (Authority)',
+    prefix: 'PCTM',
+    logo: '/poddar_logo.png',
+    borderSelected: 'border-indigo-600 ring-2 ring-indigo-500/20 bg-indigo-50/70',
+    badgeClass: 'bg-indigo-100 text-indigo-900 border-indigo-200'
   },
   {
     id: 2,
-    code: 'PODDAR',
-    name: 'Poddar College',
-    fullName: 'Poddar College, Bharatpur',
-    subTitle: 'Department of Technical & Higher Education (Direct College Credential)',
-    location: 'Bharatpur, Rajasthan (No Affiliation Added)',
-    badge: 'Bharatpur Campus',
+    code: 'POSWAL',
+    name: 'Poswal Developers',
+    fullName: 'Poswal Developers',
+    subTitle: 'Solar Power Generation & Industrial Infrastructure Training',
+    location: '214, Bapu Nagar, Ghana Road, Bharatpur (Raj.) | Mob: 9414694727',
+    badge: 'GST: 08ABIFP2454N1ZQ | MSME: UDYAM-RJ-06-0052498',
     stampType: 'Empty Box for Physical Ink Stamping',
-    watermarkType: 'Poddar College Crest Watermark',
-    centerHead: 'Nitin Sir (Centre Head)',
-    prefix: 'PCTM',
-    logo: '/poddar_logo.png',
+    watermarkType: 'Poswal Developers Logo Watermark',
+    centerHead: 'Madhuvan Singh Gurjar (Authority) & Mahesh Chand Saini (Trainer)',
+    prefix: 'POSWAL',
+    logo: '/poswal_logo.png',
     borderSelected: 'border-amber-600 ring-2 ring-amber-500/20 bg-amber-50/70',
     badgeClass: 'bg-amber-100 text-amber-900 border-amber-200'
   }
@@ -153,7 +161,7 @@ export const StepByStepWizardPage: React.FC = () => {
 
   // Form State with Sensible Autofill Defaults
   const [formData, setFormData] = useState({
-    // Organization Selection: 1 = TechnoGlobe, 2 = Poddar College
+    // Organization Selection: 1 = Poddar College, 2 = Poswal Developers
     institution_id: 2,
 
     // Step 1: Student Information
@@ -191,8 +199,8 @@ export const StepByStepWizardPage: React.FC = () => {
     setFormData((prev) => ({
       ...prev,
       institution_id: instId,
-      college_name: instId === 2 ? 'Poddar College, Bharatpur' : 'TechnoGlobe Centre / Partner College, Bharatpur',
-      address: instId === 2 ? 'Poddar College Campus, Bharatpur' : 'TechnoGlobe IT Solutions, Bharatpur'
+      college_name: instId === 2 ? 'Poswal Developers Training Division' : 'Poddar College, Bharatpur',
+      address: instId === 2 ? '214, Bapu Nagar, Bharatpur' : 'Poddar College Campus, Bharatpur'
     }));
   };
 
@@ -395,7 +403,7 @@ export const StepByStepWizardPage: React.FC = () => {
                 <span>Select Organization & Enter Student Information</span>
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Choose between TechnoGlobe (IT Partner) or Poddar College (Direct Credential), then enter student particulars.
+                Choose between Poddar College or Poswal Developers (Direct Credential), then enter student particulars.
               </p>
             </div>
             <span className="text-xs font-bold px-3 py-1 rounded-full bg-blue-100 text-blue-800">
@@ -539,7 +547,7 @@ export const StepByStepWizardPage: React.FC = () => {
             {/* College */}
             <div>
               <label className={labelStyle}>
-                College / Institution Name ({formData.institution_id === 2 ? 'Poddar College' : 'TechnoGlobe Centre'}) *
+                College / Training Entity ({formData.institution_id === 2 ? 'Poswal Developers' : 'Poddar College'}) *
               </label>
               <div className="relative">
                 <input
@@ -553,7 +561,7 @@ export const StepByStepWizardPage: React.FC = () => {
               <p className="text-[11px] text-slate-500 mt-1">
                 {formData.institution_id === 2
                   ? 'Poddar College, Bharatpur (Direct College Credential, No Affiliation line).'
-                  : 'TechnoGlobe authorized franchise centre in Bharatpur.'}
+                  : 'Poswal Developers Solar Engineering Center, Bharatpur.'}
               </p>
             </div>
 
@@ -696,7 +704,7 @@ export const StepByStepWizardPage: React.FC = () => {
                 Supervising Faculty Mentor (Will Sign All 15 Documents & 28-Page Report):
               </label>
               <span className="text-[11px] text-slate-500 font-medium">
-                Centre Head: <b>Nitin Sir</b> (Centre Head & Authorized Signatory)
+                Authority: <b>Nitin Agarwal</b> (Authority & Authorized Signatory)
               </span>
             </div>
 
@@ -913,13 +921,13 @@ export const StepByStepWizardPage: React.FC = () => {
               <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-900 text-sm font-semibold flex items-center space-x-2">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
                 <span>
-                  APPROVED by {formData.institution_id === 2 ? 'Poddar College, Bharatpur (Ref: PC/INT/2026/042)' : 'TechnoGlobe IT Solutions Centre (Ref: TG/BPT/2026/088)'}
+                  APPROVED by {formData.institution_id === 2 ? 'Poswal Developers (Ref: POSWAL/BPT/2026/088)' : 'Poddar College, Bharatpur (Ref: PC/INT/2026/042)'}
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">
                 {formData.institution_id === 2
-                  ? 'Faculty coordinator: Prof. Anjali Mathur. Designated ink-stamp box provided for physical stamping.'
-                  : 'Authorized centre supervisor: Nitin Sir. Digital gold foil seal and ISO 9001:2015 certification applied.'}
+                  ? 'Authority: Madhuvan Singh Gurjar. Trainer: Mahesh Chand Saini. Designated ink-stamp box provided for physical stamping.'
+                  : 'Authority: Nitin Agarwal. Designated ink-stamp box provided for physical college stamping.'}
               </p>
             </div>
 
@@ -974,7 +982,7 @@ export const StepByStepWizardPage: React.FC = () => {
               <div className="inline-flex items-center space-x-1.5 px-3 py-0.5 rounded-full bg-emerald-800/60 text-emerald-100 text-xs font-bold uppercase tracking-wider">
                 <CheckCircle2 className="w-4 h-4 text-emerald-300" />
                 <span>
-                  {generationResult.institution_name || (formData.institution_id === 2 ? 'Poddar College' : 'TechnoGlobe')} — Package Complete & Verified
+                  {generationResult.institution_name || (formData.institution_id === 2 ? 'Poddar College' : 'Poswal Developers')} — Package Complete & Verified
                 </span>
               </div>
               <h2 className="text-2xl font-bold">

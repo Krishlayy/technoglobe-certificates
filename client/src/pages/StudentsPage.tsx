@@ -46,7 +46,7 @@ export const StudentsPage: React.FC = () => {
             Student & Internship Directory
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Search, filter and manage registered candidates across TechnoGlobe and Poddar College programs.
+            Search, filter and manage registered candidates across Poddar College and Poswal Developers programs.
           </p>
         </div>
 
@@ -80,8 +80,8 @@ export const StudentsPage: React.FC = () => {
               className="px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 font-medium"
             >
               <option value="">All Institutions</option>
-              <option value="1">TechnoGlobe (TG)</option>
-              <option value="2">Poddar College (PODDAR)</option>
+              <option value="1">Poddar College (PCTM)</option>
+              <option value="2">Poswal Developers (POSWAL)</option>
             </select>
 
             <select

@@ -37,7 +37,7 @@ export const api = {
     return res.json();
   },
 
-  // Institutions (Multi-Institution Support: TechnoGlobe & Poddar College)
+  // Institutions (Multi-Institution Support: Poddar College & Poswal Developers)
   getInstitutions: async (): Promise<Institution[]> => {
     const res = await fetch(`${API_BASE}/institutions`);
     return res.json();

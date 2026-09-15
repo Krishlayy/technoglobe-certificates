@@ -1,55 +1,78 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { 
-  Users, Calendar, Clock, Download, FileText, CheckCircle2, 
-  Sparkles, Sliders, Plus, Trash2, ArrowRight, Building2, 
-  RefreshCw, CheckSquare, Layers, FileSpreadsheet, Archive,
-  ShieldCheck, AlertCircle, Award, UserCheck, X, BookOpen, ChevronLeft, ChevronRight,
-  RotateCcw, AlertTriangle
+import {
+  Users,
+  Building2,
+  Calendar,
+  Clock,
+  Award,
+  FileSpreadsheet,
+  FileText,
+  Download,
+  CheckCircle2,
+  RefreshCw,
+  Plus,
+  Trash2,
+  Sliders,
+  Sparkles,
+  ClipboardPaste,
+  Eye,
+  BookOpen,
+  ArrowRight,
+  ShieldCheck,
+  Percent,
+  Check,
+  X,
+  RotateCcw,
+  Sun
 } from 'lucide-react';
 import { api } from '../services/api';
 
 interface BatchStudent {
   id: string;
   full_name: string;
-  father_mother_name: string;
-  roll_no: string;
-  college_name: string;
-  degree: string;
-  branch: string;
+  father_mother_name?: string;
+  roll_no?: string;
+  college_name?: string;
+  degree?: string;
+  branch?: string;
   attendance_pct: number;
-  day_overrides?: Record<number, 'PRESENT' | 'LEAVE'>;
+  day_overrides?: { [dayNumber: number]: 'PRESENT' | 'LEAVE' };
 }
 
 const SAMPLE_NAMES = [
-  "Aarav Sharma", "Aditi Verma", "Akash Gupta", "Ananya Singh", "Aniket Mishra",
-  "Anjali Choudhary", "Arjun Patel", "Ayush Meena", "Bhavya Joshi", "Chetan Saini",
-  "Deepak Kumar", "Divya Rathore", "Gaurav Agarwal", "Harsh Vardhan", "Ishita Jain",
-  "Jatin Goyal", "Karan Mathur", "Khushi Sharma", "Kritika Soni", "Kuldeep Yadav",
-  "Manish Jangid", "Mayank Bhardwaj", "Megha Khandelwal", "Mohit Bansal", "Muskan Pareek",
-  "Naman Tiwari", "Neha Shringi", "Nikhil Singhal", "Nisha Gurjar", "Nitin Sharma",
-  "Pankaj Prajapat", "Pooja Kumawat", "Pradeep Rawat", "Prakash Choudhary", "Prateek Saxena",
-  "Priya Mahawar", "Rahul Gautam", "Rajesh Meena", "Rakesh Tanwar", "Riya Agrawal",
-  "Rohit Nagar", "Roshni Sen", "Sachin Soni", "Sakshi Koli", "Sameer Khan",
-  "Sanjay Meena", "Shreya Sharma", "Siddharth Jain", "Sneha Bairwa", "Vikas Jat"
+  'Aarav Sharma', 'Bhavya Gupta', 'Chirag Meena', 'Divya Patel', 'Eshan Verma',
+  'Gaurav Singhal', 'Harshita Saini', 'Ishaan Agarwal', 'Jatin Choudhary', 'Kavita Mishra',
+  'Lakshya Khandelwal', 'Manish Bansal', 'Neha Gurjar', 'Om Prakash Rawat', 'Pooja Jangid',
+  'Rahul Prajapat', 'Ritu Mathur', 'Sachin Goyal', 'Tanvi Soni', 'Utkarsh Bhardwaj',
+  'Vikas Kumawat', 'Yash Sharma', 'Aakash Nagar', 'Ananya Dixit', 'Ankit Faujdar',
+  'Deepak Sain', 'Garima Mittal', 'Himanshu Sharma', 'Jyoti Meena', 'Kunal Verma',
+  'Mayank Agrawal', 'Naveen Kumar', 'Prachi Jain', 'Priya Gurjar', 'Rohit Saini',
+  'Sakshi Sharma', 'Sandeep Singh', 'Shubham Jindal', 'Tarun Lodha', 'Varun Goyal'
 ];
 
 const COURSE_TRACKS = [
-  { code: 'DA', title: 'Data Analytics & Business Intelligence', badge: 'Python & Power BI', mentorId: 1 },
-  { code: 'FS', title: 'Full Stack Web Development (MERN)', badge: 'React & Node.js', mentorId: 1 },
+  { code: 'SOL-01', title: 'Rooftop Solar PV Installation & Building Integration (BIPV)', badge: 'Solar & BIPV', mentorId: 1 },
+  { code: 'SOL-02', title: 'Solar Structure Fitting, Panel Mounting & Civil Layout', badge: 'Structure Fitting', mentorId: 1 },
+  { code: 'SOL-03', title: 'Solar Electrical Systems, Inverters & Grid-Tied Technology', badge: 'Electrical & Inverter', mentorId: 1 },
+  { code: 'SOL-04', title: 'Industrial Solar Power Plant Operations & Maintenance (O&M)', badge: 'Industrial Solar O&M', mentorId: 1 },
+  { code: 'SOL-05', title: 'Solar Water Heating & Agricultural Pumping Systems', badge: 'Pumps & Thermal', mentorId: 1 },
+  { code: 'SOL-06', title: 'Off-Grid Solar Energy Storage & Battery Management (BMS)', badge: 'Storage & Batteries', mentorId: 1 },
+  { code: 'SOL-07', title: 'Solar PV System Design, Load Estimation & PVsyst Simulation', badge: 'PVsyst Design', mentorId: 1 },
+  { code: 'SOL-08', title: 'Solar Safety Standards, Electrical Earthing & Net-Metering', badge: 'Safety & Metering', mentorId: 1 },
+  { code: 'DA', title: 'Data Analytics & Business Intelligence', badge: 'Excel, SQL & Power BI', mentorId: 2 },
+  { code: 'FS', title: 'Full Stack Web Development (MERN)', badge: 'React, Node & MongoDB', mentorId: 2 },
   { code: 'AI', title: 'Python AI, ML & Data Science', badge: 'ML & TensorFlow', mentorId: 2 },
-  { code: 'CS', title: 'Cyber Security & Defensive Ops', badge: 'Security & VAPT', mentorId: 1 },
-  { code: 'CC', title: 'Cloud Computing & DevOps Architecture', badge: 'AWS, Docker & K8s', mentorId: 2 },
-  { code: 'JV', title: 'Java Enterprise & Spring Boot', badge: 'Spring Boot & JPA', mentorId: 1 },
-  { code: 'BI', title: 'Bioinformatics & Computational Biology', badge: 'Genomics & BioPython', mentorId: 1 },
-  { code: 'AD', title: 'Android Mobile App Development', badge: 'Kotlin & Compose', mentorId: 2 },
-  { code: 'DM', title: 'Digital Marketing & Growth Strategy', badge: 'SEO, Ads & GA4', mentorId: 2 },
+  { code: 'CS', title: 'Cyber Security & Ethical Hacking', badge: 'Security & VAPT', mentorId: 2 },
+  { code: 'CC', title: 'Cloud Computing & DevOps Architecture', badge: 'AWS, Docker & K8s', mentorId: 3 },
+  { code: 'JV', title: 'Java Full Stack Development', badge: 'Spring Boot & JPA', mentorId: 2 },
+  { code: 'AD', title: 'Android Mobile App Development', badge: 'Kotlin & Compose', mentorId: 3 },
+  { code: 'DM', title: 'Digital Marketing & Growth Strategy', badge: 'SEO, Ads & GA4', mentorId: 3 },
   { code: 'CUSTOM', title: 'Custom Track / Program Name', badge: 'Flexible Curricula', mentorId: 1 },
 ];
 
 export const BulkAttendancePage: React.FC = () => {
-  // 1. Institution selection (1 = TechnoGlobe, 2 = Poddar College)
-  const [institutionId, setInstitutionId] = useState<number>(2);
+  // 1. Institution selection (1 = Poddar College, 2 = Poswal Developers)
+  const [institutionId, setInstitutionId] = useState<number>(1);
 
   // 2. Batch configuration
   const [courseTrack, setCourseTrack] = useState<string>('DA');
@@ -59,17 +82,17 @@ export const BulkAttendancePage: React.FC = () => {
   const [startTime, setStartTime] = useState<string>('10:00 AM');
   const [endTime, setEndTime] = useState<string>('01:30 PM');
   const [dailyHours, setDailyHours] = useState<number>(3.5);
-  const [mentorId, setMentorId] = useState<number>(1);
+  const [mentorId, setMentorId] = useState<number>(2);
 
   // 3. Daily Day-Wise Sheet Configuration (1 or 2 pages per day)
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [layoutMode, setLayoutMode] = useState<'1_page_per_day' | '2_pages_per_day'>('1_page_per_day');
 
-  // 4. Students list
+  // 4. Students list (defaults to 5 clean students)
   const [students, setStudents] = useState<BatchStudent[]>([]);
 
   // 5. View Mode: 'roster' | 'daily_sheet' | 'matrix_preview'
-  const [activeTab, setActiveTab] = useState<'roster' | 'daily_sheet' | 'matrix_preview'>('daily_sheet');
+  const [activeTab, setActiveTab] = useState<'daily_sheet' | 'roster' | 'matrix_preview'>('daily_sheet');
 
   // 6. Preview response state
   const [previewData, setPreviewData] = useState<any>(null);
@@ -89,15 +112,29 @@ export const BulkAttendancePage: React.FC = () => {
   const [showResetDbModal, setShowResetDbModal] = useState<boolean>(false);
   const [isResettingDb, setIsResettingDb] = useState<boolean>(false);
 
-  // Initialize with 50 sample students on first render
+  // Initialize with 5 students on first render
   useEffect(() => {
-    loadSampleStudents(50, 100);
+    loadSampleStudents(5, 100);
   }, []);
 
-  const loadSampleStudents = (count = 50, defaultPct = 100) => {
+  // When switching institution, adjust default mentor and course track
+  const handleInstitutionChange = (id: number) => {
+    setInstitutionId(id);
+    if (id === 2) {
+      // Poswal Developers -> Solar track & Mahesh Chand Saini
+      setCourseTrack('SOL-01');
+      setMentorId(1);
+    } else {
+      // Poddar College -> Data Analytics & Krishlay
+      setCourseTrack('DA');
+      setMentorId(2);
+    }
+  };
+
+  const loadSampleStudents = (count = 5, defaultPct = 100) => {
     const list: BatchStudent[] = [];
-    const prefix = institutionId === 2 ? 'PCTM-2026' : 'TG-BPT-2026';
-    const college = institutionId === 2 ? 'Poddar College, Bharatpur' : 'TechnoGlobe Centre, Bharatpur';
+    const prefix = institutionId === 2 ? 'POSWAL-2026' : 'PCTM-2026';
+    const college = institutionId === 2 ? 'Poswal Developers Training Division' : 'Poddar College, Bharatpur';
 
     for (let i = 0; i < count; i++) {
       const name = SAMPLE_NAMES[i % SAMPLE_NAMES.length];
@@ -107,13 +144,19 @@ export const BulkAttendancePage: React.FC = () => {
         father_mother_name: `Mr. ${name.split(' ')[1] || 'Kumar'} Sharma`,
         roll_no: `${prefix}-${String(i + 1).padStart(3, '0')}`,
         college_name: college,
-        degree: 'BCA',
-        branch: 'Computer Science',
+        degree: institutionId === 2 ? 'Diploma / B.Tech' : 'BCA',
+        branch: institutionId === 2 ? 'Electrical & Solar' : 'Computer Science',
         attendance_pct: defaultPct
       });
     }
     setStudents(list);
-    setStatusMessage({ type: 'info', text: `Loaded ${count} sample students with ${defaultPct}% attendance.` });
+    setStatusMessage({ type: 'info', text: `Loaded ${count} students with ${defaultPct}% attendance.` });
+  };
+
+  const handleClearAllStudents = () => {
+    setStudents([]);
+    setPreviewData(null);
+    setStatusMessage({ type: 'info', text: 'Cleared student roster.' });
   };
 
   const setAllAttendance = (pct: number) => {
@@ -137,17 +180,17 @@ export const BulkAttendancePage: React.FC = () => {
   };
 
   const handleAddStudent = () => {
-    const prefix = institutionId === 2 ? 'PCTM-2026' : 'TG-BPT-2026';
-    const college = institutionId === 2 ? 'Poddar College, Bharatpur' : 'TechnoGlobe Centre, Bharatpur';
+    const prefix = institutionId === 2 ? 'POSWAL-2026' : 'PCTM-2026';
+    const college = institutionId === 2 ? 'Poswal Developers Training Division' : 'Poddar College, Bharatpur';
     const newIdx = students.length + 1;
     const newStudent: BatchStudent = {
       id: `stu_${Date.now()}_${newIdx}`,
-      full_name: `New Student ${newIdx}`,
+      full_name: `Student Name ${newIdx}`,
       father_mother_name: 'Father Name',
       roll_no: `${prefix}-${String(newIdx).padStart(3, '0')}`,
       college_name: college,
-      degree: 'BCA',
-      branch: 'Computer Science',
+      degree: institutionId === 2 ? 'Diploma / B.Tech' : 'BCA',
+      branch: institutionId === 2 ? 'Electrical & Solar' : 'Computer Science',
       attendance_pct: 100
     };
     setStudents([...students, newStudent]);
@@ -161,7 +204,6 @@ export const BulkAttendancePage: React.FC = () => {
     setStudents(students.map(s => s.id === id ? { ...s, [field]: value } : s));
   };
 
-  // Toggle a single student's attendance on any specific day (e.g. Day X)
   const toggleStudentDay = (studentIdx: number, dayNumber: number) => {
     const updatedStudents = [...students];
     const stu = { ...updatedStudents[studentIdx] };
@@ -179,371 +221,322 @@ export const BulkAttendancePage: React.FC = () => {
     const nextStatus: 'PRESENT' | 'LEAVE' = currentStatus === 'PRESENT' ? 'LEAVE' : 'PRESENT';
     overrides[dayNumber] = nextStatus;
     stu.day_overrides = overrides;
+    updatedStudents[studentIdx] = stu;
+    setStudents(updatedStudents);
 
-    // Update live previewData in memory immediately for instant UI feedback
-    if (previewData?.students?.[studentIdx]) {
+    if (previewData && previewData.students && previewData.students[studentIdx]) {
       const updatedPreview = { ...previewData };
-      const stuRecs = [...updatedPreview.students[studentIdx].records];
-      if (stuRecs[dayNumber - 1]) {
-        stuRecs[dayNumber - 1] = {
-          ...stuRecs[dayNumber - 1],
+      const studentPreview = { ...updatedPreview.students[studentIdx] };
+      const records = [...studentPreview.records];
+      if (records[dayNumber - 1]) {
+        records[dayNumber - 1] = {
+          ...records[dayNumber - 1],
           status: nextStatus === 'PRESENT' ? 'PRESENT' : 'AUTHORIZED LEAVE',
-          short_status: nextStatus === 'PRESENT' ? 'P' : 'L',
-          student_signed: nextStatus === 'PRESENT' ? 'Verified (Signed)' : 'On Leave',
-          mentor_signed: nextStatus === 'PRESENT' ? 'Verified (Signed)' : 'Approved Leave'
+          short_status: nextStatus === 'PRESENT' ? 'P' : 'L'
         };
-        updatedPreview.students[studentIdx].records = stuRecs;
-        const pCount = stuRecs.filter((r: any) => r.short_status === 'P').length;
-        const lCount = stuRecs.length - pCount;
-        const newPct = Number(((pCount / stuRecs.length) * 100).toFixed(1));
-        updatedPreview.students[studentIdx].present_days = pCount;
-        updatedPreview.students[studentIdx].leave_days = lCount;
-        updatedPreview.students[studentIdx].attendance_pct_actual = newPct;
-        updatedPreview.students[studentIdx].total_hours_logged = Number((pCount * dailyHours).toFixed(1));
-        stu.attendance_pct = newPct;
+        studentPreview.records = records;
+        const presentCount = records.filter(r => r.status === 'PRESENT').length;
+        const leaveCount = records.length - presentCount;
+        studentPreview.present_days = presentCount;
+        studentPreview.leave_days = leaveCount;
+        studentPreview.attendance_pct_actual = Math.round((presentCount / records.length) * 1000) / 10;
+        updatedPreview.students[studentIdx] = studentPreview;
         setPreviewData(updatedPreview);
       }
     }
-
-    updatedStudents[studentIdx] = stu;
-    setStudents(updatedStudents);
   };
 
-  // Set all students on Day X to PRESENT or LEAVE
   const setAllStudentsOnDay = (dayNumber: number, status: 'PRESENT' | 'LEAVE') => {
-    const updated = students.map((s) => {
-      const overrides = { ...(s.day_overrides || {}) };
+    const updatedStudents = students.map(stu => {
+      const overrides = { ...(stu.day_overrides || {}) };
       overrides[dayNumber] = status;
-      return { ...s, day_overrides: overrides };
+      return { ...stu, day_overrides: overrides };
     });
-    setStudents(updated);
-
-    if (previewData) {
-      const updatedPreview = { ...previewData };
-      updatedPreview.students.forEach((stu: any, sIdx: number) => {
-        if (stu.records[dayNumber - 1]) {
-          stu.records[dayNumber - 1].status = status === 'PRESENT' ? 'PRESENT' : 'AUTHORIZED LEAVE';
-          stu.records[dayNumber - 1].short_status = status === 'PRESENT' ? 'P' : 'L';
-          stu.records[dayNumber - 1].student_signed = status === 'PRESENT' ? 'Verified (Signed)' : 'On Leave';
-          stu.records[dayNumber - 1].mentor_signed = status === 'PRESENT' ? 'Verified (Signed)' : 'Approved Leave';
-          const pCount = stu.records.filter((r: any) => r.short_status === 'P').length;
-          stu.present_days = pCount;
-          stu.leave_days = stu.records.length - pCount;
-          stu.attendance_pct_actual = Number(((pCount / stu.records.length) * 100).toFixed(1));
-          stu.total_hours_logged = Number((pCount * dailyHours).toFixed(1));
-          updated[sIdx].attendance_pct = stu.attendance_pct_actual;
-        }
-      });
-      setPreviewData(updatedPreview);
-    }
-    setStatusMessage({ type: 'success', text: `Marked all students as ${status} on Day ${dayNumber}.` });
+    setStudents(updatedStudents);
+    setStatusMessage({
+      type: 'info',
+      text: `Marked all ${students.length} students as ${status} on Day ${dayNumber}.`
+    });
+    setTimeout(() => fetchLivePreview(), 50);
   };
 
-  // Reset student custom day overrides
   const resetStudentOverrides = (studentIdx: number) => {
-    const updated = [...students];
-    delete updated[studentIdx].day_overrides;
-    setStudents(updated);
-    setStatusMessage({ type: 'info', text: `Cleared custom day overrides for ${updated[studentIdx].full_name}.` });
-    fetchLivePreview();
+    const updatedStudents = [...students];
+    updatedStudents[studentIdx] = {
+      ...updatedStudents[studentIdx],
+      day_overrides: undefined
+    };
+    setStudents(updatedStudents);
+    setStatusMessage({
+      type: 'info',
+      text: `Reset custom day overrides for ${updatedStudents[studentIdx].full_name}.`
+    });
+    setTimeout(() => fetchLivePreview(), 50);
   };
 
-  const handleProcessPaste = () => {
+  const handleBulkPaste = () => {
     if (!pasteText.trim()) return;
-    const lines = pasteText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-    const prefix = institutionId === 2 ? 'PCTM-2026' : 'TG-BPT-2026';
-    const college = institutionId === 2 ? 'Poddar College, Bharatpur' : 'TechnoGlobe Centre, Bharatpur';
+    const lines = pasteText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const prefix = institutionId === 2 ? 'POSWAL-2026' : 'PCTM-2026';
+    const college = institutionId === 2 ? 'Poswal Developers Training Division' : 'Poddar College, Bharatpur';
 
-    const parsedList: BatchStudent[] = lines.map((line, idx) => {
-      const parts = line.split(/[,\t]+/).map(p => p.trim());
-      let name = parts[0] || `Student ${idx + 1}`;
-      let father = 'Father Name';
-      let roll = `${prefix}-${String(idx + 1).padStart(3, '0')}`;
-      let att = 100;
-
-      if (parts.length === 2) {
-        if (!isNaN(Number(parts[1]))) {
-          att = Math.min(100, Math.max(0, Number(parts[1])));
-        } else {
-          father = parts[1];
-        }
-      } else if (parts.length >= 3) {
-        father = parts[1] || father;
-        roll = parts[2] || roll;
-        if (parts[3] && !isNaN(Number(parts[3]))) {
-          att = Math.min(100, Math.max(0, Number(parts[3])));
-        }
-      }
+    const newStudents: BatchStudent[] = lines.map((line, idx) => {
+      const parts = line.split(/[\t,|]+/).map(p => p.trim());
+      const fullName = parts[0] || `Student ${idx + 1}`;
+      const fatherName = parts[1] || 'Father Name';
+      const roll = parts[2] || `${prefix}-${String(idx + 1).padStart(3, '0')}`;
+      const pct = parseFloat(parts[3]) || 100;
 
       return {
         id: `stu_${Date.now()}_${idx}`,
-        full_name: name,
-        father_mother_name: father,
+        full_name: fullName,
+        father_mother_name: fatherName,
         roll_no: roll,
         college_name: college,
-        degree: 'BCA',
-        branch: 'Computer Science',
-        attendance_pct: att
+        degree: institutionId === 2 ? 'Diploma / B.Tech' : 'BCA',
+        branch: institutionId === 2 ? 'Electrical & Solar' : 'Computer Science',
+        attendance_pct: pct
       };
     });
 
-    setStudents(parsedList);
+    setStudents(newStudents);
     setShowPasteModal(false);
     setPasteText('');
-    setStatusMessage({ type: 'success', text: `Successfully imported ${parsedList.length} students from pasted text!` });
+    setStatusMessage({ type: 'success', text: `Successfully imported ${newStudents.length} students!` });
   };
 
   const getCommonPayload = () => ({
     institution_id: institutionId,
     course_track: courseTrack,
-    custom_track_name: courseTrack === 'CUSTOM' ? customTrackName : undefined,
-    total_days: Number(totalDays),
+    custom_track_name: customTrackName || undefined,
+    total_days: totalDays,
     start_date: startDate,
     start_time: startTime,
     end_time: endTime,
-    daily_hours: Number(dailyHours),
+    daily_hours: dailyHours,
     mentor_id: mentorId,
-    selected_day: Number(selectedDay),
+    selected_day: selectedDay,
     layout_mode: layoutMode,
     students: students.map(s => ({
       full_name: s.full_name,
-      father_mother_name: s.father_mother_name,
-      roll_no: s.roll_no,
-      college_name: s.college_name,
-      degree: s.degree,
-      branch: s.branch,
-      attendance_pct: Number(s.attendance_pct),
+      father_mother_name: s.father_mother_name || 'Father Name',
+      roll_no: s.roll_no || '',
+      college_name: s.college_name || (institutionId === 2 ? 'Poswal Developers Training Division' : 'Poddar College, Bharatpur'),
+      degree: s.degree || (institutionId === 2 ? 'Diploma / B.Tech' : 'BCA'),
+      branch: s.branch || (institutionId === 2 ? 'Electrical & Solar' : 'Computer Science'),
+      attendance_pct: s.attendance_pct,
       day_overrides: s.day_overrides || undefined
     }))
   });
 
-  const fetchLivePreview = async (targetTab?: 'daily_sheet' | 'matrix_preview') => {
+  const fetchLivePreview = async () => {
     if (students.length === 0) {
-      setStatusMessage({ type: 'error', text: 'Please add at least one student to generate attendance.' });
+      setStatusMessage({ type: 'error', text: 'Please add at least 1 student to generate preview.' });
       return;
     }
-    setLoadingPreview(true);
-    setStatusMessage(null);
     try {
-      const data = await api.bulkAttendancePreview(getCommonPayload());
-      setPreviewData(data);
-      if (targetTab) setActiveTab(targetTab);
-      setStatusMessage({ type: 'success', text: `Calculated day-wise schedule for ${data.students.length} students across ${data.working_days.length} working days!` });
-    } catch (e: any) {
-      setStatusMessage({ type: 'error', text: e.message || 'Failed to generate preview' });
+      setLoadingPreview(true);
+      const res = await api.bulkAttendancePreview(getCommonPayload());
+      setPreviewData(res);
+      setStatusMessage({ type: 'success', text: `Live matrix synchronized (${res.students.length} students x ${res.total_days} days).` });
+    } catch (err: any) {
+      setStatusMessage({ type: 'error', text: err.message || 'Failed to generate preview' });
     } finally {
       setLoadingPreview(false);
     }
   };
 
-  // 1. Download Single Day Sheet (Day X A4 PDF)
-  const handleDownloadDayPdf = async () => {
-    if (students.length === 0) return;
-    setIsGeneratingDayPdf(true);
+  const handleDownloadSingleDayPdf = async () => {
     try {
+      setIsGeneratingDayPdf(true);
+      setStatusMessage({ type: 'info', text: `Rendering Day ${selectedDay} (${layoutMode === '1_page_per_day' ? '1-Page' : '2-Pages'}) PDF...` });
       await api.downloadDailyDayPdf(getCommonPayload());
-      setStatusMessage({ type: 'success', text: `Daily Attendance Sheet for Day ${selectedDay} (A4 PDF) downloaded successfully!` });
-    } catch (e: any) {
-      setStatusMessage({ type: 'error', text: e.message || 'Failed to download Day PDF' });
+      setStatusMessage({ type: 'success', text: `Day ${selectedDay} Attendance Sheet downloaded successfully!` });
+    } catch (err: any) {
+      setStatusMessage({ type: 'error', text: err.message || 'Failed to generate Day Sheet PDF' });
     } finally {
       setIsGeneratingDayPdf(false);
     }
   };
 
-  // 2. Download Complete All-Days Daily Register Book (A4 PDF - 1 or 2 pages per day)
-  const handleDownloadDailyBookPdf = async () => {
-    if (students.length === 0) return;
-    setIsGeneratingDailyBook(true);
+  const handleDownloadAllDailyBookPdf = async () => {
     try {
+      setIsGeneratingDailyBook(true);
+      setStatusMessage({ type: 'info', text: `Compiling Complete ${totalDays}-Days Daily Register Book...` });
       await api.downloadDailyBookPdf(getCommonPayload());
-      setStatusMessage({ type: 'success', text: `All-Days Daily Attendance Register Book (${totalDays} Days, A4 Format) downloaded successfully!` });
-    } catch (e: any) {
-      setStatusMessage({ type: 'error', text: e.message || 'Failed to download Daily Book PDF' });
+      setStatusMessage({ type: 'success', text: `Complete ${totalDays}-Days Daily Register Book downloaded successfully!` });
+    } catch (err: any) {
+      setStatusMessage({ type: 'error', text: err.message || 'Failed to generate Daily Register Book' });
     } finally {
       setIsGeneratingDailyBook(false);
     }
   };
 
-  // 3. Download Master Matrix PDF (Landscape A4)
-  const handleDownloadMatrixPdf = async () => {
-    if (students.length === 0) return;
-    setIsGeneratingMatrixPdf(true);
+  const handleDownloadMasterMatrixPdf = async () => {
     try {
+      setIsGeneratingMatrixPdf(true);
+      setStatusMessage({ type: 'info', text: 'Generating Landscape Master Attendance Register PDF...' });
       await api.downloadMasterAttendancePdf(getCommonPayload());
-      setStatusMessage({ type: 'success', text: 'Master Batch Attendance Matrix (Landscape PDF) downloaded successfully!' });
-    } catch (e: any) {
-      setStatusMessage({ type: 'error', text: e.message || 'Failed to download Matrix PDF' });
+      setStatusMessage({ type: 'success', text: 'Master Matrix PDF downloaded successfully!' });
+    } catch (err: any) {
+      setStatusMessage({ type: 'error', text: err.message || 'Failed to generate Master PDF' });
     } finally {
       setIsGeneratingMatrixPdf(false);
     }
   };
 
-  // 4. Download Complete ZIP Package
-  const handleDownloadZip = async () => {
-    if (students.length === 0) return;
-    setIsGeneratingZip(true);
+  const handleDownloadZipBundle = async () => {
     try {
+      setIsGeneratingZip(true);
+      setStatusMessage({ type: 'info', text: `Compiling Complete ZIP Archive (${students.length} Student Reports + Day Sheets + Register Book + Master PDF + CSV Matrix)...` });
       await api.downloadBatchAttendanceZip(getCommonPayload());
-      setStatusMessage({ type: 'success', text: `Complete Batch ZIP Package (All ${totalDays} Daily Sheets + Master Book + Matrix + CSV) downloaded!` });
-    } catch (e: any) {
-      setStatusMessage({ type: 'error', text: e.message || 'Failed to download ZIP bundle' });
+      setStatusMessage({ type: 'success', text: 'Complete ZIP Archive downloaded successfully!' });
+    } catch (err: any) {
+      setStatusMessage({ type: 'error', text: err.message || 'Failed to generate ZIP bundle' });
     } finally {
       setIsGeneratingZip(false);
     }
   };
 
-  // 5. Bulk Enroll to Database
-  const handleBulkEnroll = async () => {
-    if (students.length === 0) return;
-    if (!window.confirm(`Are you sure you want to enroll all ${students.length} students into the system database? This will create complete student profiles and day-wise attendance records.`)) {
-      return;
-    }
-    setIsEnrolling(true);
+  const handleEnrollAndSave = async () => {
     try {
+      setIsEnrolling(true);
+      setStatusMessage({ type: 'info', text: 'Enrolling all batch candidates into database...' });
       const res = await api.bulkEnrollStudents(getCommonPayload());
-      setStatusMessage({ type: 'success', text: res.message || `Enrolled ${res.enrolled_count} students successfully!` });
-    } catch (e: any) {
-      setStatusMessage({ type: 'error', text: e.message || 'Failed to enroll students' });
+      setStatusMessage({
+        type: 'success',
+        text: `Enrolled ${res.enrolled_count} students with full 50-day attendance in database!`
+      });
+    } catch (err: any) {
+      setStatusMessage({ type: 'error', text: err.message || 'Failed to enroll batch students' });
     } finally {
       setIsEnrolling(false);
     }
   };
 
-  // 6. Database Clean Reset Handler
   const handleResetDatabase = async () => {
-    setIsResettingDb(true);
     try {
-      await api.resetDatabase();
-      setStatusMessage({ type: 'success', text: 'System database has been reset to clean initial state successfully.' });
+      setIsResettingDb(true);
+      setStatusMessage({ type: 'info', text: 'Resetting database to pristine clean state...' });
+      const res = await api.resetDatabase();
       setShowResetDbModal(false);
-    } catch (e: any) {
-      setStatusMessage({ type: 'error', text: e.message || 'Failed to reset database' });
+      setStatusMessage({
+        type: 'success',
+        text: `Database wiped clean! (Preserved: Poddar College & Poswal Developers, all courses, faculty & authorities).`
+      });
+      loadSampleStudents(5, 100);
+      setPreviewData(null);
+    } catch (err: any) {
+      setStatusMessage({ type: 'error', text: err.response?.data?.detail || 'Failed to reset database' });
     } finally {
       setIsResettingDb(false);
     }
   };
 
-  // Calculations
-  const avgAttendance = students.length > 0 
-    ? (students.reduce((sum, s) => sum + Number(s.attendance_pct || 0), 0) / students.length).toFixed(1)
-    : '0';
-
-  const count100 = students.filter(s => Number(s.attendance_pct) === 100).length;
-  const currentDayInfo = previewData?.working_days?.[selectedDay - 1];
+  const triggerBlobDownload = (blob: Blob, filename: string) => {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      {/* Top Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 rounded-2xl shadow-xl border border-indigo-500/20 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="max-w-7xl mx-auto space-y-6 pb-24">
+      {/* Top Banner & Header */}
+      <div className="bg-linear-to-r from-slate-900 via-indigo-950 to-blue-950 p-6 rounded-3xl text-white shadow-xl relative overflow-hidden">
+        <div className="absolute -right-10 -bottom-10 opacity-10 pointer-events-none">
+          <FileSpreadsheet className="w-80 h-80 text-white" />
+        </div>
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center space-x-2 text-indigo-400 text-xs font-bold uppercase tracking-wider mb-1">
-              <Layers className="w-4 h-4" />
-              <span>Day-Wise Daily Attendance Sheets (1–2 Sheets per Day)</span>
-              <span className="bg-amber-400 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-extrabold">NEW</span>
+            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-semibold mb-2 border border-amber-500/30">
+              <Sun className="w-3.5 h-3.5 text-amber-400" />
+              <span>Poddar College & Poswal Developers Training Portal</span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">
-              Bulk Batch Daily Attendance Generator (50+ Students)
+            <h1 className="text-2xl sm:text-3xl font-serif font-black tracking-tight text-white">
+              Bulk Attendance & Day-Wise Register Generator
             </h1>
-            <p className="text-sm text-slate-300 mt-1 max-w-3xl">
-              Generate official A4 day-wise attendance sheets (1 or 2 sheets per day) for 50+ students across all 50 days with customizable attendance per student, instant click-to-toggle attendance marks, and Nitin Sir's seal/stamp for TechnoGlobe & Poddar College.
+            <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl">
+              Generate official A4 day-wise attendance sheets (1 or 2 sheets per day) for students across all days with customizable attendance per student, instant click-to-toggle attendance marks, and official authority seal/stamp.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <div className="flex flex-wrap items-center gap-2.5">
             <button
               onClick={() => setShowResetDbModal(true)}
-              className="px-3.5 py-2 text-xs font-bold text-rose-300 hover:text-rose-100 bg-rose-950/70 hover:bg-rose-900 rounded-lg border border-rose-800 transition flex items-center space-x-1.5 shadow-sm"
-              title="Reset Database to Clean Initial State"
+              className="inline-flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-red-900/60 hover:bg-red-800 text-red-200 text-xs font-bold border border-red-700/50 shadow-sm transition-all"
+              title="Wipe test data and reset database cleanly"
             >
-              <RotateCcw className="w-3.5 h-3.5 text-rose-400" />
+              <Trash2 className="w-4 h-4 text-red-400" />
               <span>Reset DB</span>
             </button>
-            <Link
-              to="/attendance"
-              className="px-4 py-2 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-800 rounded-lg border border-slate-700 transition"
+
+            <button
+              onClick={fetchLivePreview}
+              disabled={loadingPreview}
+              className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-indigo-600/30 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
             >
-              Single Student Planner
-            </Link>
+              <RefreshCw className={`w-4 h-4 ${loadingPreview ? 'animate-spin' : ''}`} />
+              <span>{loadingPreview ? 'Computing...' : 'Generate Matrix Preview'}</span>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Status Alert */}
+      {/* Status Feedback Notification */}
       {statusMessage && (
-        <div className={`p-4 rounded-xl flex items-center justify-between shadow-sm border ${
-          statusMessage.type === 'success' 
-            ? 'bg-emerald-50 text-emerald-900 border-emerald-200' 
-            : statusMessage.type === 'error'
-            ? 'bg-rose-50 text-rose-900 border-rose-200'
-            : 'bg-blue-50 text-blue-900 border-blue-200'
-        }`}>
-          <div className="flex items-center space-x-2.5 text-sm font-medium">
-            {statusMessage.type === 'success' ? <CheckCircle2 className="w-5 h-5 text-emerald-600" /> : <AlertCircle className="w-5 h-5 text-blue-600" />}
+        <div
+          className={`p-4 rounded-2xl text-xs sm:text-sm font-medium flex items-center justify-between shadow-sm transition-all ${
+            statusMessage.type === 'success'
+              ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
+              : statusMessage.type === 'error'
+              ? 'bg-red-50 text-red-900 border border-red-200'
+              : 'bg-blue-50 text-blue-900 border border-blue-200'
+          }`}
+        >
+          <div className="flex items-center space-x-2">
+            {statusMessage.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
+            {statusMessage.type === 'error' && <Trash2 className="w-4 h-4 text-red-600 shrink-0" />}
+            {statusMessage.type === 'info' && <RefreshCw className="w-4 h-4 text-blue-600 shrink-0 animate-spin" />}
             <span>{statusMessage.text}</span>
           </div>
-          <button onClick={() => setStatusMessage(null)} className="text-slate-400 hover:text-slate-600">
-            <X className="w-4 h-4" />
+          <button
+            onClick={() => setStatusMessage(null)}
+            className="text-slate-400 hover:text-slate-600 text-xs font-bold ml-4"
+          >
+            ✕
           </button>
         </div>
       )}
 
-      {/* 1. Dual Institution Selection */}
+      {/* 1. Institution Selector (Poddar College vs Poswal Developers) */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 flex items-center space-x-2">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 flex items-center space-x-2">
               <Building2 className="w-4 h-4 text-indigo-600" />
-              <span>Step 1: Choose Issuing Institution</span>
+              <span>Step 1: Choose Organization / Certification Body</span>
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Select which institutional branding, crest watermark, header, and official stamp box will be applied.
+              Select which institutional branding, header, GST/MSME credentials, and official authority will be applied.
             </p>
           </div>
           <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-            Active: {institutionId === 2 ? 'Poddar College' : 'TechnoGlobe'}
+            Active: {institutionId === 2 ? 'Poswal Developers' : 'Poddar College'}
           </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Card 1: TechnoGlobe */}
+          {/* Card 1: Poddar College */}
           <div
-            onClick={() => setInstitutionId(1)}
+            onClick={() => handleInstitutionChange(1)}
             className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
               institutionId === 1
-                ? 'border-blue-600 bg-blue-50/50 shadow-md ring-2 ring-blue-500/20'
-                : 'border-slate-200 bg-white hover:border-slate-300'
-            }`}
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-900 text-amber-400 flex items-center justify-center font-black text-xs shadow-sm">
-                  TG
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 text-sm">TechnoGlobe – Bharatpur Centre</h3>
-                  <p className="text-xs text-slate-500">ISO 9001:2015 Certified IT Solutions</p>
-                </div>
-              </div>
-              {institutionId === 1 && (
-                <CheckCircle2 className="w-5 h-5 text-blue-600" />
-              )}
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-slate-600 bg-white/80 p-2.5 rounded-lg border border-slate-100">
-              <div><span className="font-semibold text-slate-700">Seal:</span> Digital Gold Seal</div>
-              <div><span className="font-semibold text-slate-700">Ref Code:</span> TG/BPT/DAILY-ATT</div>
-              <div><span className="font-semibold text-slate-700">Theme:</span> Deep Navy & Gold</div>
-              <div><span className="font-semibold text-slate-700">Signatory:</span> Nitin Sir</div>
-            </div>
-          </div>
-
-          {/* Card 2: Poddar College */}
-          <div
-            onClick={() => setInstitutionId(2)}
-            className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-              institutionId === 2
-                ? 'border-amber-600 bg-amber-50/50 shadow-md ring-2 ring-amber-500/20'
+                ? 'border-indigo-600 bg-indigo-50/50 shadow-md ring-2 ring-indigo-500/20'
                 : 'border-slate-200 bg-white hover:border-slate-300'
             }`}
           >
@@ -554,7 +547,38 @@ export const BulkAttendancePage: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 text-sm">Poddar College of Technology & Management</h3>
-                  <p className="text-xs text-slate-500">Bharatpur, Rajasthan (No Affiliation Line)</p>
+                  <p className="text-xs text-slate-500">Bharatpur, Rajasthan | Phone: 9414293370</p>
+                </div>
+              </div>
+              {institutionId === 1 && (
+                <CheckCircle2 className="w-5 h-5 text-indigo-600" />
+              )}
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-slate-600 bg-white/80 p-2.5 rounded-lg border border-slate-100">
+              <div><span className="font-semibold text-slate-700">Authority:</span> Nitin Agarwal (Authority)</div>
+              <div><span className="font-semibold text-slate-700">Faculty:</span> Krishlay / Rahul</div>
+              <div><span className="font-semibold text-slate-700">Ref Code:</span> PCTM/BPT/DAILY-ATT</div>
+              <div><span className="font-semibold text-slate-700">Email:</span> nitin@pctm</div>
+            </div>
+          </div>
+
+          {/* Card 2: Poswal Developers */}
+          <div
+            onClick={() => handleInstitutionChange(2)}
+            className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+              institutionId === 2
+                ? 'border-amber-600 bg-amber-50/50 shadow-md ring-2 ring-amber-500/20'
+                : 'border-slate-200 bg-white hover:border-slate-300'
+            }`}
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-lg bg-amber-800 text-white flex items-center justify-center font-black text-xs shadow-sm">
+                  PD
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">Poswal Developers</h3>
+                  <p className="text-xs text-slate-500">Solar Power & Industrial Development (Mob: 9414694727)</p>
                 </div>
               </div>
               {institutionId === 2 && (
@@ -562,875 +586,687 @@ export const BulkAttendancePage: React.FC = () => {
               )}
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-slate-600 bg-white/80 p-2.5 rounded-lg border border-slate-100">
-              <div><span className="font-semibold text-slate-700">Seal:</span> Physical Ink Stamp Box</div>
-              <div><span className="font-semibold text-slate-700">Watermark:</span> Poddar Crest</div>
-              <div><span className="font-semibold text-slate-700">Ref Code:</span> PCTM/BPT/DAILY-ATT</div>
-              <div><span className="font-semibold text-slate-700">Signatory:</span> Nitin Sir</div>
+              <div><span className="font-semibold text-slate-700">Authority:</span> Madhuvan Singh Gurjar</div>
+              <div><span className="font-semibold text-slate-700">Trainer:</span> Mahesh Chand Saini</div>
+              <div><span className="font-semibold text-slate-700">GST No:</span> 08ABIFP2454N1ZQ</div>
+              <div><span className="font-semibold text-slate-700">MSME Udyam:</span> UDYAM-RJ-06-0052498</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 2. Batch Track, Timeline & Layout Mode */}
+      {/* 2. Batch Track & Schedule Configuration */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 flex items-center space-x-2">
+        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 flex items-center space-x-2">
           <Calendar className="w-4 h-4 text-indigo-600" />
-          <span>Step 2: Batch Schedule & Daily Sheet Layout Mode</span>
+          <span>Step 2: Training Track & Schedule Parameters</span>
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Course Track */}
-          <div className="md:col-span-2 space-y-1.5">
-            <label className="text-xs font-bold text-slate-700">Course Track / Program</label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Track Selection */}
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              Program / Specialization Track
+            </label>
             <select
               value={courseTrack}
               onChange={(e) => setCourseTrack(e.target.value)}
-              className="w-full text-xs font-medium px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full text-xs font-semibold px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
             >
               {COURSE_TRACKS.map(t => (
                 <option key={t.code} value={t.code}>
-                  {t.title} ({t.badge})
+                  [{t.code}] {t.title}
                 </option>
               ))}
             </select>
-            {courseTrack === 'CUSTOM' && (
-              <input
-                type="text"
-                placeholder="Enter custom program name (e.g. Advanced Diploma in AI)"
-                value={customTrackName}
-                onChange={(e) => setCustomTrackName(e.target.value)}
-                className="w-full text-xs px-3 py-2 mt-2 bg-white border border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-              />
-            )}
           </div>
 
-          {/* Number of Working Days */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-700">Total Working Days</label>
-              <span className="text-xs font-extrabold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
-                {totalDays} Days
-              </span>
-            </div>
+          {/* Total Days */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              Total Duration Days
+            </label>
             <input
               type="number"
               min={1}
               max={120}
               value={totalDays}
-              onChange={(e) => setTotalDays(Math.max(1, Number(e.target.value)))}
-              className="w-full text-xs font-bold px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              onChange={(e) => setTotalDays(Math.max(1, parseInt(e.target.value) || 1))}
+              className="w-full text-xs font-semibold px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
             />
-            <div className="flex items-center space-x-1 mt-1">
-              {[36, 45, 50, 60].map(d => (
-                <button
-                  key={d}
-                  type="button"
-                  onClick={() => setTotalDays(d)}
-                  className={`text-[10px] px-2 py-0.5 rounded font-semibold border transition ${
-                    totalDays === d ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border-slate-200'
-                  }`}
-                >
-                  {d}d
-                </button>
-              ))}
-            </div>
           </div>
 
-          {/* Daily Sheet Layout Mode (1 page vs 2 pages per day) */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700">A4 Daily Sheet Layout Mode</label>
-            <div className="grid grid-cols-2 gap-1.5">
-              <button
-                type="button"
-                onClick={() => setLayoutMode('1_page_per_day')}
-                className={`px-2 py-2 rounded-lg text-[11px] font-bold border transition text-center ${
-                  layoutMode === '1_page_per_day'
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                }`}
-              >
-                1 Page / Day
-                <div className="text-[9px] font-normal opacity-90">Compact A4</div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setLayoutMode('2_pages_per_day')}
-                className={`px-2 py-2 rounded-lg text-[11px] font-bold border transition text-center ${
-                  layoutMode === '2_pages_per_day'
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                }`}
-              >
-                2 Pages / Day
-                <div className="text-[9px] font-normal opacity-90">Spacious (25+25)</div>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2 border-t border-slate-100">
           {/* Start Date */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700">Start Date</label>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              Batch Commencement Date
+            </label>
             <input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full text-xs font-medium px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-md"
+              className="w-full text-xs font-semibold px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
             />
           </div>
 
-          {/* Timings */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700">Daily Session Timings</label>
-            <div className="flex items-center space-x-2">
+          {/* Daily Timing */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              Daily Timing Window
+            </label>
+            <div className="grid grid-cols-2 gap-1.5">
               <input
                 type="text"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
                 placeholder="10:00 AM"
-                className="w-1/2 text-xs px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-md"
+                className="text-xs px-2 py-2 bg-slate-50 border border-slate-300 rounded-lg text-center"
               />
-              <span className="text-xs text-slate-400">to</span>
               <input
                 type="text"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
                 placeholder="01:30 PM"
-                className="w-1/2 text-xs px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-md"
+                className="text-xs px-2 py-2 bg-slate-50 border border-slate-300 rounded-lg text-center"
               />
             </div>
           </div>
 
-          {/* Supervising Mentor */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700">Supervising Faculty</label>
-            <select
-              value={mentorId}
-              onChange={(e) => setMentorId(Number(e.target.value))}
-              className="w-full text-xs font-medium px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-md"
-            >
-              <option value={1}>Prof. Krishlay Sharma (Computer Science)</option>
-              <option value={2}>Prof. Rahul Bhatnagar (Data Science & AI)</option>
-            </select>
+          {/* Daily Hours */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              Daily Hours Logged
+            </label>
+            <input
+              type="number"
+              step={0.5}
+              min={1}
+              max={8}
+              value={dailyHours}
+              onChange={(e) => setDailyHours(parseFloat(e.target.value) || 3.5)}
+              className="w-full text-xs font-semibold px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+            />
           </div>
 
-          {/* Center Head */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700">Centre Head & Signatory</label>
-            <div className="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-md text-xs font-bold text-slate-800 flex items-center justify-between">
-              <span>Nitin Sir</span>
-              <span className="text-[10px] text-indigo-700 font-medium">Centre Head</span>
-            </div>
+          {/* Trainer / Mentor */}
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              {institutionId === 2 ? 'Lead Technical Trainer' : 'Supervising Faculty Guide'}
+            </label>
+            <select
+              value={mentorId}
+              onChange={(e) => setMentorId(parseInt(e.target.value))}
+              className="w-full text-xs font-semibold px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+            >
+              <option value={1}>Mahesh Chand Saini (Trainer - Solar Energy & Power Systems)</option>
+              <option value={2}>Krishlay (Faculty - Computing, Data Science & AI)</option>
+              <option value={3}>Rahul (Faculty - Digital Technologies & Web Engineering)</option>
+            </select>
           </div>
         </div>
       </div>
 
-      {/* 3. Main Views (Daily Sheet Preview vs Roster Editor vs Master Matrix) */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        {/* Tab Switcher & Presets */}
-        <div className="bg-slate-50 p-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Tab 1: Daily Day Sheet */}
-            <button
-              onClick={() => {
-                setActiveTab('daily_sheet');
-                if (!previewData) fetchLivePreview('daily_sheet');
-              }}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center space-x-2 ${
-                activeTab === 'daily_sheet'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
-              }`}
-            >
-              <FileText className="w-3.5 h-3.5" />
-              <span>Daily Day Sheet (A4 Sheet View)</span>
-            </button>
-
-            {/* Tab 2: Student Roster Editor */}
-            <button
-              onClick={() => setActiveTab('roster')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center space-x-2 ${
-                activeTab === 'roster'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
-              }`}
-            >
-              <Users className="w-3.5 h-3.5" />
-              <span>Edit Student Roster ({students.length})</span>
-            </button>
-
-            {/* Tab 3: Master Matrix Preview */}
-            <button
-              onClick={() => {
-                setActiveTab('matrix_preview');
-                if (!previewData) fetchLivePreview('matrix_preview');
-              }}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center space-x-2 ${
-                activeTab === 'matrix_preview'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
-              }`}
-            >
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Full Master Matrix (D1..D{totalDays})</span>
-            </button>
+      {/* 3. Student Roster Quick Bar (Easy Entry) */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 flex items-center space-x-2">
+              <Users className="w-4 h-4 text-indigo-600" />
+              <span>Step 3: Student Candidates ({students.length} Registered)</span>
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Easily add individual students, paste a batch list, or quickly load sample presets.
+            </p>
           </div>
 
-          {/* Quick Presets */}
+          {/* Quick Roster Action Buttons */}
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => loadSampleStudents(50, 100)}
-              className="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition flex items-center space-x-1"
+              onClick={handleAddStudent}
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition-colors"
             >
-              <Sparkles className="w-3 h-3 text-amber-500" />
-              <span>Fill 50 Students</span>
-            </button>
-
-            <button
-              onClick={() => setAllAttendance(100)}
-              className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition"
-            >
-              💯 Set All 100%
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Student</span>
             </button>
 
             <button
               onClick={() => setShowPasteModal(true)}
-              className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 transition flex items-center space-x-1"
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-300 transition-colors"
             >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Paste 50 Names</span>
+              <ClipboardPaste className="w-3.5 h-3.5 text-slate-600" />
+              <span>Paste Names</span>
+            </button>
+
+            <div className="h-4 w-px bg-slate-300 mx-1 hidden sm:block" />
+
+            <button
+              onClick={() => loadSampleStudents(5, 100)}
+              className="px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold border border-amber-200 transition-colors"
+            >
+              Load 5
+            </button>
+
+            <button
+              onClick={() => loadSampleStudents(25, 100)}
+              className="px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold border border-amber-200 transition-colors"
+            >
+              Load 25
+            </button>
+
+            <button
+              onClick={() => loadSampleStudents(50, 100)}
+              className="px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold border border-amber-200 transition-colors"
+            >
+              Load 50
+            </button>
+
+            <button
+              onClick={handleClearAllStudents}
+              className="px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold border border-red-200 transition-colors"
+            >
+              Clear
             </button>
           </div>
         </div>
 
-        {/* TAB 1: DAILY DAY SHEET (A4 SINGLE DAY VIEW) */}
-        {activeTab === 'daily_sheet' && (
-          <div className="p-5 space-y-4">
-            {/* Day Selector Bar */}
-            <div className="p-4 bg-slate-900 text-white rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={() => setSelectedDay(Math.max(1, selectedDay - 1))}
-                  disabled={selectedDay <= 1}
-                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 disabled:opacity-40 transition"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <div className="text-center">
-                  <span className="text-[10px] uppercase font-bold text-amber-400">Inspecting Day</span>
-                  <div className="text-lg font-black text-white">
-                    Day {selectedDay} <span className="text-xs font-normal text-slate-400">of {totalDays}</span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSelectedDay(Math.min(totalDays, selectedDay + 1))}
-                  disabled={selectedDay >= totalDays}
-                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 disabled:opacity-40 transition"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Day Slider */}
-              <div className="flex-1 max-w-md mx-2">
-                <input
-                  type="range"
-                  min={1}
-                  max={totalDays}
-                  value={selectedDay}
-                  onChange={(e) => setSelectedDay(Number(e.target.value))}
-                  className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-400"
-                />
-                <div className="flex justify-between text-[10px] text-slate-400 mt-1">
-                  <span>Day 1 (Start)</span>
-                  <span>Day {Math.round(totalDays / 2)}</span>
-                  <span>Day {totalDays} (Final)</span>
-                </div>
-              </div>
-
-              {/* Day Quick Download Button */}
-              <button
-                onClick={handleDownloadDayPdf}
-                disabled={isGeneratingDayPdf || students.length === 0}
-                className="px-4 py-2 rounded-lg text-xs font-bold bg-amber-400 hover:bg-amber-300 text-slate-950 transition flex items-center space-x-1.5 shadow-sm disabled:opacity-50"
-              >
-                {isGeneratingDayPdf ? <RefreshCw className="w-3.5 h-3.5 animate-spin text-slate-950" /> : <Download className="w-3.5 h-3.5 text-slate-950" />}
-                <span>Download Day {selectedDay} Sheet (PDF)</span>
-              </button>
-            </div>
-
-            {/* Quick Actions Bar on Sheet */}
-            <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-slate-100 rounded-xl text-xs text-slate-700 border border-slate-200">
-              <div className="flex items-center space-x-2">
-                <span className="font-bold text-slate-800">Quick Day {selectedDay} Actions:</span>
-                <button
-                  type="button"
-                  onClick={() => setAllStudentsOnDay(selectedDay, 'PRESENT')}
-                  className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shadow-xs transition"
-                >
-                  ✓ Mark All Present on Day {selectedDay}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAllStudentsOnDay(selectedDay, 'LEAVE')}
-                  className="px-2.5 py-1 rounded-md bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold shadow-xs transition"
-                >
-                  ⊘ Mark All Leave on Day {selectedDay}
-                </button>
-              </div>
-              <span className="text-[11px] text-slate-500 font-medium italic">
-                💡 Tip: Click any student's status button below to toggle between Present and Leave for Day {selectedDay}.
-              </span>
-            </div>
-
-            {/* Simulated A4 Daily Sheet Preview */}
-            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-300 shadow-inner">
-              <div className="bg-white max-w-4xl mx-auto p-8 rounded-xl shadow-md border border-slate-200 text-slate-800 space-y-4">
-                {/* Header in Sheet */}
-                <div className="text-center pb-3 border-b-2 border-indigo-900 space-y-0.5">
-                  <h2 className="text-base font-black text-slate-900 uppercase tracking-wide">
-                    {institutionId === 2 ? 'PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT' : 'TECHNOGLOBE IT SOLUTIONS PVT. LTD.'}
-                  </h2>
-                  <p className="text-xs font-bold text-indigo-700">
-                    {institutionId === 2 ? 'PODDAR COLLEGE — BHARATPUR, RAJASTHAN' : 'TECHNOGLOBE – BHARATPUR CENTRE'}
-                  </p>
-                  <p className="text-[10px] text-slate-500">
-                    {institutionId === 2 ? 'Bharatpur, Rajasthan' : 'Bharatpur Centre, Rajasthan'} | Official Daily Batch Attendance Sheet
-                  </p>
-                </div>
-
-                {/* Day Banner & Metadata */}
-                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1.5 text-xs">
-                  <div className="flex items-center justify-between font-bold text-slate-800">
-                    <span className="text-indigo-950 uppercase tracking-wider text-xs">
-                      Daily Attendance Register — Day {selectedDay} of {totalDays}
-                    </span>
-                    <span className="text-slate-600">
-                      Date: {currentDayInfo ? `${currentDayInfo.date} (${currentDayInfo.day_of_week})` : startDate}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-[11px] text-slate-600 pt-1 border-t border-slate-200">
-                    <div><span className="font-semibold text-slate-800">Program:</span> {courseTrack}</div>
-                    <div><span className="font-semibold text-slate-800">Timing:</span> {startTime} - {endTime} ({dailyHours}h)</div>
-                    <div><span className="font-semibold text-slate-800">Mentor:</span> {mentorId === 1 ? 'Prof. Krishlay Sharma' : 'Prof. Rahul Bhatnagar'}</div>
-                  </div>
-                  <div className="text-[11px] bg-indigo-50/70 p-2 rounded border border-indigo-100">
-                    <span className="font-bold text-indigo-950">Today's Topic & Practical Lab:</span>{' '}
-                    <span className="text-indigo-800 font-medium">
-                      {previewData ? (previewData.students[0]?.records[selectedDay - 1]?.topic_covered || 'Practical Lab Activity') : 'Advanced Topic / Practical Activity'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Roster for Day X with Clickable Status Toggles */}
-                <div className="overflow-x-auto rounded-lg border border-slate-200">
-                  <table className="w-full text-left border-collapse text-[11px]">
-                    <thead>
-                      <tr className="bg-slate-900 text-white font-bold text-[10px]">
-                        <th className="py-1.5 px-2 w-8 text-center">#</th>
-                        <th className="py-1.5 px-2 w-24">Roll / ID</th>
-                        <th className="py-1.5 px-2 min-w-[140px]">Student Full Name</th>
-                        <th className="py-1.5 px-2 w-28">Father's Name</th>
-                        <th className="py-1.5 px-2 w-24 text-center">Status (Click to toggle)</th>
-                        <th className="py-1.5 px-2 w-24 text-center">Student Signature</th>
-                        <th className="py-1.5 px-2 w-20 text-center">Mentor Sign</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      {students.slice(0, layoutMode === '2_pages_per_day' ? 25 : 50).map((stu, sIdx) => {
-                        let isPresentOnThisDay = true;
-                        if (stu.day_overrides && stu.day_overrides[selectedDay]) {
-                          isPresentOnThisDay = (stu.day_overrides[selectedDay] === 'PRESENT');
-                        } else if (previewData?.students?.[sIdx]?.records?.[selectedDay - 1]) {
-                          isPresentOnThisDay = (previewData.students[sIdx].records[selectedDay - 1].short_status === 'P');
-                        } else if (stu.attendance_pct < 100) {
-                          isPresentOnThisDay = true;
-                        }
-
-                        return (
-                          <tr key={stu.id} className="hover:bg-slate-50/80 transition">
-                            <td className="py-1.5 px-2 text-center text-slate-400 font-mono text-[10px]">{sIdx + 1}</td>
-                            <td className="py-1.5 px-2 font-mono text-[10px] text-slate-600">{stu.roll_no}</td>
-                            <td className="py-1.5 px-2 font-bold text-slate-800">{stu.full_name}</td>
-                            <td className="py-1.5 px-2 text-slate-600">{stu.father_mother_name}</td>
-                            <td className="py-1.5 px-2 text-center">
-                              <button
-                                type="button"
-                                onClick={() => toggleStudentDay(sIdx, selectedDay)}
-                                className={`font-extrabold px-2.5 py-0.5 rounded-full text-[10px] transition shadow-2xs flex items-center justify-center mx-auto cursor-pointer hover:scale-105 active:scale-95 ${
-                                  isPresentOnThisDay 
-                                    ? 'text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300' 
-                                    : 'text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300'
-                                }`}
-                                title={`Click to toggle ${stu.full_name}'s status on Day ${selectedDay}`}
-                              >
-                                <span>{isPresentOnThisDay ? '✓ PRESENT' : '⊘ LEAVE'}</span>
-                              </button>
-                            </td>
-                            <td className="py-1.5 px-2 text-center italic text-slate-500 text-[10px]">
-                              {isPresentOnThisDay ? 'Verified (Signed)' : 'On Leave'}
-                            </td>
-                            <td className="py-1.5 px-2 text-center italic text-slate-500 text-[10px]">
-                              {isPresentOnThisDay ? 'Verified' : 'Approved'}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-
-                {layoutMode === '2_pages_per_day' && students.length > 25 && (
-                  <p className="text-center text-[10px] text-slate-400 italic">
-                    (Showing Students 1 to 25 for Page 1 of Day {selectedDay}. Students 26 to 50 appear on Page 2).
-                  </p>
-                )}
-
-                {/* Signature Box in Sheet */}
-                <div className="grid grid-cols-3 gap-3 pt-3 border-t border-slate-200 text-center text-xs">
-                  <div className="p-3 bg-slate-50 rounded border border-slate-200 space-y-1">
-                    <span className="font-bold text-slate-800 text-[11px]">Supervising Faculty</span>
-                    <div className="pt-4 text-[10px] text-slate-500">
-                      <b>{mentorId === 1 ? 'Prof. Krishlay Sharma' : 'Prof. Rahul Bhatnagar'}</b><br/>
-                      (Verified Signature)
-                    </div>
-                  </div>
-
-                  <div className="p-3 bg-slate-50 rounded border border-slate-200 space-y-1">
-                    <span className="font-bold text-slate-800 text-[11px]">Institutional Seal</span>
-                    <div className="pt-2 text-[10px] text-slate-500">
-                      {institutionId === 2 ? (
-                        <span className="font-mono text-[9px] text-slate-600">[ OFFICIAL COLLEGE SEAL ]<br/>(Apply Ink Stamp)</span>
-                      ) : (
-                        <span className="font-bold text-[9px] text-amber-800">★ TECHNOGLOBE SEAL ★<br/>ISO 9001:2015</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="p-3 bg-slate-50 rounded border border-slate-200 space-y-1">
-                    <span className="font-bold text-slate-800 text-[11px]">Authorized Signatory</span>
-                    <div className="pt-4 text-[10px] text-slate-500">
-                      <b>Nitin Sir</b><br/>
-                      (Centre Head & Signatory)
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+        {/* Global Attendance Quick Sliders */}
+        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center space-x-2 text-slate-700 font-semibold">
+            <Percent className="w-4 h-4 text-indigo-600" />
+            <span>Set All Attendance To:</span>
           </div>
-        )}
-
-        {/* TAB 2: EDIT STUDENT ROSTER */}
-        {activeTab === 'roster' && (
-          <div className="p-4 space-y-4">
-            {/* Summary Strip */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                <span className="text-[10px] font-bold uppercase text-slate-400">Total Students</span>
-                <p className="text-xl font-black text-slate-800">{students.length}</p>
-              </div>
-              <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200">
-                <span className="text-[10px] font-bold uppercase text-emerald-600">100% Attendance (0 Absences)</span>
-                <p className="text-xl font-black text-emerald-800">{count100} Students</p>
-              </div>
-              <div className="p-3 bg-blue-50 rounded-xl border border-blue-200">
-                <span className="text-[10px] font-bold uppercase text-blue-600">Batch Avg Attendance</span>
-                <p className="text-xl font-black text-blue-800">{avgAttendance}%</p>
-              </div>
-              <div className="p-3 bg-indigo-50 rounded-xl border border-indigo-200">
-                <span className="text-[10px] font-bold uppercase text-indigo-600">Total Scheduled Days</span>
-                <p className="text-xl font-black text-indigo-800">{totalDays} Days</p>
-              </div>
-            </div>
-
-            {/* Table */}
-            <div className="overflow-x-auto rounded-xl border border-slate-200">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-900 text-white font-bold">
-                    <th className="py-2.5 px-3 w-10 text-center">#</th>
-                    <th className="py-2.5 px-3 w-32">Roll / ID</th>
-                    <th className="py-2.5 px-3 min-w-[180px]">Student Full Name</th>
-                    <th className="py-2.5 px-3 min-w-[150px]">Father's Name</th>
-                    <th className="py-2.5 px-3 w-28">Degree / Branch</th>
-                    <th className="py-2.5 px-3 min-w-[180px]">Attendance % (Configurable)</th>
-                    <th className="py-2.5 px-3 w-24 text-center">Days Present</th>
-                    <th className="py-2.5 px-3 w-12 text-center">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 font-medium">
-                  {students.map((stu, index) => {
-                    const presentCount = Math.max(1, Math.round(totalDays * (stu.attendance_pct / 100)));
-                    const is100 = stu.attendance_pct === 100;
-                    const hasOverrides = stu.day_overrides && Object.keys(stu.day_overrides).length > 0;
-
-                    return (
-                      <tr key={stu.id} className="hover:bg-slate-50/80 transition">
-                        <td className="py-2 px-3 text-center text-slate-400 font-mono text-[11px]">{index + 1}</td>
-                        <td className="py-2 px-3">
-                          <input
-                            type="text"
-                            value={stu.roll_no}
-                            onChange={(e) => handleUpdateStudent(stu.id, 'roll_no', e.target.value)}
-                            className="w-full px-2 py-1 bg-transparent border border-transparent hover:border-slate-300 focus:border-indigo-500 rounded font-mono text-[11px]"
-                          />
-                        </td>
-                        <td className="py-2 px-3">
-                          <input
-                            type="text"
-                            value={stu.full_name}
-                            onChange={(e) => handleUpdateStudent(stu.id, 'full_name', e.target.value)}
-                            className="w-full px-2 py-1 bg-transparent border border-transparent hover:border-slate-300 focus:border-indigo-500 rounded font-bold text-slate-800"
-                          />
-                        </td>
-                        <td className="py-2 px-3">
-                          <input
-                            type="text"
-                            value={stu.father_mother_name}
-                            onChange={(e) => handleUpdateStudent(stu.id, 'father_mother_name', e.target.value)}
-                            className="w-full px-2 py-1 bg-transparent border border-transparent hover:border-slate-300 focus:border-indigo-500 rounded text-slate-600"
-                          />
-                        </td>
-                        <td className="py-2 px-3">
-                          <span className="text-[11px] text-slate-600 font-semibold">{stu.degree} - {stu.branch}</span>
-                        </td>
-                        <td className="py-2 px-3">
-                          <div className="flex flex-col space-y-1.5">
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="range"
-                                min={50}
-                                max={100}
-                                step={1}
-                                value={stu.attendance_pct}
-                                onChange={(e) => handleUpdateStudent(stu.id, 'attendance_pct', Number(e.target.value))}
-                                className="w-20 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                              />
-                              <input
-                                type="number"
-                                min={50}
-                                max={100}
-                                value={stu.attendance_pct}
-                                onChange={(e) => handleUpdateStudent(stu.id, 'attendance_pct', Math.min(100, Math.max(0, Number(e.target.value))))}
-                                className={`w-14 px-1.5 py-0.5 text-center font-bold rounded border text-xs ${
-                                  is100
-                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                                    : stu.attendance_pct >= 90
-                                    ? 'bg-blue-50 text-blue-800 border-blue-300'
-                                    : 'bg-amber-50 text-amber-800 border-amber-300'
-                                }`}
-                              />
-                              <span className="text-[11px] font-bold text-slate-500">%</span>
-
-                              {/* Individual student preset chips */}
-                              <div className="flex items-center space-x-1">
-                                <button
-                                  type="button"
-                                  onClick={() => handleUpdateStudent(stu.id, 'attendance_pct', 100)}
-                                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition ${stu.attendance_pct === 100 ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                                  title="Set to 100% (0 Leaves)"
-                                >
-                                  100%
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleUpdateStudent(stu.id, 'attendance_pct', 95)}
-                                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition ${stu.attendance_pct === 95 ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                                  title="Set to 95%"
-                                >
-                                  95%
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleUpdateStudent(stu.id, 'attendance_pct', 90)}
-                                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition ${stu.attendance_pct === 90 ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                                  title="Set to 90%"
-                                >
-                                  90%
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Overrides badge if days were manually toggled */}
-                            {hasOverrides && (
-                              <div className="flex items-center space-x-2 text-[10px]">
-                                <span className="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-200 font-semibold">
-                                  {Object.keys(stu.day_overrides!).length} Custom Day Changes
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => resetStudentOverrides(index)}
-                                  className="text-slate-400 hover:text-rose-600 underline"
-                                >
-                                  Reset
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-2 px-3 text-center">
-                          <div className="flex items-center justify-center space-x-1">
-                            <input
-                              type="number"
-                              min={1}
-                              max={totalDays}
-                              value={presentCount}
-                              onChange={(e) => {
-                                const pDays = Math.min(totalDays, Math.max(1, Number(e.target.value)));
-                                const calcPct = Number(((pDays / totalDays) * 100).toFixed(1));
-                                handleUpdateStudent(stu.id, 'attendance_pct', calcPct);
-                              }}
-                              className="w-12 px-1 py-0.5 text-center font-bold text-slate-800 bg-white border border-slate-300 rounded text-xs"
-                              title="Enter exact present days"
-                            />
-                            <span className="text-slate-500 font-medium text-[11px]">/ {totalDays}d</span>
-                          </div>
-                        </td>
-                        <td className="py-2 px-3 text-center">
-                          <button
-                            onClick={() => handleRemoveStudent(stu.id)}
-                            className="p-1 text-slate-400 hover:text-rose-600 rounded transition"
-                            title="Remove Student"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 3: FULL MASTER MATRIX WITH CLICKABLE CELLS */}
-        {activeTab === 'matrix_preview' && (
-          <div className="p-4 space-y-4">
-            <div className="p-3 bg-slate-100 rounded-xl text-xs text-slate-700 flex flex-wrap items-center justify-between gap-2 border border-slate-200">
-              <span className="font-bold text-slate-800">
-                Interactive Master Attendance Matrix:
-              </span>
-              <span className="text-[11px] text-slate-500 italic">
-                💡 Click any cell (P / L) to toggle that student's status for that day instantly.
-              </span>
-            </div>
-
-            {previewData ? (
-              <div className="overflow-x-auto rounded-xl border border-slate-200 max-h-[500px]">
-                <table className="w-full text-left border-collapse text-[11px]">
-                  <thead className="sticky top-0 z-10">
-                    <tr className="bg-slate-900 text-white font-bold">
-                      <th className="py-2 px-2.5 w-8 text-center border-r border-slate-700">#</th>
-                      <th className="py-2 px-2.5 w-24 border-r border-slate-700">Roll No</th>
-                      <th className="py-2 px-2.5 min-w-[140px] border-r border-slate-700">Student Name</th>
-                      {previewData.working_days.map((d: any) => (
-                        <th key={d.day_number} className="py-1 px-1.5 text-center min-w-[28px] border-r border-slate-700 text-[10px]">
-                          D{d.day_number}
-                          <div className="text-[8px] font-normal text-slate-400">{d.short_date}</div>
-                        </th>
-                      ))}
-                      <th className="py-2 px-2 text-center w-12 border-r border-slate-700">Pres</th>
-                      <th className="py-2 px-2 text-center w-12 border-r border-slate-700">Leave</th>
-                      <th className="py-2 px-2 text-center w-12 border-r border-slate-700">Hours</th>
-                      <th className="py-2 px-2 text-center w-14">Att %</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {previewData.students.map((stu: any, sIdx: number) => (
-                      <tr key={sIdx} className="hover:bg-slate-50 transition">
-                        <td className="py-1.5 px-2 text-center text-slate-400 font-mono text-[10px] border-r border-slate-200">{sIdx + 1}</td>
-                        <td className="py-1.5 px-2 font-mono text-[10px] text-slate-600 border-r border-slate-200">{stu.roll_no}</td>
-                        <td className="py-1.5 px-2 font-bold text-slate-800 border-r border-slate-200">{stu.full_name}</td>
-                        {stu.records.map((r: any, rIdx: number) => {
-                          const isP = r.short_status === 'P';
-                          return (
-                            <td key={rIdx} className="py-1 px-1 text-center border-r border-slate-200">
-                              <button
-                                type="button"
-                                onClick={() => toggleStudentDay(sIdx, r.day_number)}
-                                className={`w-5 h-5 rounded text-[10px] font-extrabold transition flex items-center justify-center mx-auto cursor-pointer hover:scale-110 active:scale-95 shadow-2xs ${
-                                  isP 
-                                    ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300' 
-                                    : 'bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300'
-                                }`}
-                                title={`Click to toggle ${stu.full_name} on Day ${r.day_number} (Currently ${isP ? 'Present' : 'Leave'})`}
-                              >
-                                {isP ? 'P' : 'L'}
-                              </button>
-                            </td>
-                          );
-                        })}
-                        <td className="py-1.5 px-2 text-center font-bold text-slate-800 border-r border-slate-200">{stu.present_days}</td>
-                        <td className="py-1.5 px-2 text-center text-slate-600 border-r border-slate-200">{stu.leave_days}</td>
-                        <td className="py-1.5 px-2 text-center text-slate-600 border-r border-slate-200">{stu.total_hours_logged}h</td>
-                        <td className="py-1.5 px-2 text-center font-bold">
-                          <span className={stu.attendance_pct_actual >= 90 ? 'text-emerald-700' : 'text-amber-700'}>
-                            {stu.attendance_pct_actual}%
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="p-8 text-center space-y-2">
-                <button
-                  onClick={() => fetchLivePreview('matrix_preview')}
-                  className="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg shadow-sm"
-                >
-                  Load Master Matrix Preview
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 4. Action Bar with Complete Download Options */}
-        <div className="bg-slate-900 p-5 text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <span className="text-xs text-slate-400">Download Official Batch Registers:</span>
-            <div className="text-sm font-bold text-white flex items-center space-x-2 mt-0.5">
-              <span>{students.length} Students</span>
-              <span>•</span>
-              <span>{totalDays} Working Days</span>
-              <span>•</span>
-              <span>{layoutMode === '1_page_per_day' ? '1 Page/Day' : '2 Pages/Day'}</span>
-              <span>•</span>
-              <span>{institutionId === 2 ? 'Poddar College' : 'TechnoGlobe'}</span>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Download All Days Daily Book PDF (A4) */}
+          <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={handleDownloadDailyBookPdf}
-              disabled={isGeneratingDailyBook || students.length === 0}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-500 hover:bg-indigo-400 text-white transition flex items-center space-x-2 shadow-sm disabled:opacity-50"
+              onClick={() => setAllAttendance(100)}
+              className="px-3 py-1 rounded-md bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition-colors shadow-2xs"
             >
-              {isGeneratingDailyBook ? <RefreshCw className="w-4 h-4 animate-spin text-white" /> : <BookOpen className="w-4 h-4 text-white" />}
-              <span>Download All {totalDays} Days Daily Book (A4 PDF)</span>
+              100% (No Leave)
             </button>
-
-            {/* Download Master Matrix PDF (Landscape) */}
             <button
-              onClick={handleDownloadMatrixPdf}
-              disabled={isGeneratingMatrixPdf || students.length === 0}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-white hover:bg-slate-100 text-slate-900 transition flex items-center space-x-2 shadow-sm disabled:opacity-50"
+              onClick={() => setAllAttendance(95)}
+              className="px-3 py-1 rounded-md bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors shadow-2xs"
             >
-              {isGeneratingMatrixPdf ? <RefreshCw className="w-4 h-4 animate-spin text-slate-900" /> : <FileText className="w-4 h-4 text-indigo-600" />}
-              <span>Master Matrix (Landscape PDF)</span>
+              95% Attendance
             </button>
-
-            {/* Download Complete ZIP Package */}
             <button
-              onClick={handleDownloadZip}
-              disabled={isGeneratingZip || students.length === 0}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 transition flex items-center space-x-2 shadow-md disabled:opacity-50"
+              onClick={() => setAllAttendance(90)}
+              className="px-3 py-1 rounded-md bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-colors shadow-2xs"
             >
-              {isGeneratingZip ? <RefreshCw className="w-4 h-4 animate-spin text-slate-950" /> : <Archive className="w-4 h-4 text-slate-950" />}
-              <span>Download Complete ZIP (All Daily PDFs + Matrix + CSV)</span>
+              90% Attendance
             </button>
-
-            {/* Enroll to DB */}
             <button
-              onClick={handleBulkEnroll}
-              disabled={isEnrolling || students.length === 0}
-              className="px-3.5 py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center space-x-1.5 disabled:opacity-50"
+              onClick={randomizeAttendance}
+              className="px-3 py-1 rounded-md bg-amber-600 text-white font-bold hover:bg-amber-700 transition-colors shadow-2xs"
             >
-              {isEnrolling ? <RefreshCw className="w-3.5 h-3.5 animate-spin text-white" /> : <UserCheck className="w-3.5 h-3.5 text-slate-300" />}
-              <span>Enroll to DB</span>
+              Realistic Random (88-100%)
             </button>
           </div>
         </div>
       </div>
 
-      {/* Bulk Quick Paste Modal */}
-      {showPasteModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <FileSpreadsheet className="w-5 h-5 text-indigo-600" />
-                <h3 className="font-bold text-slate-900 text-base">Quick Bulk Paste (50+ Student Names)</h3>
+      {/* 4. Tab Navigation Bar (Daily Day Sheet | Student Roster | Master Matrix) */}
+      <div className="flex border-b border-slate-200 bg-white rounded-t-2xl px-4 pt-3 space-x-3 shadow-xs">
+        <button
+          onClick={() => setActiveTab('daily_sheet')}
+          className={`pb-3 px-3 text-xs sm:text-sm font-bold flex items-center space-x-2 border-b-2 transition-colors ${
+            activeTab === 'daily_sheet'
+              ? 'border-indigo-600 text-indigo-600'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Calendar className="w-4 h-4" />
+          <span>Tab 1: Daily Day Sheets (A4 Day-by-Day)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('roster')}
+          className={`pb-3 px-3 text-xs sm:text-sm font-bold flex items-center space-x-2 border-b-2 transition-colors ${
+            activeTab === 'roster'
+              ? 'border-indigo-600 text-indigo-600'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>Tab 2: Roster Editor ({students.length} Students)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('matrix_preview')}
+          className={`pb-3 px-3 text-xs sm:text-sm font-bold flex items-center space-x-2 border-b-2 transition-colors ${
+            activeTab === 'matrix_preview'
+              ? 'border-indigo-600 text-indigo-600'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <FileSpreadsheet className="w-4 h-4" />
+          <span>Tab 3: Master Attendance Matrix (All Days)</span>
+        </button>
+      </div>
+
+      {/* Tab 1: Daily Day Sheet Generator View */}
+      {activeTab === 'daily_sheet' && (
+        <div className="bg-white p-6 rounded-b-2xl border border-slate-200 shadow-sm space-y-6">
+          {/* Day Selector & Page Layout Controls */}
+          <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-indigo-950">Select Day:</span>
+              <div className="flex items-center space-x-1 overflow-x-auto max-w-md py-1">
+                {Array.from({ length: Math.min(totalDays, 50) }, (_, i) => i + 1).map(day => (
+                  <button
+                    key={day}
+                    onClick={() => setSelectedDay(day)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                      selectedDay === day
+                        ? 'bg-indigo-600 text-white shadow-xs scale-105'
+                        : 'bg-white text-slate-700 hover:bg-indigo-100 border border-indigo-100'
+                    }`}
+                  >
+                    D{day}
+                  </button>
+                ))}
               </div>
-              <button onClick={() => setShowPasteModal(false)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
-              </button>
             </div>
 
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Paste student names directly from Excel, Word, or plain text (one student per line). You can also include attendance percentage separated by comma (e.g. <code>Aarav Sharma, 100</code>).
-            </p>
-
-            <textarea
-              rows={10}
-              value={pasteText}
-              onChange={(e) => setPasteText(e.target.value)}
-              placeholder="Aarav Sharma&#10;Aditi Verma, 100&#10;Akash Gupta, 95&#10;Ananya Singh, Mr. R.K. Singh, PCTM-004, 100&#10;..."
-              className="w-full text-xs font-mono p-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
-            />
-
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-xs text-slate-400">
-                Lines detected: {pasteText.split('\n').filter(l => l.trim().length > 0).length}
-              </span>
-              <div className="flex items-center space-x-2">
+            {/* Layout Mode Selector (1 vs 2 Pages per Day) */}
+            <div className="flex items-center space-x-3 text-xs">
+              <span className="font-bold text-slate-700">Format:</span>
+              <div className="inline-flex rounded-xl bg-white p-1 border border-slate-300">
                 <button
-                  onClick={() => setShowPasteModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
+                  onClick={() => setLayoutMode('1_page_per_day')}
+                  className={`px-3 py-1 rounded-lg font-bold transition-colors ${
+                    layoutMode === '1_page_per_day'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
                 >
-                  Cancel
+                  1 Sheet / Day (Standard)
                 </button>
                 <button
-                  onClick={handleProcessPaste}
-                  className="px-5 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm"
+                  onClick={() => setLayoutMode('2_pages_per_day')}
+                  className={`px-3 py-1 rounded-lg font-bold transition-colors ${
+                    layoutMode === '2_pages_per_day'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
                 >
-                  Import Roster Now
+                  2 Sheets / Day (Spacious)
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* Quick Actions on Day X */}
+          <div className="flex flex-wrap items-center justify-between gap-3 text-xs bg-slate-50 p-3 rounded-xl border border-slate-200">
+            <div className="flex items-center space-x-2 text-slate-700">
+              <span className="font-bold">Day {selectedDay} Quick Actions:</span>
+              <span className="text-slate-500">(Click any status badge below to toggle individual attendance)</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setAllStudentsOnDay(selectedDay, 'PRESENT')}
+                className="px-2.5 py-1 rounded bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold border border-emerald-300"
+              >
+                Mark All Present on Day {selectedDay}
+              </button>
+              <button
+                onClick={() => setAllStudentsOnDay(selectedDay, 'LEAVE')}
+                className="px-2.5 py-1 rounded bg-red-100 hover:bg-red-200 text-red-800 font-bold border border-red-300"
+              >
+                Mark All Leave on Day {selectedDay}
+              </button>
+            </div>
+          </div>
+
+          {/* Student Table for Selected Day */}
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider text-[11px] border-b border-slate-200">
+                <tr>
+                  <th className="p-3 w-12 text-center">S.No</th>
+                  <th className="p-3">Student Name</th>
+                  <th className="p-3">Roll Number</th>
+                  <th className="p-3">Degree & Branch</th>
+                  <th className="p-3 text-center">Day {selectedDay} Status</th>
+                  <th className="p-3 text-center">Cumulative %</th>
+                  <th className="p-3 text-center">Student Signature</th>
+                  <th className="p-3 text-center">Trainer Verification</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 font-medium">
+                {students.map((s, idx) => {
+                  const override = s.day_overrides?.[selectedDay];
+                  const previewRec = previewData?.students?.[idx]?.records?.[selectedDay - 1];
+                  const isPresent = override ? (override === 'PRESENT') : (previewRec ? previewRec.status === 'PRESENT' : true);
+
+                  return (
+                    <tr key={s.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="p-3 text-center text-slate-500 font-bold">{idx + 1}</td>
+                      <td className="p-3 font-bold text-slate-900">{s.full_name}</td>
+                      <td className="p-3 font-mono text-slate-600">{s.roll_no}</td>
+                      <td className="p-3 text-slate-600">{s.degree} ({s.branch})</td>
+                      <td className="p-3 text-center">
+                        <button
+                          onClick={() => toggleStudentDay(idx, selectedDay)}
+                          className={`px-3 py-1 rounded-full text-[11px] font-bold inline-flex items-center space-x-1 shadow-2xs transition-all hover:scale-105 active:scale-95 ${
+                            isPresent
+                              ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300'
+                              : 'bg-red-100 hover:bg-red-200 text-red-800 border border-red-300'
+                          }`}
+                        >
+                          {isPresent ? <Check className="w-3 h-3 text-emerald-700" /> : <X className="w-3 h-3 text-red-700" />}
+                          <span>{isPresent ? 'PRESENT' : 'LEAVE'}</span>
+                        </button>
+                      </td>
+                      <td className="p-3 text-center font-bold text-slate-700">
+                        {previewData?.students?.[idx]?.attendance_pct_actual !== undefined
+                          ? `${previewData.students[idx].attendance_pct_actual}%`
+                          : `${s.attendance_pct}%`}
+                      </td>
+                      <td className="p-3 text-center text-[10px] text-slate-500 font-serif italic">
+                        Verified (Signed)
+                      </td>
+                      <td className="p-3 text-center text-[10px] text-emerald-700 font-semibold">
+                        ✓ Verified
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Download & Generation Action Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-2xl bg-slate-900 text-white shadow-md">
+            <div>
+              <h3 className="font-serif font-bold text-base text-amber-400">
+                Official PDF Downloads ({institutionId === 2 ? 'Poswal Developers' : 'Poddar College'})
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Download single day sheet, all-days register book, master landscape matrix, or complete ZIP bundle.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={handleDownloadSingleDayPdf}
+                disabled={isGeneratingDayPdf || students.length === 0}
+                className="inline-flex items-center space-x-2 px-3.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md transition-all disabled:opacity-50"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download Day {selectedDay} PDF</span>
+              </button>
+
+              <button
+                onClick={handleDownloadAllDailyBookPdf}
+                disabled={isGeneratingDailyBook || students.length === 0}
+                className="inline-flex items-center space-x-2 px-3.5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-md transition-all disabled:opacity-50"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>All {totalDays} Days Register Book</span>
+              </button>
+
+              <button
+                onClick={handleDownloadMasterMatrixPdf}
+                disabled={isGeneratingMatrixPdf || students.length === 0}
+                className="inline-flex items-center space-x-2 px-3.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md transition-all disabled:opacity-50"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>Master Matrix PDF</span>
+              </button>
+
+              <button
+                onClick={handleDownloadZipBundle}
+                disabled={isGeneratingZip || students.length === 0}
+                className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md transition-all disabled:opacity-50"
+              >
+                <Download className="w-4 h-4" />
+                <span>Complete ZIP Bundle</span>
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Reset Database Confirmation Modal */}
+      {/* Tab 2: Roster Editor */}
+      {activeTab === 'roster' && (
+        <div className="bg-white p-6 rounded-b-2xl border border-slate-200 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-sm text-slate-800">
+              Student Candidates ({students.length} Total)
+            </h3>
+            <button
+              onClick={handleAddStudent}
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Candidate</span>
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {students.map((student, idx) => (
+              <div
+                key={student.id}
+                className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-white hover:border-indigo-200 hover:shadow-xs transition-all flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs"
+              >
+                <div className="flex items-center space-x-3 w-full md:w-auto">
+                  <span className="w-6 text-center font-bold text-slate-400">{idx + 1}.</span>
+                  <div className="space-y-1 flex-1">
+                    <input
+                      type="text"
+                      value={student.full_name}
+                      onChange={(e) => handleUpdateStudent(student.id, 'full_name', e.target.value)}
+                      placeholder="Candidate Full Name"
+                      className="font-bold text-slate-900 text-sm bg-transparent border-b border-transparent hover:border-slate-300 focus:border-indigo-500 focus:bg-white px-1.5 py-0.5 rounded outline-none w-full sm:w-64"
+                    />
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                      <input
+                        type="text"
+                        value={student.roll_no}
+                        onChange={(e) => handleUpdateStudent(student.id, 'roll_no', e.target.value)}
+                        placeholder="Roll No"
+                        className="font-mono bg-transparent border-b border-transparent hover:border-slate-300 focus:border-indigo-500 focus:bg-white px-1 py-0.5 rounded outline-none w-28"
+                      />
+                      <span>•</span>
+                      <input
+                        type="text"
+                        value={student.college_name}
+                        onChange={(e) => handleUpdateStudent(student.id, 'college_name', e.target.value)}
+                        placeholder="College / Institution"
+                        className="bg-transparent border-b border-transparent hover:border-slate-300 focus:border-indigo-500 focus:bg-white px-1 py-0.5 rounded outline-none w-48"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-[11px] font-bold text-slate-600">Target %:</span>
+                    <input
+                      type="number"
+                      min={50}
+                      max={100}
+                      value={student.attendance_pct}
+                      onChange={(e) => handleUpdateStudent(student.id, 'attendance_pct', parseFloat(e.target.value) || 100)}
+                      className="w-16 px-2 py-1 text-center font-bold text-slate-800 bg-white border border-slate-300 rounded-lg"
+                    />
+                    {student.day_overrides && Object.keys(student.day_overrides).length > 0 && (
+                      <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">
+                        {Object.keys(student.day_overrides).length} custom overrides
+                      </span>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => handleRemoveStudent(student.id)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                    title="Remove candidate"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Tab 3: Master Attendance Matrix (All Days) */}
+      {activeTab === 'matrix_preview' && (
+        <div className="bg-white p-6 rounded-b-2xl border border-slate-200 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h3 className="font-bold text-sm text-slate-900">
+                Master Matrix ({students.length} Students × {totalDays} Working Days)
+              </h3>
+              <p className="text-xs text-slate-500">
+                Click any cell (D1..D{totalDays}) to toggle P (Present) ↔ L (Leave).
+              </p>
+            </div>
+            <button
+              onClick={fetchLivePreview}
+              disabled={loadingPreview}
+              className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 transition-colors flex items-center space-x-1.5"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loadingPreview ? 'animate-spin' : ''}`} />
+              <span>Refresh Matrix</span>
+            </button>
+          </div>
+
+          <div className="overflow-x-auto rounded-xl border border-slate-200 max-h-[500px]">
+            <table className="w-full text-left text-[11px] border-collapse">
+              <thead className="bg-slate-800 text-white font-bold sticky top-0 z-20">
+                <tr>
+                  <th className="p-2 w-10 text-center border border-slate-700">#</th>
+                  <th className="p-2 w-40 sticky left-0 bg-slate-800 border border-slate-700 z-30">Student</th>
+                  {Array.from({ length: totalDays }, (_, i) => i + 1).map(d => (
+                    <th key={d} className="p-1.5 text-center border border-slate-700 min-w-8">
+                      D{d}
+                    </th>
+                  ))}
+                  <th className="p-2 text-center border border-slate-700 bg-slate-900">Present</th>
+                  <th className="p-2 text-center border border-slate-700 bg-slate-900">%</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 font-medium">
+                {students.map((stu, sIdx) => {
+                  const studentPreview = previewData?.students?.[sIdx];
+                  return (
+                    <tr key={stu.id} className="hover:bg-slate-50">
+                      <td className="p-2 text-center text-slate-500 font-bold border border-slate-200">{sIdx + 1}</td>
+                      <td className="p-2 font-bold text-slate-900 border border-slate-200 sticky left-0 bg-white z-10 truncate max-w-[160px]">
+                        {stu.full_name}
+                      </td>
+                      {Array.from({ length: totalDays }, (_, dIdx) => {
+                        const dayNum = dIdx + 1;
+                        const rec = studentPreview?.records?.[dIdx];
+                        const isLeave = rec ? (rec.status === 'AUTHORIZED LEAVE' || rec.short_status === 'L') : false;
+
+                        return (
+                          <td
+                            key={dayNum}
+                            onClick={() => toggleStudentDay(sIdx, dayNum)}
+                            className={`p-1 text-center font-bold cursor-pointer border border-slate-200 transition-colors select-none ${
+                              isLeave
+                                ? 'bg-red-100 text-red-800 hover:bg-red-200'
+                                : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                            }`}
+                            title={`Day ${dayNum}: Click to toggle P/L`}
+                          >
+                            {isLeave ? 'L' : 'P'}
+                          </td>
+                        );
+                      })}
+                      <td className="p-2 text-center font-bold text-slate-800 border border-slate-200 bg-slate-50">
+                        {studentPreview?.present_days !== undefined ? `${studentPreview.present_days}d` : `${totalDays}d`}
+                      </td>
+                      <td className="p-2 text-center font-bold text-emerald-700 border border-slate-200 bg-emerald-50/50">
+                        {studentPreview?.attendance_pct_actual !== undefined ? `${studentPreview.attendance_pct_actual}%` : `${stu.attendance_pct}%`}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Paste Modal */}
+      {showPasteModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-base text-slate-900 flex items-center space-x-2">
+                <ClipboardPaste className="w-5 h-5 text-indigo-600" />
+                <span>Quick Paste Student Roster</span>
+              </h3>
+              <button
+                onClick={() => setShowPasteModal(false)}
+                className="text-slate-400 hover:text-slate-600 text-base font-bold"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-xs text-slate-500">
+              Paste student names (one per line). Format: <code className="bg-slate-100 px-1 py-0.5 rounded text-indigo-600">Name [tab/comma] Father Name [tab/comma] Roll No [tab/comma] Attendance%</code>
+            </p>
+            <textarea
+              rows={8}
+              value={pasteText}
+              onChange={(e) => setPasteText(e.target.value)}
+              placeholder={`Aarav Sharma\tMr. Ramesh Sharma\t${institutionId === 2 ? 'POSWAL' : 'PCTM'}-2026-001\t100\nBhavya Gupta\tMr. Suresh Gupta\t${institutionId === 2 ? 'POSWAL' : 'PCTM'}-2026-002\t95`}
+              className="w-full font-mono text-xs p-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+            />
+            <div className="flex items-center justify-end space-x-3">
+              <button
+                onClick={() => setShowPasteModal(false)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkPaste}
+                disabled={!pasteText.trim()}
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold disabled:opacity-50"
+              >
+                Import Candidates
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Database Modal */}
       {showResetDbModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 space-y-4">
-            <div className="flex items-start space-x-3">
-              <div className="p-3 bg-rose-100 text-rose-700 rounded-xl shrink-0">
-                <AlertTriangle className="w-6 h-6" />
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-red-200 space-y-4">
+            <div className="flex items-center space-x-3 text-red-600">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-600" />
               </div>
-              <div>
-                <h3 className="font-bold text-slate-900 text-base">Reset System Database</h3>
-                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                  This will purge all test students, internships, attendance records, and certificates from the database, and restore clean initial institutional profiles and courses.
-                </p>
-              </div>
+              <h3 className="font-bold text-base text-slate-900">
+                Confirm Database Reset
+              </h3>
             </div>
-
-            <div className="bg-rose-50 p-3 rounded-xl border border-rose-200 text-rose-900 text-xs font-medium">
-              ⚠️ Are you sure you want to proceed? This operation will remove all test records.
-            </div>
-
-            <div className="flex items-center justify-end space-x-2 pt-2">
+            <p className="text-xs text-slate-600 leading-relaxed">
+              This will wipe all test student records, internships, daily logs, and certificates.
+              <br/><br/>
+              <b>Preserved:</b> Poddar College & Poswal Developers organizations, all courses & modules, faculty & authority profiles.
+            </p>
+            <div className="flex items-center justify-end space-x-3 pt-2">
               <button
                 onClick={() => setShowResetDbModal(false)}
-                disabled={isResettingDb}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition"
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold"
               >
                 Cancel
               </button>
               <button
                 onClick={handleResetDatabase}
                 disabled={isResettingDb}
-                className="px-5 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition flex items-center space-x-1.5 shadow-sm disabled:opacity-50"
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-md disabled:opacity-50"
               >
-                {isResettingDb ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                <span>Yes, Reset Database</span>
+                {isResettingDb ? 'Wiping DB...' : 'Yes, Reset Cleanly'}
               </button>
             </div>
           </div>

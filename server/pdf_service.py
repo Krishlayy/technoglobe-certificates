@@ -109,28 +109,30 @@ def get_base_context(internship_id: int):
     att_stats = dict(cursor.fetchone())
 
     # Institution profile
-    inst_id = internship.get("institution_id") or 1
-    cursor.execute("SELECT * FROM institutions WHERE id = ?", (inst_id,))
-    inst_row = cursor.fetchone()
-    if not inst_row:
-        cursor.execute("SELECT * FROM institutions ORDER BY id ASC LIMIT 1")
-        inst_row = cursor.fetchone()
-    institution = dict(inst_row) if inst_row else {
-        "id": 1, "code": "TG", "name": "TechnoGlobe", "full_name": "TechnoGlobe IT Solutions Pvt. Ltd.",
-        "logo_path": "technoglobe_logo.png", "primary_color": "#0B2545", "secondary_color": "#134074",
-        "accent_color": "#D4AF37", "signatory_name": "Nitin Sir", "signatory_designation": "Centre Head & Authorized Signatory",
-        "stamp_mode": "DIGITAL_BADGE", "watermark_mode": "SEAL", "address": "Bharatpur, Rajasthan"
-    }
+    inst_id = internship.get("institution_id")
+    c_code = str(internship.get("course_code", ""))
+    cert_no = str(internship.get("certificate_number", ""))
+    title = str(internship.get("internship_title", ""))
+    if not inst_id or inst_id == 1:
+        if c_code.startswith("SOL") or "POSWAL" in cert_no or "Poswal" in title or "Solar" in title:
+            inst_id = 2
+        else:
+            inst_id = 1
+
+    institution = resolve_institution_profile(inst_id)
 
     # Update settings copy to reflect active institution
     settings["institution"] = institution
-    if institution.get("code") == "PODDAR":
-        settings["org_name"] = "PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT"
-        settings["centre_name"] = "PODDAR COLLEGE"
-        settings["address"] = institution.get("address", "Bharatpur, Rajasthan")
-        settings["logo_url"] = "poddar_logo.png"
-        settings["cert_prefix"] = "PCTM"
-        settings["doc_prefix"] = "PCTM/BPT"
+    settings["org_name"] = institution.get("full_name", "PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT")
+    settings["centre_name"] = institution.get("name", "Poddar College")
+    settings["address"] = institution.get("address", "Bharatpur, Rajasthan")
+    settings["phone"] = institution.get("phone", "9414293370")
+    settings["email"] = institution.get("email", "nitin@pctm")
+    settings["signatory_name"] = institution.get("signatory_name", "Nitin Agarwal")
+    settings["signatory_designation"] = institution.get("signatory_designation", "Authority")
+    settings["logo_url"] = institution.get("logo_path", "poddar_logo.png")
+    settings["cert_prefix"] = institution.get("cert_prefix", "PCTM")
+    settings["doc_prefix"] = institution.get("doc_prefix", "PCTM/BPT")
 
     conn.close()
     return {
@@ -174,45 +176,44 @@ class NumberedCanvas(canvas.Canvas):
 
 def build_official_header(settings, doc_ref, doc_date, doc_title, institution=None):
     inst = institution or settings.get("institution") or {}
-    is_poddar = (inst.get("code") == "PODDAR" or settings.get("code") == "PODDAR" or "Poddar" in settings.get("centre_name", ""))
+    is_poswal = (inst.get("code") == "POSWAL" or settings.get("code") == "POSWAL" or "Poswal" in str(settings.get("centre_name", "")))
     
-    inst_primary = colors.HexColor(inst.get("primary_color", "#0A2540") if is_poddar else "#0B2545")
-    inst_secondary = colors.HexColor(inst.get("secondary_color", "#EAA824") if is_poddar else "#134074")
-    inst_accent = colors.HexColor(inst.get("accent_color", "#EAA824") if is_poddar else "#D4AF37")
+    inst_primary = colors.HexColor(inst.get("primary_color", "#6B2222" if is_poswal else "#0A2540"))
+    inst_secondary = colors.HexColor(inst.get("secondary_color", "#1D4ED8" if is_poswal else "#1E3A8A"))
+    inst_accent = colors.HexColor(inst.get("accent_color", "#B45309" if is_poswal else "#EAA824"))
 
     styles = getSampleStyleSheet()
     header_elements = []
 
-    org_style = ParagraphStyle('OrgHeader', fontName='Helvetica-Bold', fontSize=14, leading=17, textColor=inst_primary, alignment=1)
-    centre_style = ParagraphStyle('CentreHeader', fontName='Helvetica-Bold', fontSize=10.5, leading=13.5, textColor=inst_secondary, alignment=1)
-    addr_style = ParagraphStyle('AddrHeader', fontName='Helvetica', fontSize=8, leading=10.5, textColor=MUTED, alignment=1)
+    org_style = ParagraphStyle('OrgHeader', fontName='Helvetica-Bold', fontSize=13.5, leading=16.5, textColor=inst_primary, alignment=1)
+    centre_style = ParagraphStyle('CentreHeader', fontName='Helvetica-Bold', fontSize=9.5, leading=12, textColor=inst_secondary, alignment=1)
+    addr_style = ParagraphStyle('AddrHeader', fontName='Helvetica', fontSize=7.8, leading=10, textColor=MUTED, alignment=1)
+    meta_style = ParagraphStyle('MetaHeader', fontName='Helvetica-Bold', fontSize=8, leading=10, textColor=DARK, alignment=1)
     ref_style = ParagraphStyle('RefStyle', fontName='Helvetica-Bold', fontSize=8.5, leading=11, textColor=DARK)
     date_style = ParagraphStyle('DateStyle', fontName='Helvetica-Bold', fontSize=8.5, leading=11, textColor=DARK, alignment=2)
-    title_style = ParagraphStyle('TitleStyle', fontName='Helvetica-Bold', fontSize=12.5, leading=15.5, textColor=inst_primary, alignment=1)
+    title_style = ParagraphStyle('TitleStyle', fontName='Helvetica-Bold', fontSize=12, leading=15, textColor=inst_primary, alignment=1)
 
-    logo_filename = inst.get("logo_path", "poddar_logo.png" if is_poddar else "technoglobe_logo.png")
+    logo_filename = inst.get("logo_path", "poswal_logo.png" if is_poswal else "poddar_logo.png")
     logo_full_path = os.path.join(os.path.dirname(__file__), logo_filename)
 
-    if os.path.exists(logo_full_path):
-        if is_poddar:
-            header_elements.append(RLImage(logo_full_path, width=22 * mm, height=22 * mm, hAlign='CENTER'))
-            header_elements.append(Spacer(1, 1 * mm))
-            header_elements.append(Paragraph("PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT", org_style))
-            header_elements.append(Paragraph("Bharatpur, Rajasthan", centre_style))
-            header_elements.append(Spacer(1, 1 * mm))
-            addr_line = "Bharatpur, Rajasthan | Phone: +91 94140 12345 | Web: https://poddarcollege.org"
-            header_elements.append(Paragraph(addr_line, addr_style))
+    if is_poswal:
+        header_elements.append(Paragraph("GST NO. 08ABIFP2454N1ZQ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; !! Shri Ganeshay Namah !! &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Mob. 9414694727", meta_style))
+        header_elements.append(Spacer(1, 1.5 * mm))
+        if os.path.exists(logo_full_path):
+            header_elements.append(RLImage(logo_full_path, width=58 * mm, height=12.2 * mm, hAlign='CENTER'))
         else:
-            header_elements.append(RLImage(logo_full_path, width=38 * mm, height=13.8 * mm, hAlign='CENTER'))
-            header_elements.append(Spacer(1, 1 * mm))
-            header_elements.append(Paragraph(settings.get("centre_name", "TECHNOGLOBE – BHARATPUR CENTRE"), centre_style))
-            header_elements.append(Spacer(1, 1 * mm))
-            addr_line = f"{settings.get('address')} | Phone: {settings.get('phone')} | Email: {settings.get('email')} | Web: {settings.get('website')}"
-            header_elements.append(Paragraph(addr_line, addr_style))
-    else:
-        header_elements.append(Paragraph(inst.get("full_name") or settings.get("org_name"), org_style))
+            header_elements.append(Paragraph("POSWAL DEVELOPERS", org_style))
         header_elements.append(Spacer(1, 1 * mm))
-        header_elements.append(Paragraph(inst.get("address") or settings.get("centre_name"), centre_style))
+        header_elements.append(Paragraph("214, Bapu Nagar, Madan Vihar Colony, Kali Baghichi, Ghana Road, Bharatpur (Raj.) 321001", addr_style))
+        header_elements.append(Paragraph("MSME Udyam: UDYAM-RJ-06-0052498 | Solar Energy Generation & Infrastructure", addr_style))
+    else:
+        if os.path.exists(logo_full_path):
+            header_elements.append(RLImage(logo_full_path, width=20 * mm, height=20 * mm, hAlign='CENTER'))
+            header_elements.append(Spacer(1, 1 * mm))
+        header_elements.append(Paragraph("PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT", org_style))
+        header_elements.append(Paragraph("Bharatpur, Rajasthan", centre_style))
+        header_elements.append(Spacer(1, 1 * mm))
+        header_elements.append(Paragraph("Bharatpur, Rajasthan | Phone: 9414293370 | Email: nitin@pctm | Web: https://poddarcollege.org", addr_style))
 
     header_elements.append(Spacer(1, 2 * mm))
     header_elements.append(HRFlowable(width="100%", thickness=1.5, color=inst_primary, spaceAfter=8, spaceBefore=2))
@@ -231,12 +232,12 @@ def build_official_header(settings, doc_ref, doc_date, doc_title, institution=No
         ('RIGHTPADDING', (0,0), (-1,-1), 0),
     ]))
     header_elements.append(ref_table)
-    header_elements.append(Spacer(1, 4 * mm))
+    header_elements.append(Spacer(1, 3.5 * mm))
 
     # Document Banner Title
     header_elements.append(Paragraph(doc_title.upper(), title_style))
     header_elements.append(Spacer(1, 1 * mm))
-    header_elements.append(HRFlowable(width="30%", thickness=1, color=inst_accent, spaceAfter=10, spaceBefore=2))
+    header_elements.append(HRFlowable(width="30%", thickness=1, color=inst_accent, spaceAfter=8, spaceBefore=2))
 
     return header_elements
 
@@ -248,13 +249,13 @@ def build_signature_section(settings, mentor_name, mentor_desig):
     data = [
         [
             Paragraph("<b>STUDENT SIGNATURE</b>", sig_label),
-            Paragraph("<b>FACULTY / MENTOR</b>", sig_label),
-            Paragraph("<b>AUTHORIZED SIGNATORY</b>", sig_label)
+            Paragraph("<b>TRAINER / FACULTY</b>", sig_label),
+            Paragraph("<b>AUTHORITY</b>", sig_label)
         ],
         [
             Paragraph("<br/><br/><br/>_______________________<br/>Candidate's Signature", sig_sub),
             Paragraph(f"<br/><br/><br/>_______________________<br/><b>{mentor_name}</b><br/>{mentor_desig}", sig_sub),
-            Paragraph(f"<br/><br/><br/>_______________________<br/><b>{settings['signatory_name']}</b><br/>{settings['signatory_designation']}<br/><i>(Official Stamp & Seal)</i>", sig_sub)
+            Paragraph(f"<br/><br/><br/>_______________________<br/><b>{settings.get('signatory_name', 'Nitin Agarwal')}</b><br/>{settings.get('signatory_designation', 'Authority')}<br/><i>(Official Seal & Stamp)</i>", sig_sub)
         ]
     ]
 
@@ -1139,13 +1140,22 @@ def generate_completion_certificate(internship_id: int) -> str:
     it = ctx["internship"]
     pf = ctx["project_fields"]
 
-    is_poddar = (inst.get("code") == "PODDAR" or it.get("institution_id") == 2)
-    c_primary = colors.HexColor("#0A2540") if is_poddar else PRIMARY
-    c_secondary = colors.HexColor("#0F3A66") if is_poddar else SECONDARY
-    c_accent = colors.HexColor("#EAA824") if is_poddar else ACCENT
+    inst_id = it.get("institution_id") or inst.get("id") or 1
+    c_code = str(it.get("course_code", ""))
+    cert_no = str(it.get("certificate_number", ""))
+    title = str(it.get("internship_title", ""))
+    if inst_id == 2 or c_code.startswith("SOL") or "POSWAL" in cert_no or "Poswal" in title or "Solar" in title:
+        prof = resolve_institution_profile(2)
+    else:
+        prof = resolve_institution_profile(inst_id)
+    is_poswal = (prof["code"] == "POSWAL")
 
-    cert_prefix = inst.get("cert_prefix") or ("PCTM" if is_poddar else "TG-BPT")
-    doc_prefix = inst.get("doc_prefix") or ("PCTM/BPT" if is_poddar else "TG/BPT")
+    c_primary = colors.HexColor(prof["primary_color"])
+    c_secondary = colors.HexColor(prof["secondary_color"])
+    c_accent = colors.HexColor(prof["accent_color"])
+
+    cert_prefix = prof.get("cert_prefix", "PCTM")
+    doc_prefix = prof.get("doc_prefix", "PCTM/BPT")
 
     cert_num = it["certificate_number"] or f"{cert_prefix}-{it['course_code']}-2026-{it['id']:04d}"
     ver_code = it["verification_code"] or f"VER-{cert_prefix}-{it['course_code']}-{it['id']:05d}"
@@ -1161,151 +1171,165 @@ def generate_completion_certificate(internship_id: int) -> str:
 
     # 1. Double Guilloche Decorative Borders
     c.saveState()
-    # Outer Navy Border
+    # Outer Border
     c.setStrokeColor(c_primary)
-    c.setLineWidth(4)
-    c.rect(10 * mm, 10 * mm, width - 20 * mm, height - 20 * mm)
+    c.setLineWidth(3.5)
+    c.rect(9 * mm, 9 * mm, width - 18 * mm, height - 18 * mm)
 
-    # Inner Gold Border
+    # Inner Accent Border
+    c.setStrokeColor(c_accent)
+    c.setLineWidth(1.2)
+    c.rect(12 * mm, 12 * mm, width - 24 * mm, height - 24 * mm)
+
+    # Corner Ornaments
+    orn_len = 12 * mm
     c.setStrokeColor(c_accent)
     c.setLineWidth(1.5)
-    c.rect(13 * mm, 13 * mm, width - 26 * mm, height - 26 * mm)
-
-    # Corner Ornaments (Top-Left, Top-Right, Bottom-Right)
-    orn_len = 14 * mm
-    c.setStrokeColor(c_accent)
-    c.setLineWidth(1.8)
     # Top-Left
-    c.line(16*mm, height - 16*mm, 16*mm + orn_len, height - 16*mm)
-    c.line(16*mm, height - 16*mm, 16*mm, height - 16*mm - orn_len)
+    c.line(14.5*mm, height - 14.5*mm, 14.5*mm + orn_len, height - 14.5*mm)
+    c.line(14.5*mm, height - 14.5*mm, 14.5*mm, height - 14.5*mm - orn_len)
     # Top-Right
-    c.line(width - 16*mm, height - 16*mm, width - 16*mm - orn_len, height - 16*mm)
-    c.line(width - 16*mm, height - 16*mm, width - 16*mm, height - 16*mm - orn_len)
+    c.line(width - 14.5*mm, height - 14.5*mm, width - 14.5*mm - orn_len, height - 14.5*mm)
+    c.line(width - 14.5*mm, height - 14.5*mm, width - 14.5*mm, height - 14.5*mm - orn_len)
+    # Bottom-Left
+    c.line(14.5*mm, 14.5*mm, 14.5*mm + orn_len, 14.5*mm)
+    c.line(14.5*mm, 14.5*mm, 14.5*mm, 14.5*mm + orn_len)
     # Bottom-Right
-    c.line(width - 16*mm, 16*mm, width - 16*mm - orn_len, 16*mm)
-    c.line(width - 16*mm, 16*mm, width - 16*mm, 16*mm + orn_len)
+    c.line(width - 14.5*mm, 14.5*mm, width - 14.5*mm - orn_len, 14.5*mm)
+    c.line(width - 14.5*mm, 14.5*mm, width - 14.5*mm, 14.5*mm + orn_len)
     c.restoreState()
 
     # Translucent Background Watermark
-    poddar_logo_path = os.path.join(os.path.dirname(__file__), "poddar_logo.png")
-    if is_poddar and os.path.exists(poddar_logo_path):
+    watermark_logo_path = os.path.join(os.path.dirname(__file__), prof["logo_path"])
+    if os.path.exists(watermark_logo_path):
         c.saveState()
         try:
-            c.setFillAlpha(0.08)
-            c.setStrokeAlpha(0.08)
+            c.setFillAlpha(0.065)
+            c.setStrokeAlpha(0.065)
         except Exception:
             pass
-        wm_size = 95 * mm
-        c.drawImage(poddar_logo_path, (width - wm_size)/2.0, (height - wm_size)/2.0 - 4*mm, width=wm_size, height=wm_size, mask='auto', preserveAspectRatio=True)
+        wm_size = 90 * mm
+        c.drawImage(watermark_logo_path, (width - wm_size)/2.0, (height - wm_size)/2.0 - 5*mm, width=wm_size, height=wm_size, mask='auto', preserveAspectRatio=True)
         c.restoreState()
 
-    # 2. Header / Branding with Official Logo
-    if is_poddar and os.path.exists(poddar_logo_path):
-        logo_size = 23 * mm
-        logo_x = (width - logo_size) / 2.0
-        logo_y = height - 33.5 * mm
-        c.drawImage(poddar_logo_path, logo_x, logo_y, width=logo_size, height=logo_size, mask='auto', preserveAspectRatio=True)
+    # 2. Header / Branding
+    if is_poswal:
+        # Poswal Developers Letterhead Banner & Header
+        c.setFont("Helvetica-Bold", 8)
+        c.setFillColor(DARK)
+        c.drawString(16 * mm, height - 18 * mm, f"GST NO. {prof['gst_no']}")
+        c.drawCentredString(width / 2.0, height - 18 * mm, "!! Shri Ganeshay Namah !!")
+        c.drawRightString(width - 16 * mm, height - 18 * mm, f"Mob. {prof['phone']}")
 
-        c.setFont("Helvetica-Bold", 11.5)
-        c.setFillColor(c_primary)
-        c.drawCentredString(width / 2.0, height - 37 * mm, "PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT")
+        logo_full_path = os.path.join(os.path.dirname(__file__), prof["logo_path"])
+        if os.path.exists(logo_full_path):
+            logo_w = 64 * mm
+            logo_h = 13.5 * mm
+            logo_x = (width - logo_w) / 2.0
+            logo_y = height - 33 * mm
+            c.drawImage(logo_full_path, logo_x, logo_y, width=logo_w, height=logo_h, mask='auto', preserveAspectRatio=True)
+        else:
+            c.setFont("Helvetica-Bold", 18)
+            c.setFillColor(c_primary)
+            c.drawCentredString(width / 2.0, height - 28 * mm, "POSWAL DEVELOPERS")
 
-        c.setFont("Helvetica", 7.5)
-        c.setFillColor(MUTED)
-        c.drawCentredString(width / 2.0, height - 40.5 * mm, "Bharatpur, Rajasthan | Website: https://poddarcollege.org")
-    elif os.path.exists(LOGO_PATH):
-        logo_w = 46 * mm
-        logo_h = 16.7 * mm
-        logo_x = (width - logo_w) / 2.0
-        logo_y = height - 31.5 * mm
-        c.drawImage(LOGO_PATH, logo_x, logo_y, width=logo_w, height=logo_h, mask='auto', preserveAspectRatio=True)
+        c.setFont("Helvetica", 7.8)
+        c.setFillColor(DARK)
+        c.drawCentredString(width / 2.0, height - 37 * mm, prof["address"])
 
-        c.setFont("Helvetica-Bold", 10.5)
-        c.setFillColor(c_secondary)
-        c.drawCentredString(width / 2.0, height - 35.5 * mm, s.get("centre_name", "TECHNOGLOBE – BHARATPUR CENTRE"))
-
-        c.setFont("Helvetica", 7.2)
-        c.setFillColor(MUTED)
-        c.drawCentredString(width / 2.0, height - 39 * mm, f"{s.get('address')} | Website: {s.get('website')}")
+        c.setFont("Helvetica-Bold", 7)
+        c.setFillColor(colors.HexColor("#475569"))
+        c.drawCentredString(width / 2.0, height - 40.5 * mm, f"MSME Udyam: {prof['msme_no']} • Solar Energy Generation & Industrial Infrastructure")
     else:
-        c.setFont("Helvetica-Bold", 18)
+        # Poddar College Official Header
+        poddar_logo_path = os.path.join(os.path.dirname(__file__), "poddar_logo.png")
+        if os.path.exists(poddar_logo_path):
+            logo_size = 20 * mm
+            logo_x = (width - logo_size) / 2.0
+            logo_y = height - 32 * mm
+            c.drawImage(poddar_logo_path, logo_x, logo_y, width=logo_size, height=logo_size, mask='auto', preserveAspectRatio=True)
+
+        c.setFont("Helvetica-Bold", 12.5)
         c.setFillColor(c_primary)
-        c.drawCentredString(width / 2.0, height - 26 * mm, inst.get("full_name") or s.get("org_name"))
+        c.drawCentredString(width / 2.0, height - 36.5 * mm, "PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT")
 
-        c.setFont("Helvetica-Bold", 12)
-        c.setFillColor(c_secondary)
-        c.drawCentredString(width / 2.0, height - 32 * mm, inst.get("address") or s.get("centre_name"))
+        c.setFont("Helvetica", 7.8)
+        c.setFillColor(MUTED)
+        c.drawCentredString(width / 2.0, height - 40 * mm, f"Bharatpur, Rajasthan | Contact: {prof['phone']} | Email: {prof['email']} | Web: {prof['website']}")
 
-    # Gold / Accent separator line
+    # Gold / Accent Separator Line
     c.setStrokeColor(c_accent)
-    c.setLineWidth(1)
-    c.line(55 * mm, height - 42.5 * mm, width - 55 * mm, height - 42.5 * mm)
+    c.setLineWidth(1.2)
+    c.line(45 * mm, height - 43 * mm, width - 45 * mm, height - 43 * mm)
 
-    # Certificate Title
-    c.setFont("Helvetica-Bold", 20.5)
+    # Certificate Title (Centered & Bold)
+    cert_title = "CERTIFICATE OF INDUSTRIAL TRAINING" if is_poswal else "CERTIFICATE OF INTERNSHIP COMPLETION"
+    c.setFont("Helvetica-Bold", 19)
     c.setFillColor(c_primary)
-    c.drawCentredString(width / 2.0, height - 51 * mm, "CERTIFICATE OF INTERNSHIP COMPLETION")
+    c.drawCentredString(width / 2.0, height - 51.5 * mm, cert_title)
 
     c.setFont("Helvetica-Oblique", 10.5)
     c.setFillColor(DARK)
     c.drawCentredString(width / 2.0, height - 58 * mm, "This is to certify that")
 
-    # Student Name (Large, Bold & Highlighted)
-    c.setFont("Helvetica-Bold", 23)
-    c.setFillColor(c_secondary)
+    # Student Name (Large, Ultra-Bold, Centered, Standout)
+    c.setFont("Helvetica-Bold", 24)
+    c.setFillColor(c_primary if is_poswal else c_secondary)
     c.drawCentredString(width / 2.0, height - 68 * mm, it["student_name"].upper())
 
-    # Decorative underline below name
-    name_w = c.stringWidth(it["student_name"].upper(), "Helvetica-Bold", 23)
+    # Decorative Underline with Accent Wings
+    name_w = c.stringWidth(it["student_name"].upper(), "Helvetica-Bold", 24)
     c.setStrokeColor(c_accent)
-    c.setLineWidth(1.5)
-    c.line((width - name_w) / 2.0 - 10*mm, height - 70 * mm, (width + name_w) / 2.0 + 10*mm, height - 70 * mm)
+    c.setLineWidth(1.6)
+    c.line((width - name_w) / 2.0 - 12*mm, height - 70.5 * mm, (width + name_w) / 2.0 + 12*mm, height - 70.5 * mm)
 
-    # Micro-text security line below name underline
-    c.setFont("Helvetica-Bold", 4.3)
+    # Micro Security Line
+    c.setFont("Helvetica-Bold", 4.2)
     c.setFillColor(colors.HexColor("#475569"))
-    sec_line = "• PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT • BHARATPUR, RAJASTHAN • AUTHENTIC CREDENTIAL •" if is_poddar else "• TECHNOGLOBE IT SOLUTIONS PVT. LTD. • AUTHORIZED CENTRE BHARATPUR • AUTHENTIC CREDENTIAL • ISO 9001:2015 COMPLIANT •"
-    c.drawCentredString(width / 2.0, height - 72.3 * mm, sec_line)
+    if is_poswal:
+        sec_line = f"• POSWAL DEVELOPERS • GST: {prof['gst_no']} • MSME: {prof['msme_no']} • SOLAR POWER TRAINING • AUTHENTIC CREDENTIAL •"
+    else:
+        sec_line = "• PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT • BHARATPUR, RAJASTHAN • AUTHENTIC ACADEMIC CREDENTIAL •"
+    c.drawCentredString(width / 2.0, height - 72.8 * mm, sec_line)
 
-    # Student College & Academic Details
+    # Student College / Academic Details (Centered)
     c.setFont("Helvetica", 10)
     c.setFillColor(DARK)
     acad_text = f"Student of {it['college_name']} | {it['degree']} ({it['branch']}) | Session: {it['academic_session']}"
-    c.drawCentredString(width / 2.0, height - 76 * mm, acad_text)
+    c.drawCentredString(width / 2.0, height - 77 * mm, acad_text)
 
-    # Completion Body Text
+    # Completion Body Text (Centered & Balanced)
     c.setFont("Helvetica", 10)
-    line1 = f"has successfully completed a course-based industrial training program in"
-    c.drawCentredString(width / 2.0, height - 83.5 * mm, line1)
+    training_desc = "has successfully completed the comprehensive course-based industrial training program in" if is_poswal else "has successfully completed the course-based internship program in"
+    c.drawCentredString(width / 2.0, height - 84 * mm, training_desc)
 
-    c.setFont("Helvetica-Bold", 13.5)
+    # Course Title Highlight
+    c.setFont("Helvetica-Bold", 14)
     c.setFillColor(c_primary)
-    c.drawCentredString(width / 2.0, height - 90 * mm, it["course_title"])
+    c.drawCentredString(width / 2.0, height - 91 * mm, it["course_title"])
 
-    c.setFont("Helvetica", 9.5)
+    # Duration & Dates
+    c.setFont("Helvetica", 9.6)
     c.setFillColor(DARK)
-    line2 = f"conducted from {it['start_date']} to {it['end_date']} with a total duration of {it['duration_weeks']} Weeks ({it['total_training_hours']} Training Hours)."
-    c.drawCentredString(width / 2.0, height - 96.5 * mm, line2)
+    dur_line = f"conducted from {it['start_date']} to {it['end_date']} covering a total curriculum duration of {it['duration_weeks']} Weeks ({it['total_training_hours']} Training Hours)."
+    c.drawCentredString(width / 2.0, height - 97.5 * mm, dur_line)
 
-    proj_text = f"Capstone Project: \"{pf.get('project_title', it['internship_title'])}\""
-    c.setFont("Helvetica-BoldOblique", 9.5)
+    # Capstone / Project
+    cap_title = pf.get('project_title') or it.get('internship_title') or "Applied Practical Implementation"
+    c.setFont("Helvetica-BoldOblique", 9.6)
     c.setFillColor(c_secondary)
-    c.drawCentredString(width / 2.0, height - 103 * mm, proj_text)
+    c.drawCentredString(width / 2.0, height - 104 * mm, f"Practical Specialization / Capstone: \"{cap_title}\"")
 
-    # Statement of Performance
-    c.setFont("Helvetica", 9)
+    # Performance Statement
+    c.setFont("Helvetica", 9.2)
     c.setFillColor(DARK)
-    line3 = "During the internship tenure, the candidate demonstrated exemplary diligence, academic discipline, and technical proficiency."
-    c.drawCentredString(width / 2.0, height - 109.5 * mm, line3)
+    c.drawCentredString(width / 2.0, height - 110.5 * mm, "During the training tenure, the candidate demonstrated exemplary diligence, academic discipline, and technical proficiency.")
 
-    # 3. Direct Online/LAN Verification URL QR Code (Left Side)
+    # 3. Bottom Row: QR Code Box (Left), Physical Ink Stamp Box (Center), Dual Signatures (Right)
     sem_text = it.get("semester_year") or "6th Semester"
     deg_text = it.get("degree") or "BCA"
-    branch_text = it.get("branch") or "Computer Science"
 
     raw_base = s.get("verification_base_url") or "https://technoglobe-certificates.onrender.com"
-    if "192.168." in raw_base or "localhost" in raw_base:
-        raw_base = os.environ.get("VERIFICATION_BASE_URL", "https://technoglobe-certificates.onrender.com")
     base_url = raw_base.rstrip("/")
     sig = compute_certificate_signature(cert_num, it['student_name'], it['course_name'], issue_date)
     import urllib.parse
@@ -1321,16 +1345,15 @@ def generate_completion_certificate(internship_id: int) -> str:
     })
     qr_payload_str = f"{base_url}/verify?{params}"
 
-    # Verification container box
-    box_x = 18 * mm
+    # Left: QR Verification Container Box
+    box_x = 16 * mm
     box_y = 15 * mm
-    box_w = 92 * mm
+    box_w = 88 * mm
     box_h = 35 * mm
     c.setStrokeColor(BORDER_COLOR)
     c.setFillColor(BG_LIGHT)
     c.rect(box_x, box_y, box_w, box_h, fill=1, stroke=1)
 
-    # Real QR code drawing via ReportLab
     qr_size = 23 * mm
     try:
         c.saveState()
@@ -1340,110 +1363,85 @@ def generate_completion_certificate(internship_id: int) -> str:
         qh = b[3] - b[1]
         d = Drawing(qr_size, qr_size, transform=[qr_size/qw, 0, 0, qr_size/qh, 0, 0])
         d.add(qr)
-        renderPDF.draw(d, c, box_x + 3 * mm, box_y + 8.5 * mm)
+        renderPDF.draw(d, c, box_x + 2.5 * mm, box_y + 8.5 * mm)
         c.restoreState()
     except Exception as e:
-        c.restoreState()
         print(f"QR drawing error: {e}")
 
-    # Label centered directly beneath QR code
     c.setFont("Helvetica-Bold", 5.5)
     c.setFillColor(c_primary)
-    c.drawCentredString(32.5 * mm, box_y + 5 * mm, "SCAN TO VIEW")
-    c.drawCentredString(32.5 * mm, box_y + 2.5 * mm, "STUDENT DETAILS")
+    c.drawCentredString(box_x + 14 * mm, box_y + 5 * mm, "SCAN TO VERIFY")
+    c.drawCentredString(box_x + 14 * mm, box_y + 2.5 * mm, "OFFICIAL RECORD")
 
-    # Text metadata on right side of QR box
-    text_x = box_x + 29 * mm
-    c.setFont("Helvetica-Bold", 7.5)
+    text_x = box_x + 28 * mm
+    c.setFont("Helvetica-Bold", 7.2)
     c.setFillColor(c_primary)
     c.drawString(text_x, box_y + 29.5 * mm, "OFFICIAL VERIFICATION RECORD")
 
     c.setFont("Helvetica", 6.8)
     c.setFillColor(DARK)
     c.drawString(text_x, box_y + 24.5 * mm, f"Candidate: {it['student_name']}")
-    c.drawString(text_x, box_y + 20 * mm, f"Course: {it['course_name']}")
-    c.drawString(text_x, box_y + 15.5 * mm, f"Program: {deg_text} ({sem_text})")
+    c.drawString(text_x, box_y + 20 * mm, f"Program: {it['course_name']}")
+    c.drawString(text_x, box_y + 15.5 * mm, f"Degree: {deg_text} ({sem_text})")
     c.drawString(text_x, box_y + 11 * mm, f"Cert No: {cert_num}")
-    c.drawString(text_x, box_y + 6.5 * mm, f"Issue Date: {issue_date} • {inst.get('code', 'BPT')}")
+    c.drawString(text_x, box_y + 6.5 * mm, f"Issue Date: {issue_date} • {prof.get('code', 'PCTM')}")
 
     c.setFont("Helvetica-Bold", 5.5)
     c.setFillColor(colors.HexColor("#059669"))
     c.drawString(text_x, box_y + 2.5 * mm, f"✓ Cryptographic Signature: {sig[:8]}... (Authentic)")
 
-    # 4. Signatures Section (Center & Right)
-    # Mentor
+    # Center: Empty Space for Physical Ink Stamp
+    stamp_x = 110 * mm
+    stamp_y = 15 * mm
+    stamp_w = 34 * mm
+    stamp_h = 35 * mm
+    c.saveState()
+    c.setStrokeColor(colors.HexColor("#94A3B8"))
+    c.setLineWidth(0.8)
+    c.setDash(2, 1.5)
+    c.setFillColor(colors.HexColor("#FFFFFF"))
+    c.roundRect(stamp_x, stamp_y, stamp_w, stamp_h, 2*mm, fill=1, stroke=1)
+    c.setFont("Helvetica-Bold", 5.5)
+    c.setFillColor(colors.HexColor("#64748B"))
+    seal_label = "[ OFFICIAL COMPANY SEAL ]" if is_poswal else "[ OFFICIAL COLLEGE SEAL ]"
+    c.drawCentredString(stamp_x + stamp_w/2.0, stamp_y + stamp_h/2.0 + 3*mm, seal_label)
+    c.setFont("Helvetica-Oblique", 5)
+    c.drawCentredString(stamp_x + stamp_w/2.0, stamp_y + stamp_h/2.0 - 3*mm, "(Apply Ink Stamp Here)")
+    c.restoreState()
+
+    # Right: Dual Signatures (Trainer / Faculty on Left, Authority on Right)
+    trainer_name = prof.get("default_trainer_name", it.get("mentor_name", "Mahesh Chand Saini" if is_poswal else "Krishlay"))
+    trainer_desig = prof.get("default_trainer_designation", "Trainer" if is_poswal else "Faculty")
+    authority_name = prof.get("signatory_name", "Madhuvan Singh Gurjar" if is_poswal else "Nitin Agarwal")
+    authority_desig = prof.get("signatory_designation", "Authority")
+
+    # Trainer Signature Line
+    sig1_x = 178 * mm
     c.setFont("Helvetica-Bold", 9)
     c.setFillColor(DARK)
-    c.drawCentredString(148 * mm, 38 * mm, it["mentor_name"])
+    c.drawCentredString(sig1_x, 38 * mm, trainer_name)
     c.setFont("Helvetica", 8)
     c.setFillColor(MUTED)
-    c.drawCentredString(148 * mm, 34 * mm, it["mentor_designation"])
+    c.drawCentredString(sig1_x, 34 * mm, trainer_desig)
     c.setStrokeColor(DARK)
-    c.setLineWidth(0.5)
-    c.line(125 * mm, 42 * mm, 171 * mm, 42 * mm)
-    c.setFont("Helvetica-Oblique", 7.5)
-    c.drawCentredString(148 * mm, 26 * mm, "Faculty Mentor / Guide")
+    c.setLineWidth(0.6)
+    c.line(sig1_x - 22*mm, 42 * mm, sig1_x + 22*mm, 42 * mm)
+    c.setFont("Helvetica-Oblique", 7.2)
+    c.drawCentredString(sig1_x, 26 * mm, "Trainer / Faculty Guide")
 
-    # Centre Director / Authorized Signatory
+    # Authority Signature Line
+    sig2_x = 246 * mm
     c.setFont("Helvetica-Bold", 9)
     c.setFillColor(DARK)
-    c.drawCentredString(244 * mm, 38 * mm, "Nitin Sir")
+    c.drawCentredString(sig2_x, 38 * mm, authority_name)
     c.setFont("Helvetica", 8)
     c.setFillColor(MUTED)
-    c.drawCentredString(244 * mm, 34 * mm, "Center Head & Authorized Signatory" if is_poddar else s.get("signatory_designation", "Centre Head"))
+    c.drawCentredString(sig2_x, 34 * mm, authority_desig)
     c.setStrokeColor(DARK)
-    c.setLineWidth(0.5)
-    c.line(220 * mm, 42 * mm, 268 * mm, 42 * mm)
-    c.setFont("Helvetica-Oblique", 7.5)
-    c.drawCentredString(244 * mm, 26 * mm, "Authorized Signatory (Seal & Stamp)")
-
-    if is_poddar:
-        # Empty space for physical ink stamp
-        stamp_x = 180 * mm
-        stamp_y = 15 * mm
-        stamp_w = 34 * mm
-        stamp_h = 35 * mm
-        c.saveState()
-        c.setStrokeColor(colors.HexColor("#94A3B8"))
-        c.setLineWidth(0.8)
-        c.setDash(2, 1.5)
-        c.setFillColor(colors.HexColor("#FFFFFF"))
-        c.roundRect(stamp_x, stamp_y, stamp_w, stamp_h, 2*mm, fill=1, stroke=1)
-        c.setFont("Helvetica-Bold", 5.5)
-        c.setFillColor(colors.HexColor("#64748B"))
-        c.drawCentredString(stamp_x + stamp_w/2.0, stamp_y + stamp_h/2.0 + 3*mm, "[ OFFICIAL COLLEGE SEAL ]")
-        c.setFont("Helvetica-Oblique", 5)
-        c.drawCentredString(stamp_x + stamp_w/2.0, stamp_y + stamp_h/2.0 - 3*mm, "(Apply Ink Stamp Here)")
-        c.restoreState()
-    else:
-        # Official Centre Embossed Gold Seal Badge (between signatures)
-        seal_x = 194 * mm
-        seal_y = 33 * mm
-        c.saveState()
-        c.setStrokeColor(colors.HexColor("#B45309"))
-        c.setFillColor(colors.HexColor("#FEF3C7"))
-        c.setLineWidth(1.6)
-        c.circle(seal_x, seal_y, 13 * mm, stroke=1, fill=1)
-
-        c.setStrokeColor(colors.HexColor("#D97706"))
-        c.setLineWidth(0.8)
-        c.setDash(2, 1.5)
-        c.circle(seal_x, seal_y, 11 * mm, stroke=1, fill=0)
-        c.setDash()
-
-        c.setStrokeColor(colors.HexColor("#92400E"))
-        c.setLineWidth(0.5)
-        c.circle(seal_x, seal_y, 9 * mm, stroke=1, fill=0)
-
-        c.setFont("Helvetica-Bold", 4.5)
-        c.setFillColor(colors.HexColor("#92400E"))
-        c.drawCentredString(seal_x, seal_y + 5.5 * mm, "★ TECHNOGLOBE ★")
-        c.setFont("Helvetica-Bold", 5.5)
-        c.drawCentredString(seal_x, seal_y + 1.2 * mm, "OFFICIAL")
-        c.drawCentredString(seal_x, seal_y - 2.8 * mm, "SEAL")
-        c.setFont("Helvetica-Bold", 3.8)
-        c.drawCentredString(seal_x, seal_y - 6.5 * mm, "BHARATPUR CENTRE")
-        c.restoreState()
+    c.setLineWidth(0.6)
+    c.line(sig2_x - 22*mm, 42 * mm, sig2_x + 22*mm, 42 * mm)
+    c.setFont("Helvetica-Oblique", 7.2)
+    c.drawCentredString(sig2_x, 26 * mm, "Authority (Authorized Signatory)")
 
     c.showPage()
     c.save()
@@ -1553,7 +1551,7 @@ def generate_complete_package_zip(internship_id: int) -> str:
         ("Complete_Academic_Internship_Report.pdf", generate_consolidated_report(internship_id))
     ]
 
-    zip_filename = f"TECHNOGLOBE_INTERNSHIP_COMPLETE_PACKAGE_{student_name_clean}.zip"
+    zip_filename = f"INTERNSHIP_COMPLETE_PACKAGE_{student_name_clean}.zip"
     zip_path = os.path.join(GENERATED_DIR, zip_filename)
 
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zip_file:
@@ -1593,12 +1591,74 @@ class LandscapeNumberedCanvas(canvas.Canvas):
         footer_text = f"Master Batch Attendance Register — Page {self._pageNumber} of {page_count} | Official Institutional Record"
         self.drawCentredString(landscape(A4)[0] / 2.0, 7 * mm, footer_text)
         self.setFont("Helvetica", 7)
-        self.drawString(12 * mm, 7 * mm, "TechnoGlobe & Poddar College Institutional Documentation")
-        self.drawRightString(landscape(A4)[0] - 12 * mm, 7 * mm, "Authorized Signatory: Nitin Sir")
+        self.drawString(12 * mm, 7 * mm, "Poddar College & Poswal Developers Institutional Record")
+        self.drawRightString(landscape(A4)[0] - 12 * mm, 7 * mm, "Authority: Nitin Agarwal / Madhuvan Singh Gurjar")
         self.restoreState()
 
 
 BATCH_TRACK_TOPICS = {
+    'SOL-01': [
+        "Solar Photovoltaic Principles & Solar Spectral Radiation", "Monocrystalline vs Polycrystalline vs Bifacial Modules",
+        "Peak Sun Hours (PSH), Solar Azimuth & Tilt Angle Optimization", "Rooftop Load Assessment & Structural Stability Audits",
+        "Building Integrated Photovoltaics (BIPV) Architecture & Façades", "Solar Glass, Canopies & Atrium Solar Integration",
+        "Module Mounting Structure (MMS) Engineering & Assembly", "Hot-Dip Galvanized Iron (HDGI) & Anodized Aluminum Rails",
+        "Mid-Clamps, End-Clamps & EPDM Rubber Gasket Fitting", "Torque Tightening Standards & Mechanical Stability Testing",
+        "Solar DC Cable Sizing (TUV 2 Pfg 1169) & Voltage Drop Math", "MC4 Connector Crimping, Pin Insertion & Waterproof IP67 Sealing",
+        "DC Array Junction Box (AJB) & Combiner Box Assembly", "gPV DC Fuses & Type-2 Surge Protection Devices (SPD)",
+        "On-Grid String Inverter Architecture & MPPT Optimization", "Inverter AC Output Wiring & Three-Phase Phase Synchronization",
+        "AC Distribution Board (ACDB) Assembly & MCB/MCCB Breaker Sizing", "Type-B Earth Leakage Relays (ELCB / RCCB) Testing",
+        "Chemical Earth Pit Construction (Bentonite / Marconite Compounds)", "Earth Electrode Resistance Measurement (< 2.0 Ohm)",
+        "Early Streamer Emission (ESE) Lightning Arrestor Installation", "Earth Mat Bonding Jumpers & Structure Continuity Testing",
+        "Megger Insulation Resistance Testing at 1000V DC", "Live Anti-Islanding Protection & Safety Trip Testing",
+        "Bidirectional Net-Metering & DISCOM Power Grid Interconnection", "Zero Export Controller Setup & Smart Energy Metering",
+        "Single Line Diagram (SLD) Design & As-Built Documentation", "Solar PV Testing Protocols according to IEC 62446 Standards",
+        "Commissioning Checklist Verification & Handover Dossier", "Preventive Maintenance Schedules & Thermal Inspection",
+        "I-V Curve Diagnostics & Panel Degradation Analysis", "Rooftop Solar Safety Standards & High Voltage PPE Workflows"
+    ],
+    'SOL-02': [
+        "Civil Surveying & Rooftop Footprint Marking", "True North Alignment & Magnetic Declination Correction",
+        "Inter-Row Pitch Calculations to Prevent Inter-Row Shadowing", "Structural Metallurgy & Hot-Dip Galvanizing Standards (IS 4759)",
+        "Aluminum 6063 T6 Extrusion Profiles & Tensile Testing", "SS304 / SS316 Fastener Selection & Anti-Seize Compounds",
+        "Chemical Epoxy Resin Anchor Bolt Installation in RCC Slabs", "Mechanical Wedge Anchors & Pull-Out Force Calibration",
+        "Non-Penetrating Precast Concrete Ballast Footings", "Polyurethane Waterproofing & Slab Membrane Sealing",
+        "Triangular Truss Superstructure Assembly & Plumb-Line Leveling", "Seasonal Tilt Angle Adjustment Mechanics (15° to 30°)",
+        "Rafter & Purlin Splicing Protocols & Deflection Limits", "Diagonal Cross-Bracing for High-Speed Wind Resistance",
+        "Solar Panel Handling Ergonomics & Micro-Crack Prevention", "Torque Wrench Calibration & 12-14 Nm Clamping Verification",
+        "Thermal Expansion Gap Provisioning Between Modules", "Structure Earth Continuity Bonding with Copper Jumpers",
+        "Star Washer Installation for Anodized Coating Penetration", "Structural Quality Punch List & Torque Marking",
+        "Cold Galvanizing Zinc Spray Application on Field Modifications", "Annual Structural Integrity & Fastener Re-Torquing Audits"
+    ],
+    'SOL-03': [
+        "Electrical Safety Standards & DC Arc Flash Prevention", "Personal Protective Equipment (PPE 1000V Rated)",
+        "Solar Cell I-V & P-V Characterization (Voc, Isc, Vmp, Imp)", "Temperature Coefficient Calculations for Extreme Weather",
+        "String Sizing Algorithms & MPPT Voltage Window Matching", "Maximum System Voltage Compliance (1000V / 1500V DC)",
+        "DC Combiner Box Internal Wiring & Terminal Block Torque", "Multi-MPPT Solar Inverter Topology & Efficiency Curves",
+        "App-Based Inverter Parameter Setup & Grid Code Settings", "ACDB Breaker Selection, Cable Ampacity & Derating Factors",
+        "Type-B RCCB Residual Current Protection Selection", "Bidirectional Smart Metering & Current Transformer (CT) Wiring",
+        "Zero-Export Device Integration with Master Inverter", "RS485 Modbus RTU / TCP Communication Daisy Chaining",
+        "Wi-Fi & 4G Cellular Data Logger Gateway Setup", "Cloud Telemetry Dashboards & Automated Alarm Configuration",
+        "1000V DC Insulation Resistance (Megger) Testing", "Thermographic Camera Hotspot Inspection on AC/DC Terminals",
+        "Voltage Drop Verification Across Full Generation Cycles", "Single Line Diagram (SLD) Drafting for DISCOM Sanction"
+    ],
+    'SOL-04': [
+        "Utility-Scale Solar Power Plant Topography & Layouts", "Central Inverters vs Decentralized String Inverters",
+        "HT Step-Up Transformers (0.8kV to 11kV / 33kV Architecture)", "HT Switchyard Operations (VCB, Isolators, CT/PT Units)",
+        "Industrial SCADA Systems & Weather Monitoring Stations (WMS)", "Pyranometer Irradiance Measurement & Reference Cell Calibrations",
+        "Plant Performance Ratio (PR) & Capacity Utilization Factor (CUF)", "Handheld & Drone-Based Infrared Thermography Inspections",
+        "Cell Hotspots, Snail Trails & Bypass Diode Short Diagnostics", "I-V Curve Tracing on Utility Strings & Degradation Audits",
+        "Dry Robotic Cleaning Systems vs Automated Water Jet Sprinklers", "Water Demineralization (TDS < 80 ppm) for Panel Longevity",
+        "Inverter Heat Sink Cleaning & Cooling Fan Maintenance", "DC Bus Capacitor Health Audits & Inverter Firmware Updates",
+        "Transformer Oil Dielectric Breakdown Voltage (BDV) Testing", "Substation Earth Mat Resistance Testing (4-Electrode Method)",
+        "Numerical Protection Relay Testing & Fault Clearance Timing", "Utility Solar Plant O&M Comprehensive Audit Dossier"
+    ],
+    'SOLAR': [
+        "Fundamentals of Solar Energy & Photovoltaic Technologies", "Solar Radiation, Peak Sun Hours (PSH) & Orientation",
+        "Rooftop Solar PV Installation & Building Integration (BIPV)", "Module Mounting Structure (MMS) Fitting & Clamping",
+        "Solar DC Cabling, MC4 Connectors & Combiner Boxes", "Solar Inverters, Maximum Power Point Tracking (MPPT) & Grid Sync",
+        "AC Distribution Boards (ACDB) & Circuit Breaker Protection", "Earthing Pit Construction & Low-Resistance Safety Networks",
+        "Lightning Protection Systems (ESE) & Surge Suppressors", "Testing & Commissioning of Rooftop Solar Systems",
+        "Net-Metering Configuration & DISCOM Interconnection", "Solar Operations, Preventative Maintenance & Troubleshooting"
+    ],
     'DA': [
         "Advanced Excel Formulae & Logical Functions", "VLOOKUP, XLOOKUP & Nested Logic", "Pivot Tables & Dynamic Aggregations",
         "Conditional Formatting & Error Trapping", "Advanced Financial & Statistical Modeling", "Relational Database Concepts & Schema Design",
@@ -1900,44 +1960,59 @@ def resolve_institution_profile(institution_id: int):
     settings = dict(cursor.fetchone())
     conn.close()
 
-    is_poddar = (inst.get("code") == "PODDAR" or institution_id == 2)
-    if is_poddar:
+    is_poswal = (inst.get("code") == "POSWAL" or institution_id == 2 or "Poswal" in inst.get("name", ""))
+    if is_poswal:
         return {
             "id": 2,
-            "code": "PODDAR",
-            "name": "Poddar College",
-            "full_name": "PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT",
-            "centre_name": "PODDAR COLLEGE",
-            "address": "Bharatpur, Rajasthan",
-            "logo_path": "poddar_logo.png",
-            "primary_color": "#0A2540",
-            "secondary_color": "#EAA824",
-            "accent_color": "#EAA824",
-            "signatory_name": "Nitin Sir",
-            "signatory_designation": "Centre Head & Authorized Signatory",
-            "stamp_mode": "PHYSICAL_BOX",
-            "watermark_mode": "PODDAR_CREST",
-            "doc_prefix": "PCTM/BPT",
-            "cert_prefix": "PCTM"
+            "code": "POSWAL",
+            "name": "Poswal Developers",
+            "full_name": "POSWAL DEVELOPERS",
+            "centre_name": "POSWAL DEVELOPERS – BHARATPUR",
+            "tagline": "Solar Power & Industrial Development",
+            "address": "214, Bapu Nagar, Madan Vihar Colony, Kali Baghichi, Ghana Road, Bharatpur (Raj.) 321001",
+            "phone": "9414694727",
+            "email": "madhuvangurjar19@gmail.com",
+            "website": "https://poswaldevelopers.com",
+            "gst_no": "08ABIFP2454N1ZQ",
+            "msme_no": "UDYAM-RJ-06-0052498",
+            "logo_path": "poswal_logo.png",
+            "letterhead_banner_path": "poswal_letterhead_banner.png",
+            "primary_color": "#6B2222",
+            "secondary_color": "#1D4ED8",
+            "accent_color": "#B45309",
+            "signatory_name": "Madhuvan Singh Gurjar",
+            "signatory_designation": "Authority",
+            "default_trainer_name": "Mahesh Chand Saini",
+            "default_trainer_designation": "Trainer",
+            "stamp_mode": "EMPTY_INK_PAD_BOX",
+            "watermark_mode": "POSWAL_LOGO_TRANSLUCENT",
+            "doc_prefix": "POSWAL/BPT",
+            "cert_prefix": "POSWAL"
         }
     else:
         return {
             "id": 1,
-            "code": "TG",
-            "name": "TechnoGlobe",
-            "full_name": "TechnoGlobe IT Solutions Pvt. Ltd.",
-            "centre_name": "TECHNOGLOBE – BHARATPUR CENTRE",
-            "address": settings.get("address", "Bharatpur Centre, Rajasthan"),
-            "logo_path": "technoglobe_logo.png",
-            "primary_color": "#0B2545",
-            "secondary_color": "#134074",
-            "accent_color": "#D4AF37",
-            "signatory_name": "Nitin Sir",
-            "signatory_designation": "Centre Head & Authorized Signatory",
-            "stamp_mode": "DIGITAL_BADGE",
-            "watermark_mode": "SEAL",
-            "doc_prefix": "TG/BPT",
-            "cert_prefix": "TG-BPT"
+            "code": "PODDAR",
+            "name": "Poddar College",
+            "full_name": "PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT",
+            "centre_name": "PODDAR COLLEGE – BHARATPUR",
+            "tagline": "Excellence in Technology & Management",
+            "address": "Bharatpur, Rajasthan",
+            "phone": "9414293370",
+            "email": "nitin@pctm",
+            "website": "https://poddarcollege.org",
+            "logo_path": "poddar_logo.png",
+            "primary_color": "#0A2540",
+            "secondary_color": "#1E3A8A",
+            "accent_color": "#EAA824",
+            "signatory_name": "Nitin Agarwal",
+            "signatory_designation": "Authority",
+            "default_trainer_name": "Krishlay",
+            "default_trainer_designation": "Faculty",
+            "stamp_mode": "EMPTY_INK_PAD_BOX",
+            "watermark_mode": "PODDAR_LOGO_TRANSLUCENT",
+            "doc_prefix": "PCTM/BPT",
+            "cert_prefix": "PCTM"
         }
 
 def generate_master_batch_attendance_pdf(batch_meta: dict, students_list: list) -> str:
@@ -1974,7 +2049,7 @@ def generate_master_batch_attendance_pdf(batch_meta: dict, students_list: list) 
 
     # Output file path
     now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-    clean_org = "PODDAR" if is_poddar else "TECHNOGLOBE"
+    clean_org = "PODDAR" if is_poddar else "POSWAL"
     clean_track = re.sub(r'[^A-Za-z0-9_]', '_', track_code)
     filename = f"Master_Batch_Attendance_Register_{clean_org}_{clean_track}_{total_days}Days_{now_str}.pdf"
     filepath = os.path.join(GENERATED_DIR, filename)
@@ -2196,9 +2271,9 @@ def generate_master_batch_attendance_pdf(batch_meta: dict, students_list: list) 
             sig_sub
         )
     else:
-        # TechnoGlobe: Digital Gold Badge Seal
+        # Poswal Developers: Physical Ink Stamp Area
         stamp_cell = Paragraph(
-            "<br/><b>★ TECHNOGLOBE OFFICIAL SEAL ★</b><br/><font color='#B45309'><b>ISO 9001:2015 CERTIFIED CENTRE</b></font><br/><i>Bharatpur Centre</i>",
+            "<br/><b>[ OFFICIAL COMPANY SEAL ]</b><br/><font color='#64748B'><i>(Apply Physical Ink Stamp Here)</i></font>",
             sig_sub
         )
 
@@ -2485,7 +2560,7 @@ def build_daily_day_story_elements(day_num: int, total_days: int, day_info: dict
     if is_poddar:
         stamp_box = Paragraph("<b>[ OFFICIAL COLLEGE SEAL ]</b><br/><i>(Physical Ink Stamp)</i>", sig_sub)
     else:
-        stamp_box = Paragraph("<b>★ TECHNOGLOBE SEAL ★</b><br/><font color='#B45309'><b>BHARATPUR CENTRE</b></font>", sig_sub)
+        stamp_box = Paragraph("<b>[ OFFICIAL COMPANY SEAL ]</b><br/><i>(Physical Ink Stamp)</i>", sig_sub)
 
     sig_data = [
         [
@@ -2560,7 +2635,7 @@ def generate_daily_day_attendance_pdf(day_number: int, batch_meta: dict, student
     day_topic = topics[day_idx]
 
     now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-    clean_org = "PODDAR" if inst["code"] == "PODDAR" else "TECHNOGLOBE"
+    clean_org = "PODDAR" if inst["code"] == "PODDAR" else "POSWAL"
     clean_track = re.sub(r'[^A-Za-z0-9_]', '_', track_code)
     filename = f"Daily_Attendance_Sheet_{clean_org}_{clean_track}_Day_{day_number:02d}_{now_str}.pdf"
     filepath = os.path.join(GENERATED_DIR, filename)
@@ -2605,7 +2680,7 @@ def generate_all_daily_batch_attendance_book_pdf(batch_meta: dict, students_list
     ]
 
     now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-    clean_org = "PODDAR" if inst["code"] == "PODDAR" else "TECHNOGLOBE"
+    clean_org = "PODDAR" if inst["code"] == "PODDAR" else "POSWAL"
     clean_track = re.sub(r'[^A-Za-z0-9_]', '_', track_code)
     filename = f"ALL_DAYS_DAILY_ATTENDANCE_BOOK_{clean_org}_{clean_track}_{total_days}Days_{now_str}.pdf"
     filepath = os.path.join(GENERATED_DIR, filename)

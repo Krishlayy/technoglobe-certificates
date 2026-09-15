@@ -32,13 +32,13 @@ export const DocumentEditorPage: React.FC = () => {
     total_hours: 120,
     duration_weeks: 6,
     project_title: 'Retail Sales Performance & Customer Churn Analytics Dashboard',
-    mentor_name: 'Prof. Krishlay Sharma',
-    mentor_designation: 'Professor',
-    signatory_name: 'Nitin Sir',
-    signatory_designation: 'Centre Head & Authorized Signatory',
+    mentor_name: 'Krishlay',
+    mentor_designation: 'Faculty',
+    signatory_name: 'Nitin Agarwal',
+    signatory_designation: 'Authority',
     issue_date: '2026-07-14',
-    certificate_no: 'TG-BPT-DA-2026-0001',
-    verification_code: 'VER-TG-DA-98214',
+    certificate_no: 'PCTM-DA-2026-0001',
+    verification_code: 'VER-PCTM-DA-98214',
     custom_remarks: 'Exemplary diligence, academic discipline, and technical proficiency demonstrated throughout the training tenure.',
   });
 
@@ -69,11 +69,11 @@ export const DocumentEditorPage: React.FC = () => {
         internship_title: st.internship_title || 'Course-Based Internship',
         start_date: st.start_date || '2026-06-01',
         end_date: st.end_date || '2026-07-12',
-        certificate_no: st.certificate_number || 'TG-BPT-DA-2026-0001',
-        verification_code: st.verification_code || 'VER-TG-DA-98214',
-        mentor_name: st.mentor_name || (sett?.signatory_name || 'Prof. Krishlay Sharma'),
-        signatory_name: sett?.signatory_name || 'Nitin Sir',
-        signatory_designation: sett?.signatory_designation || 'Centre Head & Authorized Signatory',
+        certificate_no: st.certificate_number || 'PCTM-DA-2026-0001',
+        verification_code: st.verification_code || 'VER-PCTM-DA-98214',
+        mentor_name: st.mentor_name || 'Krishlay',
+        signatory_name: sett?.signatory_name || 'Nitin Agarwal',
+        signatory_designation: sett?.signatory_designation || 'Authority',
       }));
     }
   };
@@ -378,12 +378,12 @@ export const DocumentEditorPage: React.FC = () => {
               
               {/* Header with Official Logo */}
               <div className="space-y-0.5 mt-1 flex flex-col items-center">
-                <img src="/technoglobe_logo.png" alt="TechnoGlobe" className="h-7 w-auto object-contain mb-0.5" />
+                <img src="/poddar_logo.png" alt="TechnoGlobe" className="h-7 w-auto object-contain mb-0.5" />
                 <h4 className="text-[10px] font-serif font-bold tracking-wider text-brand-700 uppercase">
-                  {settings?.centre_name || 'TECHNOGLOBE – BHARATPUR CENTRE'}
+                  {settings?.centre_name || 'PODDAR COLLEGE – BHARATPUR'}
                 </h4>
                 <p className="text-[7.5px] text-slate-500">
-                  {settings?.address || 'Poddar College, Bharatpur, Near SP Office, Bharatpur, Rajasthan'} | Website: {settings?.website || 'https://www.technoglobe.co.in'}
+                  {settings?.address || 'Poddar College, Bharatpur, Near SP Office, Bharatpur, Rajasthan'} | Website: {settings?.website || 'https://poddarcollege.org'}
                 </p>
                 <div className="w-48 h-[1px] bg-gold-400 mx-auto mt-0.5" />
               </div>
@@ -476,10 +476,10 @@ export const DocumentEditorPage: React.FC = () => {
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="text-xs font-serif font-black tracking-wider text-brand-900 uppercase">
-                      {settings?.org_name || 'TECHNOGLOBE IT SOLUTIONS PVT. LTD.'}
+                      {settings?.org_name || 'PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT'}
                     </h3>
                     <h4 className="text-[10px] font-serif font-bold text-brand-700 uppercase">
-                      {settings?.centre_name || 'TECHNOGLOBE – BHARATPUR CENTRE'}
+                      {settings?.centre_name || 'PODDAR COLLEGE – BHARATPUR'}
                     </h4>
                     <p className="text-[7.5px] text-slate-500">
                       {settings?.address || 'Poddar College, Bharatpur, Near SP Office, Bharatpur, Rajasthan'}

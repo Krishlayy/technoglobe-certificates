@@ -56,7 +56,7 @@ export const CentreSettingsPage: React.FC = () => {
           Franchise Centre Configuration & Branding
         </h1>
         <p className="text-xs text-slate-500 mt-0.5">
-          Configure official TechnoGlobe Bharatpur centre credentials, authorized signatories, and numbering prefixes.
+          Configure official Poddar College Bharatpur centre credentials, authorized signatories, and numbering prefixes.
         </p>
       </div>
 
@@ -71,11 +71,11 @@ export const CentreSettingsPage: React.FC = () => {
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center space-x-4">
             <div className="bg-white p-2 rounded-lg border border-slate-200 shadow-2xs">
-              <img src="/technoglobe_logo.png" alt="Official TechnoGlobe Logo" className="h-10 w-auto object-contain" />
+              <img src="/poddar_logo.png" alt="Official TechnoGlobe Logo" className="h-10 w-auto object-contain" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="font-serif font-bold text-sm text-slate-900">Official TechnoGlobe Registered Logo</span>
+                <span className="font-serif font-bold text-sm text-slate-900">Official Poddar College Registered Logo</span>
                 <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
                   Active in All Documents
                 </span>
@@ -300,7 +300,7 @@ export const CentreSettingsPage: React.FC = () => {
                   required
                   value={settings.verification_base_url || ''}
                   onChange={(e) => setSettings({ ...settings, verification_base_url: e.target.value })}
-                  placeholder="https://verify.technoglobe.co.in or http://192.168.0.103:8000"
+                  placeholder="https://technoglobe-certificates.onrender.com or http://192.168.0.103:8000"
                   className="flex-1 px-3 py-2 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:outline-none font-mono"
                 />
               </div>
@@ -328,10 +328,10 @@ export const CentreSettingsPage: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setSettings({ ...settings, verification_base_url: 'https://verify.technoglobe.co.in' })}
+                onClick={() => setSettings({ ...settings, verification_base_url: 'https://technoglobe-certificates.onrender.com' })}
                 className="px-2.5 py-1 text-[11px] font-medium rounded-md bg-brand-50 hover:bg-brand-100 text-brand-800 border border-brand-200 transition-colors"
               >
-                Public Cloud Domain (https://verify.technoglobe.co.in)
+                Public Cloud Domain (https://technoglobe-certificates.onrender.com)
               </button>
             </div>
 

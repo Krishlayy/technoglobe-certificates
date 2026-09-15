@@ -48,11 +48,11 @@ def init_db():
         stamp_url TEXT,
         show_digital_signature INTEGER DEFAULT 0,
         show_digital_stamp INTEGER DEFAULT 0,
-        cert_prefix TEXT DEFAULT 'TG-BPT',
-        doc_prefix TEXT DEFAULT 'TG/BPT',
+        cert_prefix TEXT DEFAULT 'PCTM',
+        doc_prefix TEXT DEFAULT 'PCTM/BPT',
         default_required_hours INTEGER DEFAULT 120,
         default_required_attendance_pct REAL DEFAULT 75.0,
-        verification_base_url TEXT DEFAULT 'http://192.168.0.103:8000',
+        verification_base_url TEXT DEFAULT 'https://technoglobe-certificates.onrender.com',
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     """)
@@ -76,15 +76,15 @@ def init_db():
         email TEXT,
         phone TEXT,
         logo_path TEXT NOT NULL,
-        primary_color TEXT DEFAULT '#0B2545',
-        secondary_color TEXT DEFAULT '#134074',
-        accent_color TEXT DEFAULT '#D4AF37',
-        signatory_name TEXT NOT NULL DEFAULT 'Nitin Sir',
-        signatory_designation TEXT NOT NULL DEFAULT 'Centre Head & Authorized Signatory',
-        stamp_mode TEXT NOT NULL DEFAULT 'DIGITAL_BADGE',
-        watermark_mode TEXT NOT NULL DEFAULT 'SEAL',
-        doc_prefix TEXT DEFAULT 'TG/BPT',
-        cert_prefix TEXT DEFAULT 'TG-BPT',
+        primary_color TEXT DEFAULT '#0A2540',
+        secondary_color TEXT DEFAULT '#1E3A8A',
+        accent_color TEXT DEFAULT '#EAA824',
+        signatory_name TEXT NOT NULL DEFAULT 'Nitin Agarwal',
+        signatory_designation TEXT NOT NULL DEFAULT 'Authority',
+        stamp_mode TEXT NOT NULL DEFAULT 'EMPTY_INK_PAD_BOX',
+        watermark_mode TEXT NOT NULL DEFAULT 'PODDAR_LOGO_TRANSLUCENT',
+        doc_prefix TEXT DEFAULT 'PCTM/BPT',
+        cert_prefix TEXT DEFAULT 'PCTM',
         is_active INTEGER DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -185,6 +185,7 @@ def init_db():
         course_id INTEGER NOT NULL,
         batch_id INTEGER,
         mentor_id INTEGER NOT NULL,
+        institution_id INTEGER DEFAULT 1,
         internship_title TEXT NOT NULL,
         internship_type TEXT NOT NULL DEFAULT 'Course-Based Internship',
         start_date TEXT NOT NULL,
@@ -203,9 +204,15 @@ def init_db():
         FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
         FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE RESTRICT,
         FOREIGN KEY (batch_id) REFERENCES batches (id) ON DELETE SET NULL,
-        FOREIGN KEY (mentor_id) REFERENCES mentors (id) ON DELETE RESTRICT
+        FOREIGN KEY (mentor_id) REFERENCES mentors (id) ON DELETE RESTRICT,
+        FOREIGN KEY (institution_id) REFERENCES institutions (id) ON DELETE SET DEFAULT
     );
     """)
+    cursor.execute("PRAGMA table_info(internships)")
+    i_cols = [r[1] for r in cursor.fetchall()]
+    if "institution_id" not in i_cols:
+        cursor.execute("ALTER TABLE internships ADD COLUMN institution_id INTEGER DEFAULT 1")
+
 
     # 9. University / College Compliance Records (Internal Only)
     cursor.execute("""

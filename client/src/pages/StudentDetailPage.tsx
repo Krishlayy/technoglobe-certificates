@@ -308,7 +308,7 @@ export const StudentDetailPage: React.FC = () => {
               Official Academic Documentation Package (15 Forms & Letters)
             </h2>
             <span className="text-xs text-slate-400">
-              Each document features official TechnoGlobe Bharatpur branding, reference numbers, and signature zones.
+              Each document features official Poddar College & Poswal Developers branding, reference numbers, and signature zones.
             </span>
           </div>
 

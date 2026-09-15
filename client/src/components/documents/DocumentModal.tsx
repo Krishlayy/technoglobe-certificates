@@ -94,7 +94,7 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
 
         {/* Footer Notice */}
         <div className="px-6 py-2.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500 shrink-0">
-          <span>TechnoGlobe Bharatpur Centre — Industrial Training & Documentation System</span>
+          <span>Poddar College & Poswal Developers — Certification & Training Portal</span>
           <span className="italic text-slate-400">Designated signature & stamp zones provided for physical validation</span>
         </div>
       </div>
