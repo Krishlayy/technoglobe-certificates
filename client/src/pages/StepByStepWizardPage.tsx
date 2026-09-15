@@ -225,7 +225,7 @@ const INSTITUTIONS = [
     badge: 'Poddar College Bharatpur',
     stampType: 'Empty Box for Physical Ink Stamping',
     watermarkType: 'Poddar College Logo Watermark',
-    centerHead: 'Nitin Agarwal (Authority)',
+    authority: 'Nitin Agarwal (Authority)',
     prefix: 'PCTM',
     logo: '/poddar_logo.png',
     borderSelected: 'border-indigo-600 ring-2 ring-indigo-500/20 bg-indigo-50/70',
@@ -241,7 +241,7 @@ const INSTITUTIONS = [
     badge: 'GST: 08ABIFP2454N1ZQ | MSME: UDYAM-RJ-06-0052498',
     stampType: 'Empty Box for Physical Ink Stamping',
     watermarkType: 'Poswal Developers Logo Watermark',
-    centerHead: 'Madhuvan Singh Gurjar (Authority) & Mahesh Chand Saini (Trainer)',
+    authority: 'Madhuvan Singh Gurjar (Authority)',
     prefix: 'POSWAL',
     logo: '/poswal_logo.png',
     borderSelected: 'border-amber-600 ring-2 ring-amber-500/20 bg-amber-50/70',
@@ -567,8 +567,8 @@ export const StepByStepWizardPage: React.FC = () => {
                         <span className="font-semibold text-slate-800">{inst.watermarkType}</span>
                       </div>
                       <div>
-                        <span className="text-slate-400 block text-[9px] uppercase font-bold">Centre Head</span>
-                        <span className="font-semibold text-slate-800">{inst.centerHead}</span>
+                        <span className="text-slate-400 block text-[9px] uppercase font-bold">Authority</span>
+                        <span className="font-semibold text-slate-800">{inst.authority}</span>
                       </div>
                       <div>
                         <span className="text-slate-400 block text-[9px] uppercase font-bold">Cert Prefix</span>
@@ -662,8 +662,8 @@ export const StepByStepWizardPage: React.FC = () => {
               </div>
               <p className="text-[11px] text-slate-500 mt-1">
                 {formData.institution_id === 2
-                  ? 'Poddar College, Bharatpur (Direct College Credential, No Affiliation line).'
-                  : 'Poswal Developers Solar Engineering Center, Bharatpur.'}
+                  ? 'Poswal Developers Training Division, Bharatpur.'
+                  : 'Poddar College, Bharatpur (Direct College Credential).'}
               </p>
             </div>
 

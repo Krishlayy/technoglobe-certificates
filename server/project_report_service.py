@@ -709,11 +709,20 @@ def build_25page_academic_project_report(internship_id: int) -> str:
     end_date = str(it.get('end_date') or "2026-07-12")[:10]
     project_title = it.get('internship_title') or f"MediConnect: {course_name} Healthcare Appointment Portal"
     project_desc = f"Enterprise software engineering capstone focused on {course_name}."
-    mentor_name = it.get('mentor_name') or "Prof. Krishlay Sharma"
-    mentor_desig = it.get('mentor_designation') or "Professor"
+        inst_id = it.get("institution_id", 1)
+    if not inst_id or inst_id == 1:
+        if str(course_code).startswith("SOL") or "POSWAL" in str(enrollment_no) or "Solar" in str(course_name):
+            inst_id = 2
+        else:
+            inst_id = 1
+    prof = resolve_institution_profile(inst_id)
+    is_poswal = (prof["code"] == "POSWAL")
+
+    mentor_name = it.get('mentor_name') or ("Mahesh Chand Saini" if is_poswal else "Krishlay")
+    mentor_desig = it.get('mentor_designation') or ("Trainer" if is_poswal else "Faculty")
     cert_num = enrollment_no
-    signatory_name = "Nitin Sir"
-    signatory_desig = "Center Head & Authorized Signatory" if is_poddar else "Centre Head & Authorized Signatory"
+    signatory_name = prof.get("signatory_name", "Madhuvan Singh Gurjar" if is_poswal else "Nitin Agarwal")
+    signatory_desig = prof.get("signatory_designation", "Authority")
 
     artifacts = get_track_artifacts(course_code, course_name, student_name)
 
@@ -826,7 +835,7 @@ def build_25page_academic_project_report(internship_id: int) -> str:
     # Two column Submitted By / Supervised By Box
     host_org_label = "Poddar College of Technology & Management" if is_poddar else "TechnoGlobe IT Solutions"
     cand_info = f"<b>Candidate Name:</b> {student_name.upper()}<br/><b>Enrollment / Ref:</b> {enrollment_no}<br/><b>Degree / Branch:</b> {degree}<br/><b>Affiliated College:</b> {college_name}<br/><b>Academic Session:</b> 2025-2026"
-    sup_info = f"<b>Supervising Faculty:</b> {mentor_name}<br/><b>Designation:</b> {mentor_desig}<br/><b>Department:</b> Computer Science & Tech<br/><b>Host Institute:</b> {host_org_label}<br/><b>Centre Head:</b> {signatory_name}"
+    sup_info = f"<b>Supervising Faculty:</b> {mentor_name}<br/><b>Designation:</b> {mentor_desig}<br/><b>Department:</b> Computer Science & Tech<br/><b>Host Institute:</b> {host_org_label}<br/><b>Authority:</b> {signatory_name}"
     
     meta_table = Table([
         [Paragraph("<b>SUBMITTED BY:</b>", body_bold), Paragraph("<b>UNDER THE SUPERVISION OF:</b>", body_bold)],
@@ -1053,7 +1062,7 @@ def build_25page_academic_project_report(internship_id: int) -> str:
         ],
         [
             Paragraph("<br/>____________________________<br/><b>3. College Faculty Coordinator</b><br/>Name: <b>Head of Department</b><br/>Dept. of Computer Science<br/>" + college_name, body),
-            Paragraph("<br/>____________________________<br/><b>4. Center Head & Director</b><br/>Name: <b>" + signatory_name + "</b><br/>" + signatory_desig + "<br/>" + org_sign_text, body)
+            Paragraph("<br/>____________________________<br/><b>4. Authority</b><br/>Name: <b>" + signatory_name + "</b><br/>" + signatory_desig + "<br/>" + org_sign_text, body)
         ]
     ]
     t_exam = Table(exam_board, colWidths=[87*mm, 87*mm])
@@ -1074,7 +1083,7 @@ def build_25page_academic_project_report(internship_id: int) -> str:
     story.append(Paragraph("The successful realization and execution of this Capstone Project and the compilation of this comprehensive dissertation report is the culmination of invaluable guidance, academic encouragement, and institutional support extended to me by numerous distinguished individuals and organizations.", body_justify))
     story.append(Spacer(1, 2.5 * mm))
 
-    story.append(Paragraph(f"First and foremost, I wish to express my deepest gratitude and heartfelt respect to <b>{signatory_name}</b>, Centre Head and Director of TechnoGlobe IT Solutions Pvt. Ltd., Bharatpur Centre, for granting me the opportunity to undergo this intensive industrial internship program, providing state-of-the-art laboratory infrastructure, and fostering an environment of technical innovation.", body_justify))
+    story.append(Paragraph(f"First and foremost, I wish to express my deepest gratitude and heartfelt respect to <b>{signatory_name}</b>, Authority of Poddar College of Technology & Management, for granting me the opportunity to undergo this intensive industrial internship program, providing state-of-the-art laboratory infrastructure, and fostering an environment of technical innovation.", body_justify))
     story.append(Spacer(1, 2.5 * mm))
 
     story.append(Paragraph(f"I express my profound indebtedness and sincere thanks to my esteemed Supervising Faculty Mentor, <b>{mentor_name}</b> ({mentor_desig}), whose profound technical mastery, meticulous reviews, and constant mentorship were instrumental in navigating architectural bottlenecks and refining algorithmic implementations.", body_justify))
@@ -1083,7 +1092,7 @@ def build_25page_academic_project_report(internship_id: int) -> str:
     story.append(Paragraph(f"I extend my sincere gratitude to the Principal, Head of the Department of Computer Science, and the esteemed faculty members of <b>{college_name}</b> for their academic backing, administrative facilitation, and foundation in computer science principles.", body_justify))
     story.append(Spacer(1, 2.5 * mm))
 
-    story.append(Paragraph("I also express my sincere gratitude to the TechnoGlobe Academic Advisory Council and curriculum steering committee for framing an industry-aligned capstone curriculum that seamlessly synthesizes modern engineering practices with rigorous computer science foundational theory.", body_justify))
+    story.append(Paragraph("I also express my sincere gratitude to the Academic Advisory Council and curriculum steering committee for framing an industry-aligned capstone curriculum that seamlessly synthesizes modern engineering practices with rigorous computer science foundational theory.", body_justify))
     story.append(Spacer(1, 2.5 * mm))
 
     story.append(Paragraph("Finally, I am eternally indebted to my parents and family for their unconditional love, moral encouragement, and patience throughout my academic pursuits, and to my peer cohort at TechnoGlobe for their collaborative spirit during laboratory sprints.", body_justify))
@@ -1750,7 +1759,7 @@ def build_25page_academic_project_report(internship_id: int) -> str:
     story.append(HRFlowable(width="100%", thickness=1, color=PRIMARY, spaceBefore=2, spaceAfter=6))
 
     story.append(Paragraph("<b>7.1 Empirical Results & Quantitative Performance Benchmarks</b>", sec_heading))
-    story.append(Paragraph(f"The deployment of <b>f'{project_title}'</b> in the TechnoGlobe laboratory environment demonstrated exceptional operational performance, achieving dramatic improvements over baseline legacy software systems across all core engineering dimensions.", body_justify))
+    story.append(Paragraph(f"The deployment of <b>f'{project_title}'</b> in the institutional laboratory environment demonstrated exceptional operational performance, achieving dramatic improvements over baseline legacy software systems across all core engineering dimensions.", body_justify))
     story.append(Spacer(1, 3.5 * mm))
 
     story.append(Paragraph("<b>Table 7.1: Pre-Implementation Baseline vs Post-Implementation Benchmarks:</b>", subsec_heading))
@@ -1957,7 +1966,7 @@ def build_25page_academic_project_report(internship_id: int) -> str:
     story.append(Spacer(1, 3.5 * mm))
 
     story.append(Table([[
-        Paragraph(f"<b>FINAL TRAINING LOGBOOK CERTIFICATION:</b> Candidate completed total <b>126.0 Hours</b> across 36 instructional laboratory days with 100% attendance. All learning outcomes certified. <b>Supervising Faculty: {mentor_name}</b> | <b>Centre Head: {signatory_name}</b>", ParagraphStyle('Rev3', fontName='Helvetica', fontSize=7.5, leading=10, textColor=DARK))
+        Paragraph(f"<b>FINAL TRAINING LOGBOOK CERTIFICATION:</b> Candidate completed total <b>126.0 Hours</b> across 36 instructional laboratory days with 100% attendance. All learning outcomes certified. <b>Supervising Faculty: {mentor_name}</b> | <b>Authority: {signatory_name}</b>", ParagraphStyle('Rev3', fontName='Helvetica', fontSize=7.5, leading=10, textColor=DARK))
     ]], colWidths=[174*mm], style=[('BOX', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('BACKGROUND', (0,0), (-1,-1), BG_LIGHT), ('TOPPADDING', (0,0), (-1,-1), 4), ('BOTTOMPADDING', (0,0), (-1,-1), 4)]))
     story.append(PageBreak())
 
@@ -2035,7 +2044,7 @@ def build_25page_academic_project_report(internship_id: int) -> str:
         [
             Paragraph(f"<b>Supervising Faculty Guide:</b><br/><b>{mentor_name}</b><br/>{mentor_desig}<br/>Dept. of Emerging Technologies<br/>TechnoGlobe Bharatpur Centre", body),
             Paragraph(f"<b>College Faculty Coordinator:</b><br/><b>Head of Department</b><br/>Dept. of Computer Science<br/>{college_name}", body),
-            Paragraph(f"<b>Centre Head & Director:</b><br/><b>{signatory_name}</b><br/>{signatory_desig}<br/>TechnoGlobe IT Solutions Pvt. Ltd.<br/>Official Centre Seal", body)
+            Paragraph(f"<b>Authority:</b><br/><b>{signatory_name}</b><br/>{signatory_desig}<br/>TechnoGlobe IT Solutions Pvt. Ltd.<br/>Official Centre Seal", body)
         ]
     ]
     fs_tab = Table(final_signs, colWidths=[58*mm, 58*mm, 58*mm])
@@ -2050,7 +2059,7 @@ def build_25page_academic_project_report(internship_id: int) -> str:
     story.append(Spacer(1, 3 * mm))
 
     story.append(Table([[
-        Paragraph(f"<b>DIGITAL AUTHENTICATION RECORD:</b> Document #10 generated and verified at TechnoGlobe Regional Server. Serial Ref: <b>{cert_num}</b>. Verification URL: <code>https://technoglobe-certificates.onrender.com/verify?cert={cert_num}</code>", ParagraphStyle('EndNotice', fontName='Helvetica', fontSize=7, leading=9.5, textColor=MUTED))
+        Paragraph(f"<b>DIGITAL AUTHENTICATION RECORD:</b> Document #10 generated and verified at Institutional Digital Verification System. Serial Ref: <b>{cert_num}</b>. Verification URL: <code>https://technoglobe-certificates.onrender.com/verify?cert={cert_num}</code>", ParagraphStyle('EndNotice', fontName='Helvetica', fontSize=7, leading=9.5, textColor=MUTED))
     ]], colWidths=[174*mm], style=[('BOX', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#F1F5F9")), ('TOPPADDING', (0,0), (-1,-1), 2), ('BOTTOMPADDING', (0,0), (-1,-1), 2)]))
 
     # Build document
