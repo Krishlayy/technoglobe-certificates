@@ -266,3 +266,26 @@ export interface DocumentTemplate {
   blocks: TemplateBlock[];
   updated_at?: string;
 }
+
+export interface AppreciationCertificate {
+  id?: number;
+  recipient_name: string;
+  institution_id: number;
+  title: string;
+  subtitle?: string;
+  appreciation_text: string;
+  event_name?: string;
+  organization?: string;
+  issue_date: string;
+  certificate_number?: string;
+  verification_code?: string;
+  signatory_name?: string;
+  signatory_designation?: string;
+  mentor_name?: string;
+  mentor_designation?: string;
+  institution_name?: string;
+  institution_code?: string;
+  institution_full_name?: string;
+  created_at?: string;
+  pdf_url?: string;
+}

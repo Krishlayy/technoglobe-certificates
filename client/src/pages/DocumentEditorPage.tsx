@@ -459,10 +459,9 @@ export const DocumentEditorPage: React.FC = () => {
                       <span className="text-[5px] font-semibold text-slate-600 leading-tight">MSME REG.</span>
                     </div>
                   ) : (
-                    <div className="w-14 h-14 mx-auto border border-dashed border-slate-400 rounded-sm flex flex-col items-center justify-center text-[6.5px] text-slate-400 uppercase font-semibold">
-                      <span>OFFICIAL</span>
-                      <span>COLLEGE</span>
-                      <span>SEAL</span>
+                    <div className="w-14 h-14 mx-auto border border-slate-200 bg-white rounded-sm flex flex-col items-center justify-center p-0.5 shadow-xs">
+                      <img src="/poddar_stamp.png" alt="Poddar Stamp" className="w-10 h-10 object-contain" />
+                      <span className="text-[4.5px] font-bold text-blue-950 leading-tight">OFFICIAL SEAL</span>
                     </div>
                   )}
                 </div>
@@ -470,18 +469,22 @@ export const DocumentEditorPage: React.FC = () => {
                 {/* Signatures (Cols 8-12) */}
                 <div className="col-span-5 grid grid-cols-2 gap-2 text-center">
                   <div>
-                    <div className="h-6" />
-                    <div className="border-t border-slate-800 text-[8px] font-bold text-slate-900 pt-0.5">
-                      {formData.mentor_name}
+                    <div className="h-6 flex items-center justify-center">
+                      <img src={isPoswal ? "/mahesh_sign.png" : "/nitin_sign.png"} alt="Mentor Sign" className="h-5 object-contain" />
                     </div>
-                    <div className="text-[7px] text-slate-500 italic">Industry Mentor</div>
+                    <div className="border-t border-slate-800 text-[8px] font-bold text-slate-900 pt-0.5 truncate">
+                      {formData.mentor_name || 'Faculty'}
+                    </div>
+                    <div className="text-[7px] text-slate-500 italic">Faculty / Mentor</div>
                   </div>
                   <div>
-                    <div className="h-6" />
-                    <div className="border-t border-slate-800 text-[8px] font-bold text-slate-900 pt-0.5">
+                    <div className="h-6 flex items-center justify-center">
+                      <img src={isPoswal ? "/madhuvan_sign.png" : "/nitin_sign.png"} alt="Authority Sign" className="h-5 object-contain" />
+                    </div>
+                    <div className="border-t border-slate-800 text-[8px] font-bold text-slate-900 pt-0.5 truncate">
                       {formData.signatory_name}
                     </div>
-                    <div className="text-[7px] text-slate-500 italic">Authorized Signatory</div>
+                    <div className="text-[7px] text-slate-500 italic">{isPoswal ? 'Authority' : 'Director / Authority'}</div>
                   </div>
                 </div>
               </div>
@@ -500,7 +503,7 @@ export const DocumentEditorPage: React.FC = () => {
                       {settings?.centre_name || 'PODDAR COLLEGE – BHARATPUR'}
                     </h4>
                     <p className="text-[7.5px] text-slate-500">
-                      {settings?.address || 'Poddar College, Bharatpur, Near SP Office, Bharatpur, Rajasthan'}
+                      {isPoswal ? '214, Bapu Nagar, Ghana Road, Bharatpur (Raj.)' : 'Near SP Office, Bharatpur (Raj.) | Email: nitin_pitm@yahoo.com | Web: poddarcollege.org'}
                     </p>
                   </div>
                   <div className="text-right text-[8px] font-mono text-slate-500">

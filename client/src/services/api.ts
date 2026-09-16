@@ -334,7 +334,9 @@ export const api = {
     semester_year?: string;
     academic_session?: string;
     course_track: string;
-    mentor_id?: number;
+    mentor_id?: number | null;
+    custom_faculty_name?: string | null;
+    custom_faculty_designation?: string | null;
     start_date?: string;
     end_date?: string;
     custom_project_title?: string;
@@ -481,6 +483,53 @@ export const api = {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.detail || 'Failed to bulk enroll students');
     }
+    return res.json();
+  },
+
+  // Appreciation Certificates
+  generateAppreciationCertificate: async (data: any) => {
+    const res = await fetch(`${API_BASE}/certificates/appreciation/generate`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to generate appreciation certificate');
+    }
+    return res.json();
+  },
+
+  getAppreciationCertificates: async (institution_id?: number) => {
+    const q = institution_id ? `?institution_id=${institution_id}` : '';
+    const res = await fetch(`${API_BASE}/certificates/appreciation${q}`, {
+      headers: authHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to fetch appreciation certificates');
+    return res.json();
+  },
+
+  getAppreciationPdfUrl: (id: number) => `${API_BASE}/certificates/appreciation/${id}/pdf`,
+
+  previewAppreciationCertificate: async (data: any) => {
+    const res = await fetch(`${API_BASE}/certificates/appreciation/preview`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to generate appreciation preview');
+    }
+    return res.blob();
+  },
+
+  deleteAppreciationCertificate: async (id: number) => {
+    const res = await fetch(`${API_BASE}/certificates/appreciation/${id}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to delete appreciation certificate');
     return res.json();
   },
 

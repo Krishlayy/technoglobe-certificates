@@ -18,13 +18,13 @@ def normalize_text(text: str) -> str:
     cleaned = re.sub(r'None training hours', '120 Training Hours', cleaned)
     return ' '.join(cleaned.split())
 
-# 2 Core Institutions: Poddar College & Poswal Developers
+# 3 Core Institutions: Poddar College, Poswal Developers & Technoglobe Jaipur
 INSTITUTIONS_CATALOG = [
-    (1, 'PODDAR', 'Poddar College', 'Poddar College of Technology & Management', '',
-     'Bharatpur, Rajasthan', '',
-     'https://poddarcollege.org', 'nitin@pctm', '9414293370',
+    (1, 'PODDAR', 'Poddar College', 'PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT', 'Excellence in Technology & Management',
+     'Near SP Office, Bharatpur (Raj.)', 'Affiliated with University & Technical Board',
+     'https://poddarcollege.org', 'nitin_pitm@yahoo.com', '9414293370',
      'poddar_logo.png', '#0A2540', '#1E3A8A', '#EAA824',
-     'Nitin Agarwal', 'Authority',
+     'Nitin Agarwal', 'Director',
      'EMPTY_INK_PAD_BOX', 'PODDAR_LOGO_TRANSLUCENT', 'PCTM/BPT', 'PCTM', 1),
     (2, 'POSWAL', 'Poswal Developers', 'Poswal Developers', 'Solar Power & Industrial Development',
      '214, Bapu Nagar, Madan Vihar Colony, Kali Baghichi, Ghana Road, Bharatpur (Raj.) 321001',
@@ -32,7 +32,14 @@ INSTITUTIONS_CATALOG = [
      'https://poswaldevelopers.com', 'madhuvangurjar19@gmail.com', '9414694727',
      'poswal_logo.png', '#6B2222', '#1D4ED8', '#B45309',
      'Madhuvan Singh Gurjar', 'Authority',
-     'EMPTY_INK_PAD_BOX', 'POSWAL_LOGO_TRANSLUCENT', 'POSWAL/BPT', 'POSWAL', 1)
+     'EMPTY_INK_PAD_BOX', 'POSWAL_LOGO_TRANSLUCENT', 'POSWAL/BPT', 'POSWAL', 1),
+    (3, 'TECHNOGLOBE', 'Technoglobe', 'TECHNOGLOBE - ADVANCED IT TRAINING & DEVELOPMENT', 'Transforming Careers Through Technology',
+     'Technoglobe Corporate Center, Plot No. 4, Gopalpura Bypass, Jaipur (Raj.)',
+     'Premier IT & Advanced Computing Institute • Jaipur',
+     'https://technoglobe.co.in', 'info@technoglobe.co.in', '9829012345',
+     'technoglobe_logo.png', '#831843', '#1E40AF', '#F59E0B',
+     'Nitin Agarwal', 'Director',
+     'EMPTY_INK_PAD_BOX', 'TECHNOGLOBE_LOGO_TRANSLUCENT', 'TG/JPR', 'TG', 1)
 ]
 
 # Comprehensive Courses Definition (Solar Energy + IT/Computing)
@@ -233,11 +240,13 @@ def apply_faculty_updates(cursor, conn):
     cursor.execute("""
     UPDATE centre_settings 
     SET signatory_name = 'Nitin Agarwal', 
-        signatory_designation = 'Authority',
+        signatory_designation = 'Director',
         org_name = 'PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT',
         centre_name = 'PODDAR COLLEGE – BHARATPUR',
+        address = 'Near SP Office, Bharatpur (Raj.)',
         phone = '9414293370',
-        email = 'nitin@pctm',
+        email = 'nitin_pitm@yahoo.com',
+        website = 'https://poddarcollege.org',
         verification_base_url = 'https://technoglobe-certificates.onrender.com'
     WHERE id = 1
     """)

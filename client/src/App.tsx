@@ -12,6 +12,7 @@ import { BulkAttendancePage } from './pages/BulkAttendancePage';
 import { DailyLogsPage } from './pages/DailyLogsPage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { CertificatesPage } from './pages/CertificatesPage';
+import { AppreciationCertificatePage } from './pages/AppreciationCertificatePage';
 import { DocumentEditorPage } from './pages/DocumentEditorPage';
 import { TemplatesPage } from './pages/TemplatesPage';
 import { BackupRestorePage } from './pages/BackupRestorePage';
@@ -58,6 +59,7 @@ export function App() {
             <Route path="daily-logs" element={<DailyLogsPage />} />
             <Route path="projects" element={<ProjectsPage />} />
             <Route path="certificates" element={<CertificatesPage />} />
+            <Route path="appreciation" element={<AppreciationCertificatePage />} />
             <Route path="document-editor" element={<DocumentEditorPage />} />
             <Route path="templates" element={<TemplatesPage />} />
             <Route path="backup-restore" element={<BackupRestorePage />} />

@@ -184,7 +184,7 @@ def init_db():
         student_id INTEGER NOT NULL,
         course_id INTEGER NOT NULL,
         batch_id INTEGER,
-        mentor_id INTEGER NOT NULL,
+        mentor_id INTEGER,
         institution_id INTEGER DEFAULT 1,
         internship_title TEXT NOT NULL,
         internship_type TEXT NOT NULL DEFAULT 'Course-Based Internship',
@@ -327,7 +327,7 @@ def init_db():
     CREATE TABLE IF NOT EXISTS evaluations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         internship_id INTEGER UNIQUE NOT NULL,
-        mentor_id INTEGER NOT NULL,
+        mentor_id INTEGER,
         criteria_scores_json TEXT NOT NULL DEFAULT '{}',
         overall_score INTEGER NOT NULL DEFAULT 0, -- out of 100
         final_remark TEXT,
@@ -385,7 +385,30 @@ def init_db():
     );
     """)
 
-    # 18. Audit Logs
+    # 18. Custom Appreciation Certificates
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS appreciation_certificates (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        recipient_name TEXT NOT NULL,
+        institution_id INTEGER NOT NULL DEFAULT 1,
+        title TEXT NOT NULL DEFAULT 'CERTIFICATE OF APPRECIATION',
+        subtitle TEXT DEFAULT 'IN RECOGNITION OF EXCELLENCE',
+        appreciation_text TEXT NOT NULL,
+        event_name TEXT,
+        organization TEXT,
+        issue_date TEXT NOT NULL,
+        certificate_number TEXT UNIQUE NOT NULL,
+        verification_code TEXT UNIQUE NOT NULL,
+        signatory_name TEXT NOT NULL DEFAULT 'Nitin Agarwal',
+        signatory_designation TEXT NOT NULL DEFAULT 'Director / Authority',
+        mentor_name TEXT,
+        mentor_designation TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (institution_id) REFERENCES institutions (id) ON DELETE SET DEFAULT
+    );
+    """)
+
+    # 19. Audit Logs
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS audit_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -412,6 +435,7 @@ def init_db():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_internships_status ON internships(status)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_internships_institution_id ON internships(institution_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_certificates_internship_id ON certificates(internship_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_appreciation_institution_id ON appreciation_certificates(institution_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_course_modules_course_id ON course_modules(course_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_attendance_internship_id ON attendance(internship_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_daily_logs_internship_id ON daily_logs(internship_id)")

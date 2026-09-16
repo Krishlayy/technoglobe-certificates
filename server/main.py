@@ -237,7 +237,7 @@ class StudentCreate(BaseModel):
     # Internship enrollment details
     institution_id: Optional[int] = 1
     course_id: int
-    mentor_id: int
+    mentor_id: Optional[int] = None
     batch_id: Optional[int] = None
     internship_title: Optional[str] = ""
     internship_type: Optional[str] = "Course-Based Internship"
@@ -1281,6 +1281,180 @@ def batch_print_certificates(ids: Optional[str] = None, user = Depends(get_curre
         headers={"Content-Disposition": "inline; filename=TechnoGlobe_Batch_Certificates_Print_Ready.pdf"}
     )
 
+
+# -------------------------------------------------------------
+# 14. Appreciation Certificates Endpoints
+# -------------------------------------------------------------
+class AppreciationCreateRequest(BaseModel):
+    recipient_name: str
+    institution_id: int = 1
+    title: str = "CERTIFICATE OF APPRECIATION"
+    subtitle: Optional[str] = "PROUDLY PRESENTED IN RECOGNITION OF EXCELLENCE"
+    appreciation_text: str = "For outstanding performance, exceptional dedication, and remarkable contributions during the technical training and practical project execution."
+    event_name: Optional[str] = ""
+    organization: Optional[str] = ""
+    issue_date: Optional[str] = None
+    certificate_number: Optional[str] = None
+    signatory_name: Optional[str] = None
+    signatory_designation: Optional[str] = None
+    mentor_name: Optional[str] = None
+    mentor_designation: Optional[str] = None
+
+@app.post("/api/certificates/appreciation/generate")
+def create_and_generate_appreciation_cert(req: AppreciationCreateRequest, user = Depends(get_current_user)):
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Resolve institution
+    inst_id = req.institution_id or 1
+    cursor.execute("SELECT * FROM institutions WHERE id = ?", (inst_id,))
+    inst_row = cursor.fetchone()
+    if not inst_row:
+        inst_id = 1
+        cursor.execute("SELECT * FROM institutions WHERE id = 1")
+        inst_row = cursor.fetchone()
+    inst = dict(inst_row) if inst_row else {}
+    prefix = inst.get("cert_prefix") or ("POSWAL" if inst_id == 2 else ("TG-JPR" if inst_id == 3 else "PCTM"))
+    
+    issue_dt = req.issue_date or datetime.now().strftime("%Y-%m-%d")
+    import random
+    ts = int(datetime.now().timestamp()) % 10000
+    rand_part = random.randint(100, 999)
+    cert_num = req.certificate_number or f"{prefix}-APP-{datetime.now().strftime('%Y')}-{ts:04d}{rand_part}"
+    ver_code = f"VER-{cert_num}"
+    
+    signatory_name = req.signatory_name or inst.get("signatory_name", "Nitin Agarwal" if inst_id != 2 else "Madhuvan Singh Gurjar")
+    signatory_desig = req.signatory_designation or inst.get("signatory_designation", "Director / Authority" if inst_id != 2 else "Authority")
+    
+    cursor.execute("""
+    INSERT INTO appreciation_certificates (
+        recipient_name, institution_id, title, subtitle, appreciation_text,
+        event_name, organization, issue_date, certificate_number, verification_code,
+        signatory_name, signatory_designation, mentor_name, mentor_designation
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        req.recipient_name.strip(), inst_id, req.title.strip(), (req.subtitle or "").strip(),
+        req.appreciation_text.strip(), (req.event_name or "").strip(), (req.organization or "").strip(),
+        issue_dt, cert_num, ver_code, signatory_name, signatory_desig,
+        (req.mentor_name or "").strip(), (req.mentor_designation or "").strip()
+    ))
+    cert_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    
+    pdf_req = {
+        "recipient_name": req.recipient_name,
+        "institution_id": inst_id,
+        "title": req.title,
+        "subtitle": req.subtitle,
+        "appreciation_text": req.appreciation_text,
+        "event_name": req.event_name,
+        "issue_date": issue_dt,
+        "certificate_number": cert_num,
+        "signatory_name": signatory_name,
+        "signatory_designation": signatory_desig,
+        "mentor_name": req.mentor_name,
+        "mentor_designation": req.mentor_designation
+    }
+    
+    pdf_path = pdf_service.generate_appreciation_certificate(pdf_req)
+    
+    log_audit("CREATE_APPRECIATION", "appreciation_certificates", cert_id, {"recipient": req.recipient_name, "cert_num": cert_num})
+    
+    return {
+        "success": True,
+        "id": cert_id,
+        "certificate_number": cert_num,
+        "verification_code": ver_code,
+        "pdf_url": f"/api/certificates/appreciation/{cert_id}/pdf",
+        "filename": os.path.basename(pdf_path)
+    }
+
+@app.get("/api/certificates/appreciation")
+def list_appreciation_certificates(institution_id: Optional[int] = None):
+    conn = get_db()
+    cursor = conn.cursor()
+    if institution_id:
+        cursor.execute("""
+        SELECT ac.*, inst.name as institution_name, inst.code as institution_code, inst.full_name as institution_full_name
+        FROM appreciation_certificates ac
+        LEFT JOIN institutions inst ON ac.institution_id = inst.id
+        WHERE ac.institution_id = ?
+        ORDER BY ac.id DESC
+        """, (institution_id,))
+    else:
+        cursor.execute("""
+        SELECT ac.*, inst.name as institution_name, inst.code as institution_code, inst.full_name as institution_full_name
+        FROM appreciation_certificates ac
+        LEFT JOIN institutions inst ON ac.institution_id = inst.id
+        ORDER BY ac.id DESC
+        """)
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+@app.get("/api/certificates/appreciation/{cert_id}/pdf")
+def download_appreciation_cert_pdf(cert_id: int):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+    SELECT ac.*, inst.code as institution_code
+    FROM appreciation_certificates ac
+    LEFT JOIN institutions inst ON ac.institution_id = inst.id
+    WHERE ac.id = ?
+    """, (cert_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="Appreciation certificate not found")
+    
+    data = dict(row)
+    pdf_req = {
+        "recipient_name": data["recipient_name"],
+        "institution_id": data["institution_id"],
+        "title": data["title"],
+        "subtitle": data.get("subtitle"),
+        "appreciation_text": data["appreciation_text"],
+        "event_name": data.get("event_name"),
+        "issue_date": data["issue_date"],
+        "certificate_number": data["certificate_number"],
+        "signatory_name": data.get("signatory_name"),
+        "signatory_designation": data.get("signatory_designation"),
+        "mentor_name": data.get("mentor_name"),
+        "mentor_designation": data.get("mentor_designation")
+    }
+    filepath = pdf_service.generate_appreciation_certificate(pdf_req)
+    return FileResponse(filepath, media_type="application/pdf", filename=os.path.basename(filepath))
+
+@app.post("/api/certificates/appreciation/preview")
+def preview_appreciation_cert(req: AppreciationCreateRequest):
+    pdf_req = {
+        "recipient_name": req.recipient_name,
+        "institution_id": req.institution_id or 1,
+        "title": req.title,
+        "subtitle": req.subtitle,
+        "appreciation_text": req.appreciation_text,
+        "event_name": req.event_name,
+        "issue_date": req.issue_date or datetime.now().strftime("%Y-%m-%d"),
+        "certificate_number": req.certificate_number or "PREVIEW-APP-2026",
+        "signatory_name": req.signatory_name,
+        "signatory_designation": req.signatory_designation,
+        "mentor_name": req.mentor_name,
+        "mentor_designation": req.mentor_designation
+    }
+    filepath = pdf_service.generate_appreciation_certificate(pdf_req)
+    return FileResponse(filepath, media_type="application/pdf", filename=os.path.basename(filepath))
+
+@app.delete("/api/certificates/appreciation/{cert_id}")
+def delete_appreciation_cert(cert_id: int, user = Depends(get_current_user)):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM appreciation_certificates WHERE id = ?", (cert_id,))
+    conn.commit()
+    conn.close()
+    log_audit("DELETE_APPRECIATION", "appreciation_certificates", cert_id, {})
+    return {"success": True}
+
 # -------------------------------------------------------------
 # 14b. Backup & Restore Endpoints
 # -------------------------------------------------------------
@@ -1474,7 +1648,7 @@ def clear_attendance(id: int, user = Depends(get_current_user)):
 # -------------------------------------------------------------
 class QuickGenerateRequest(BaseModel):
     # Step 0: Issuing Organization Selection
-    institution_id: int = 1  # 1 for TechnoGlobe, 2 for Poddar College
+    institution_id: int = 1  # 1 for Poddar College, 2 for Poswal Developers, 3 for Technoglobe Jaipur
 
     # Step 1: Student Information
     full_name: str
@@ -1493,8 +1667,10 @@ class QuickGenerateRequest(BaseModel):
     academic_session: str = "2025-2026"
 
     # Step 2: Course, Track & Faculty Selection
-    course_track: str = "DA"  # "DA", "DM", "FS", "AI", "CS", "CC", "JV", "BI", "AD"
-    mentor_id: Optional[int] = None  # 1 for Prof. Krishlay Sharma, 2 for Prof. Rahul Bhatnagar
+    course_track: str = "DA"
+    mentor_id: Optional[int] = None
+    custom_faculty_name: Optional[str] = None
+    custom_faculty_designation: Optional[str] = None
     start_date: str = "2026-06-01"
     end_date: str = "2026-07-12"
     custom_project_title: Optional[str] = None
@@ -1566,14 +1742,37 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
     course = dict(course)
     course_id = course["id"]
     
-    # Faculty supervisor resolution
+    # Faculty supervisor resolution (Optional: if empty, mentor_id is None -> single authority Nitin Agarwal)
+    mentor_id = None
     if is_poswal:
-        mentor_id = 1  # Mahesh Chand Saini (Trainer - Poswal Developers)
-    else:
-        if req.mentor_id and req.mentor_id in (2, 3):
+        if req.custom_faculty_name and req.custom_faculty_name.strip():
+            cursor.execute("SELECT id FROM mentors WHERE name = ?", (req.custom_faculty_name.strip(),))
+            m_row = cursor.fetchone()
+            if m_row:
+                mentor_id = m_row["id"]
+            else:
+                cursor.execute("INSERT INTO mentors (name, designation, email, is_active) VALUES (?, ?, '', 1)", 
+                               (req.custom_faculty_name.strip(), req.custom_faculty_designation or "Trainer - Poswal Developers"))
+                mentor_id = cursor.lastrowid
+        elif req.mentor_id:
             mentor_id = req.mentor_id
         else:
-            mentor_id = 3 if track in ('DM', 'AD') else 2  # Krishlay / Rahul (Poddar College)
+            mentor_id = 1  # Mahesh Chand Saini
+    else:
+        # Poddar & Technoglobe
+        if req.custom_faculty_name and req.custom_faculty_name.strip():
+            cursor.execute("SELECT id FROM mentors WHERE name = ?", (req.custom_faculty_name.strip(),))
+            m_row = cursor.fetchone()
+            if m_row:
+                mentor_id = m_row["id"]
+            else:
+                cursor.execute("INSERT INTO mentors (name, designation, email, is_active) VALUES (?, ?, '', 1)", 
+                               (req.custom_faculty_name.strip(), req.custom_faculty_designation or "Faculty Guide"))
+                mentor_id = cursor.lastrowid
+        elif req.mentor_id and req.mentor_id > 0:
+            mentor_id = req.mentor_id
+        else:
+            mentor_id = None  # None -> Single authority signature for Nitin Agarwal!
 
     # 4. Internship Record
     cursor.execute("""

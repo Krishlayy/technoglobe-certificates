@@ -9,12 +9,12 @@ const DEFAULT_INSTITUTIONS: Institution[] = [
     name: 'Poddar College',
     full_name: 'PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT',
     tagline: 'Excellence in Technology & Management',
-    address: 'Bharatpur, Rajasthan',
+    address: 'Near SP Office, Bharatpur (Raj.)',
     phone: '9414293370',
-    email: 'nitin@pctm',
+    email: 'nitin_pitm@yahoo.com',
     website: 'https://poddarcollege.org',
     signatory_name: 'Nitin Agarwal',
-    signatory_designation: 'Authority',
+    signatory_designation: 'Director / Authority',
     stamp_mode: 'EMPTY_INK_PAD_BOX',
     cert_prefix: 'PCTM',
     doc_prefix: 'PCTM/BPT',
@@ -46,6 +46,27 @@ const DEFAULT_INSTITUTIONS: Institution[] = [
     secondary_color: '#1D4ED8',
     accent_color: '#B45309',
     is_active: 1
+  },
+  {
+    id: 3,
+    code: 'TECHNOGLOBE',
+    name: 'Technoglobe Jaipur',
+    full_name: 'TECHNOGLOBE - ADVANCED IT TRAINING & DEVELOPMENT',
+    tagline: 'Premier Software & Emerging Technologies Institute',
+    address: 'Plot No. 4, Gopalpura Bypass Road, Near Triveni Nagar, Jaipur (Raj.) 302018',
+    phone: '9829012345',
+    email: 'info@technoglobe.co.in',
+    website: 'https://technoglobe.co.in',
+    signatory_name: 'Nitin Agarwal',
+    signatory_designation: 'Director / Authority',
+    stamp_mode: 'EMPTY_INK_PAD_BOX',
+    cert_prefix: 'TG-JPR',
+    doc_prefix: 'TG/JPR',
+    logo_path: 'technoglobe_logo.png',
+    primary_color: '#1E3A8A',
+    secondary_color: '#0284C7',
+    accent_color: '#F59E0B',
+    is_active: 1
   }
 ];
 
@@ -56,6 +77,7 @@ interface InstitutionContextType {
   selectInstitution: (id: number) => void;
   isPoddar: boolean;
   isPoswal: boolean;
+  isTechnoglobe: boolean;
   institutions: Institution[];
 }
 
@@ -88,13 +110,14 @@ export const InstitutionProvider: React.FC<{ children: ReactNode }> = ({ childre
   const rawActive = institutions.find(i => i.id === institutionId) || institutions[0] || DEFAULT_INSTITUTIONS[0];
   const isPoddar = rawActive.code === 'PODDAR' || institutionId === 1;
   const isPoswal = rawActive.code === 'POSWAL' || institutionId === 2;
+  const isTechnoglobe = rawActive.code === 'TECHNOGLOBE' || institutionId === 3;
 
   const activeInstitution: Institution = {
     ...rawActive,
     fullName: rawActive.full_name,
-    logo: rawActive.logo_path ? (rawActive.logo_path.startsWith('/') ? rawActive.logo_path : `/${rawActive.logo_path}`) : (isPoswal ? '/poswal_logo.png' : '/poddar_logo.png'),
+    logo: rawActive.logo_path ? (rawActive.logo_path.startsWith('/') ? rawActive.logo_path : `/${rawActive.logo_path}`) : (isPoswal ? '/poswal_logo.png' : (isTechnoglobe ? '/technoglobe_logo.png' : '/poddar_logo.png')),
     location: rawActive.address,
-    badgeText: isPoswal ? 'GST: 08ABIFP2454N1ZQ | MSME: UDYAM-RJ-06-0052498' : 'Poddar College of Technology & Management • Bharatpur'
+    badgeText: isPoswal ? 'GST: 08ABIFP2454N1ZQ | MSME: UDYAM-RJ-06-0052498' : (isTechnoglobe ? 'TechnoGlobe - Advanced IT Training & Development • Jaipur' : 'Poddar College of Technology & Management • Near SP Office, Bharatpur')
   };
 
   return (
@@ -106,6 +129,7 @@ export const InstitutionProvider: React.FC<{ children: ReactNode }> = ({ childre
         selectInstitution,
         isPoddar,
         isPoswal,
+        isTechnoglobe,
         institutions
       }}
     >
