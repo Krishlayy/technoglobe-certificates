@@ -801,73 +801,7 @@ export const StepByStepWizardPage: React.FC = () => {
               />
             </div>
 
-            {/* College */}
-            <div>
-              <label className={labelStyle}>
-                College / Training Entity ({formData.institution_id === 2 ? 'Poswal Developers' : 'Poddar College'}) *
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={formData.college_name}
-                  onChange={(e) => setFormData({ ...formData, college_name: e.target.value })}
-                  className={inputStyle}
-                />
-                <Building2 className="w-5 h-5 text-slate-400 absolute right-3.5 top-3.5" />
-              </div>
-              <p className="text-[11px] text-slate-500 mt-1">
-                {formData.institution_id === 2
-                  ? 'Poswal Developers Training Division, Bharatpur.'
-                  : 'Poddar College, Bharatpur (Direct College Credential).'}
-              </p>
-            </div>
 
-            {/* Degree */}
-            <div>
-              <label className={labelStyle}>Degree / Program *</label>
-              <select
-                value={formData.degree}
-                onChange={(e) => {
-                  const deg = e.target.value;
-                  let defBranch = formData.branch;
-                  if (deg === 'BCA') defBranch = 'Computer Science';
-                  else if (deg === 'B.Sc (Bio)') defBranch = 'Biology';
-                  else if (deg === 'B.Sc (Math)') defBranch = 'Mathematics';
-                  else if (deg === 'B.Sc (Physics)') defBranch = 'Physics';
-                  setFormData({ ...formData, degree: deg, branch: defBranch });
-                }}
-                className={inputStyle}
-              >
-                <option value="BCA">BCA (Bachelor of Computer Applications)</option>
-                <option value="B.Sc (Bio)">B.Sc (Biology)</option>
-                <option value="B.Sc (Math)">B.Sc (Mathematics)</option>
-                <option value="B.Sc (Physics)">B.Sc (Physics)</option>
-              </select>
-            </div>
-
-            {/* Branch / Stream */}
-            <div>
-              <label className={labelStyle}>Branch / Stream / Department *</label>
-              <input
-                type="text"
-                value={formData.branch}
-                onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
-                placeholder="e.g. Computer Science / Mathematics / Physics / Biology"
-                className={inputStyle}
-              />
-            </div>
-
-            {/* Academic Session */}
-            <div>
-              <label className={labelStyle}>Academic Session</label>
-              <input
-                type="text"
-                value={formData.academic_session}
-                onChange={(e) => setFormData({ ...formData, academic_session: e.target.value })}
-                placeholder="2025-2026"
-                className={inputStyle}
-              />
-            </div>
           </div>
 
           <div className="pt-4 border-t border-slate-200 flex items-center justify-between">

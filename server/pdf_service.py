@@ -1319,10 +1319,13 @@ def generate_completion_certificate(internship_id: int) -> str:
         sec_line = "• PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT • BHARATPUR, RAJASTHAN • AUTHENTIC ACADEMIC CREDENTIAL •"
     c.drawCentredString(width / 2.0, height - 85.8 * mm, sec_line)
 
-    # Student College / Academic Details (Centered)
-    c.setFont("Helvetica", 10.8)
+    # Student College / Affiliation (Centered & Elegant)
+    c.setFont("Helvetica", 11)
     c.setFillColor(DARK)
-    acad_text = f"Student of {it['college_name']} | {it['degree']} ({it['branch']}) | Session: {it['academic_session']}"
+    if is_poswal:
+        acad_text = "Enrolled Trainee at Poswal Developers Technical Training Division, Bharatpur"
+    else:
+        acad_text = "Student of Poddar College of Technology & Management, Bharatpur (Raj.)"
     c.drawCentredString(width / 2.0, height - 95.0 * mm, acad_text)
 
     # Completion Body Text (Centered & Balanced)
@@ -1414,7 +1417,7 @@ def generate_completion_certificate(internship_id: int) -> str:
     c.setFillColor(DARK)
     c.drawString(text_x, box_y + 25.5 * mm, f"Candidate: {it['student_name']}")
     c.drawString(text_x, box_y + 21.0 * mm, f"Program: {it['course_name']}")
-    c.drawString(text_x, box_y + 16.5 * mm, f"Degree: {deg_text} ({sem_text})")
+    c.drawString(text_x, box_y + 16.5 * mm, f"Authorized Centre: {prof['name']}")
     c.drawString(text_x, box_y + 12.0 * mm, f"Cert No: {cert_num}")
     c.drawString(text_x, box_y + 7.5 * mm, f"Issue Date: {issue_date} • {prof.get('code', 'PCTM')}")
 
