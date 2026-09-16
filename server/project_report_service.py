@@ -1,3 +1,71 @@
+
+def resolve_institution_profile(institution_id: int):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM institutions WHERE id = ?", (institution_id,))
+    inst_row = cursor.fetchone()
+    if not inst_row:
+        cursor.execute("SELECT * FROM institutions ORDER BY id ASC LIMIT 1")
+        inst_row = cursor.fetchone()
+    inst = dict(inst_row) if inst_row else {}
+    conn.close()
+
+    is_poswal = (inst.get("code") == "POSWAL" or institution_id == 2 or "Poswal" in inst.get("name", ""))
+    if is_poswal:
+        return {
+            "id": 2,
+            "code": "POSWAL",
+            "name": "Poswal Developers",
+            "full_name": "POSWAL DEVELOPERS",
+            "centre_name": "POSWAL DEVELOPERS – BHARATPUR",
+            "tagline": "Solar Power & Industrial Development",
+            "address": "214, Bapu Nagar, Madan Vihar Colony, Kali Baghichi, Ghana Road, Bharatpur (Raj.) 321001",
+            "phone": "9414694727",
+            "email": "madhuvangurjar19@gmail.com",
+            "website": "https://poswaldevelopers.com",
+            "gst_no": "08ABIFP2454N1ZQ",
+            "msme_no": "UDYAM-RJ-06-0052498",
+            "logo_path": "poswal_logo.png",
+            "letterhead_banner_path": "poswal_letterhead_banner.png",
+            "primary_color": "#6B2222",
+            "secondary_color": "#1D4ED8",
+            "accent_color": "#B45309",
+            "signatory_name": "Madhuvan Singh Gurjar",
+            "signatory_designation": "Authority",
+            "default_trainer_name": "Mahesh Chand Saini",
+            "default_trainer_designation": "Trainer",
+            "stamp_mode": "EMPTY_INK_PAD_BOX",
+            "watermark_mode": "POSWAL_LOGO_TRANSLUCENT",
+            "doc_prefix": "POSWAL/BPT",
+            "cert_prefix": "POSWAL"
+        }
+    else:
+        return {
+            "id": 1,
+            "code": "PODDAR",
+            "name": "Poddar College",
+            "full_name": "PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT",
+            "centre_name": "PODDAR COLLEGE – BHARATPUR",
+            "tagline": "Excellence in Technology & Management",
+            "address": "Bharatpur, Rajasthan",
+            "phone": "9414293370",
+            "email": "nitin@pctm",
+            "website": "https://poddarcollege.org",
+            "logo_path": "poddar_logo.png",
+            "letterhead_banner_path": "",
+            "primary_color": "#0A2540",
+            "secondary_color": "#1E3A8A",
+            "accent_color": "#EAA824",
+            "signatory_name": "Nitin Agarwal",
+            "signatory_designation": "Authority",
+            "default_trainer_name": "Krishlay",
+            "default_trainer_designation": "Faculty",
+            "stamp_mode": "EMPTY_INK_PAD_BOX",
+            "watermark_mode": "PODDAR_LOGO_TRANSLUCENT",
+            "doc_prefix": "PCTM/BPT",
+            "cert_prefix": "PCTM"
+        }
+
 import os
 import json
 from datetime import datetime
@@ -709,7 +777,7 @@ def build_25page_academic_project_report(internship_id: int) -> str:
     end_date = str(it.get('end_date') or "2026-07-12")[:10]
     project_title = it.get('internship_title') or f"MediConnect: {course_name} Healthcare Appointment Portal"
     project_desc = f"Enterprise software engineering capstone focused on {course_name}."
-        inst_id = it.get("institution_id", 1)
+    inst_id = it.get("institution_id", 1)
     if not inst_id or inst_id == 1:
         if str(course_code).startswith("SOL") or "POSWAL" in str(enrollment_no) or "Solar" in str(course_name):
             inst_id = 2
