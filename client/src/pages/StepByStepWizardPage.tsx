@@ -279,7 +279,7 @@ export const StepByStepWizardPage: React.FC = () => {
 
     // Step 2: Course & Track Selection & Faculty
     course_track: 'DA',
-    mentor_id: 1,
+    mentor_id: 2,
     start_date: '2026-06-01',
     end_date: '2026-07-12',
     custom_project_title: '',
@@ -291,6 +291,118 @@ export const StepByStepWizardPage: React.FC = () => {
     evaluation_score: 94,
     mentor_remarks: 'Demonstrated exemplary technical aptitude, consistency, and professional work ethic throughout the 6-week internship.'
   });
+
+  // Auto-Save and Restore Draft from localStorage
+  React.useEffect(() => {
+    const saved = localStorage.getItem('wizard_form_draft');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.full_name) {
+          setFormData((prev) => ({ ...prev, ...parsed }));
+        }
+      } catch {}
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (formData.full_name) {
+      localStorage.setItem('wizard_form_draft', JSON.stringify(formData));
+    }
+  }, [formData]);
+
+  const toTitleCase = (str: string) => {
+    return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
+  };
+
+  const handleFillPoddarSample = () => {
+    handleInstitutionChange(1);
+    setFormData((prev) => ({
+      ...prev,
+      institution_id: 1,
+      full_name: 'Sneha Agarwal',
+      father_mother_name: 'Sh. Nitin Agarwal',
+      dob: '2004-03-20',
+      gender: 'Female',
+      mobile: '9414293370',
+      email: 'sneha.agarwal@example.com',
+      address: 'Poddar College Campus, Bharatpur',
+      city: 'Bharatpur',
+      state: 'Rajasthan',
+      college_name: 'Poddar College, Bharatpur',
+      degree: 'BCA',
+      branch: 'Computer Science',
+      semester_year: '6th Semester',
+      academic_session: '2025-2026',
+      course_track: 'DA',
+      mentor_id: 2,
+      start_date: '2026-06-01',
+      end_date: '2026-07-12',
+      custom_project_title: 'Retail Sales Performance & Customer Churn Analytics Dashboard',
+      attendance_preset: '100',
+      evaluation_score: 96,
+      mentor_remarks: 'Demonstrated exemplary technical diligence, advanced SQL & Power BI analytics modeling, and outstanding project delivery.'
+    }));
+  };
+
+  const handleFillPoswalSample = () => {
+    handleInstitutionChange(2);
+    setFormData((prev) => ({
+      ...prev,
+      institution_id: 2,
+      full_name: 'Devendra Gurjar',
+      father_mother_name: 'Sh. Madhuvan Singh Gurjar',
+      dob: '2003-08-14',
+      gender: 'Male',
+      mobile: '9414694727',
+      email: 'devendra.gurjar@example.com',
+      address: '214, Bapu Nagar, Ghana Road, Bharatpur (Raj.) 321001',
+      city: 'Bharatpur',
+      state: 'Rajasthan',
+      college_name: 'Poswal Developers Training Division, Bharatpur',
+      degree: 'Diploma / B.Tech (Solar & Electrical)',
+      branch: 'Solar PV Systems & Grid-Tied Technology',
+      semester_year: '6th Semester',
+      academic_session: '2025-2026',
+      course_track: 'SOL-01',
+      mentor_id: 1,
+      start_date: '2026-06-01',
+      end_date: '2026-07-12',
+      custom_project_title: '50 kWp Commercial Rooftop Solar PV & Building-Integrated (BIPV) System Installation',
+      attendance_preset: '100',
+      evaluation_score: 95,
+      mentor_remarks: 'Exhibited superior understanding of rooftop civil structural layouts, string inverter synchronization, and DISCOM electrical safety standards.'
+    }));
+  };
+
+  const handleResetForm = () => {
+    localStorage.removeItem('wizard_form_draft');
+    setFormData({
+      institution_id: globalInstId || 1,
+      full_name: '',
+      father_mother_name: '',
+      dob: '2004-05-15',
+      gender: 'Male',
+      mobile: '9829012345',
+      email: '',
+      address: 'Poddar College Campus, Bharatpur',
+      city: 'Bharatpur',
+      state: 'Rajasthan',
+      college_name: 'Poddar College, Bharatpur',
+      degree: 'BCA',
+      branch: 'Computer Science',
+      semester_year: '6th Semester',
+      academic_session: '2025-2026',
+      course_track: 'DA',
+      mentor_id: 2,
+      start_date: '2026-06-01',
+      end_date: '2026-07-12',
+      custom_project_title: '',
+      attendance_preset: '100',
+      evaluation_score: 94,
+      mentor_remarks: 'Demonstrated exemplary technical aptitude, consistency, and professional work ethic throughout the 6-week internship.'
+    });
+  };
 
     const handleInstitutionChange = (instId: number) => {
     selectInstitution(instId);
@@ -513,6 +625,44 @@ export const StepByStepWizardPage: React.FC = () => {
             </span>
           </div>
 
+          {/* Quick 1-Click Preset Bar for Zero-Effort Generation */}
+          <div className="bg-linear-to-r from-amber-500/15 via-blue-500/10 to-indigo-500/15 border border-amber-300/80 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center space-x-2.5">
+              <div className="w-8 h-8 rounded-lg bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 font-bold">
+                ⚡
+              </div>
+              <div className="text-left">
+                <span className="text-xs font-bold text-slate-900 block">Quick 1-Click Autofill Presets</span>
+                <span className="text-[11px] text-slate-600">Populate realistic test candidate particulars instantly</span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handleFillPoddarSample}
+                className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-transform active:scale-95 cursor-pointer flex items-center space-x-1"
+              >
+                <span>🎓 Fill Poddar BCA</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleFillPoswalSample}
+                className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-xs transition-transform active:scale-95 cursor-pointer flex items-center space-x-1"
+              >
+                <span>☀️ Fill Poswal Solar</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleResetForm}
+                className="px-2.5 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
+                title="Reset Form to Defaults"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+
           {/* Organization / Institution Selector Cards */}
           <div className="space-y-2">
             <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-700">
@@ -594,6 +744,11 @@ export const StepByStepWizardPage: React.FC = () => {
                 onChange={(e) => {
                   setError('');
                   setFormData({ ...formData, full_name: e.target.value });
+                }}
+                onBlur={(e) => {
+                  if (e.target.value) {
+                    setFormData({ ...formData, full_name: toTitleCase(e.target.value) });
+                  }
                 }}
                 placeholder="Type full name, e.g. Rohan Sharma"
                 className={`${inputStyle} ring-2 ring-blue-500/20`}

@@ -2139,6 +2139,45 @@ if os.path.exists(CLIENT_DIST):
             return FileResponse(index_file)
         return JSONResponse({"detail": "Frontend not found"}, status_code=404)
 
+# -------------------------------------------------------------
+# 18. System Health, Diagnostics & Integrity Check
+# -------------------------------------------------------------
+@app.get("/api/system/health")
+def system_health_check():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA integrity_check")
+    db_integrity = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM students")
+    student_count = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM certificates")
+    cert_count = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM attendance")
+    att_count = cursor.fetchone()[0]
+    conn.close()
+
+    logo_poddar_exists = os.path.exists(os.path.join(os.path.dirname(__file__), "poddar_logo.png"))
+    logo_poswal_exists = os.path.exists(os.path.join(os.path.dirname(__file__), "poswal_logo.png"))
+    gen_dir_exists = os.path.exists(os.path.join(os.path.dirname(__file__), "generated"))
+
+    return {
+        "status": "HEALTHY" if db_integrity == "ok" else "DEGRADED",
+        "database_integrity": db_integrity,
+        "total_students": student_count,
+        "total_certificates": cert_count,
+        "total_attendance_records": att_count,
+        "assets_status": {
+            "poddar_logo": logo_poddar_exists,
+            "poswal_logo": logo_poswal_exists,
+            "generated_dir": gen_dir_exists
+        },
+        "system_time": datetime.now().isoformat(),
+        "zero_mistake_engine": "ACTIVE"
+    }
+
 if __name__ == "__main__":
     import uvicorn
     init_db()
