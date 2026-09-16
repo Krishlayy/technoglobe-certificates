@@ -12,7 +12,7 @@ import { useInstitution } from '../contexts/InstitutionContext';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const { activeInstitution, institutionId, isPoddar, isPoswal } = useInstitution();
+  const { activeInstitution, institutionId, isPoddar, isPoswal, isTechnoglobe } = useInstitution();
   const [stats, setStats] = useState<any>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [search, setSearch] = useState('');
@@ -48,40 +48,51 @@ export const DashboardPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Top Banner */}
-      <div className={`rounded-2xl p-6 text-white shadow-md border flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+      <div className={`rounded-3xl p-6 sm:p-8 text-white shadow-xl border flex flex-col md:flex-row md:items-center justify-between gap-6 ${
         isPoswal 
-          ? 'bg-linear-to-r from-red-950 via-amber-950 to-stone-900 border-amber-900/60' 
-          : 'bg-linear-to-r from-blue-950 via-slate-900 to-blue-900 border-blue-900'
+          ? 'bg-gradient-to-r from-red-950 via-amber-950 to-stone-900 border-amber-900/60' 
+          : isTechnoglobe
+          ? 'bg-gradient-to-r from-slate-950 via-indigo-950 to-blue-950 border-indigo-900/60'
+          : 'bg-gradient-to-r from-blue-950 via-slate-900 to-blue-900 border-blue-900'
       }`}>
         <div>
-          <div className="flex items-center space-x-2 text-amber-300 text-xs font-semibold tracking-wider uppercase mb-1">
+          <div className="flex items-center space-x-2 text-amber-300 text-xs font-bold tracking-wider uppercase mb-1.5">
             <ShieldCheck className="w-4 h-4" />
             <span>{activeInstitution.badgeText}</span>
           </div>
-          <h1 className="text-2xl md:text-3xl font-serif font-bold text-white tracking-tight">
-            {activeInstitution.fullName}
+          <h1 className="text-2xl sm:text-3xl font-serif font-black text-white tracking-tight">
+            {activeInstitution.full_name || activeInstitution.name}
           </h1>
-          <p className="text-xs md:text-sm text-slate-200 mt-1 max-w-2xl leading-relaxed">
+          <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-2xl leading-relaxed">
             {isPoswal 
-              ? 'Industrial Solar Energy & Rooftop PV Training Portal with MSME/GST registration, automated logbooks, safety compliance, and ISO/MSME verified certificates.'
-              : 'Single-entry student registration, automated curriculum logbooks, mentor evaluation rubrics, institutional compliance, and one-click 15-document internship package generation.'
+              ? 'Industrial Solar Energy & Rooftop PV Training Division with MSME/GST registration, automated logbooks, and official scannable certificates.'
+              : isTechnoglobe
+              ? 'Premier Advanced IT & Software Engineering Institute (Jaipur) with automated dossier compilation and scannable QR verification.'
+              : 'Poddar College of Technology & Management (Near SP Office, Bharatpur) • Academic & Technical Degree Certifications with 15-document dossier packages.'
             }
           </p>
         </div>
 
-        <div className="flex items-center space-x-3 shrink-0">
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
           <Link
             to="/wizard"
-            className="inline-flex items-center space-x-2 px-5 py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs shadow-md transition-transform active:scale-95"
+            className="inline-flex items-center space-x-2 px-5 py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-md transition-all cursor-pointer"
           >
             <Wand2 className="w-4 h-4 text-slate-950" />
-            <span>5-Step Generator</span>
+            <span>15-Doc Dossier Wizard</span>
+          </Link>
+          <Link
+            to="/appreciation"
+            className="inline-flex items-center space-x-2 px-4 py-3 rounded-xl bg-white/15 hover:bg-white/25 text-white border border-white/20 font-bold text-xs shadow-sm transition-all cursor-pointer"
+          >
+            <Award className="w-4 h-4 text-amber-300" />
+            <span>Appreciation Studio</span>
           </Link>
           <Link
             to="/document-editor"
-            className="inline-flex items-center space-x-2 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 font-semibold text-xs shadow-sm transition-colors"
+            className="inline-flex items-center space-x-2 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 font-semibold text-xs shadow-sm transition-colors cursor-pointer"
           >
-            <FileText className="w-4 h-4 text-amber-300" />
+            <FileText className="w-4 h-4 text-slate-300" />
             <span>Live Editor</span>
           </Link>
         </div>
