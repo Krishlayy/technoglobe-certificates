@@ -77,6 +77,25 @@ export const Navbar: React.FC = () => {
               </span>
             </button>
 
+            {/* Direct Certificate Creation Links */}
+            <Link
+              to="/appreciation"
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 border border-amber-400/40 text-xs font-black transition-all shadow-xs cursor-pointer"
+              title="Custom Certificate of Appreciation Studio"
+            >
+              <Award className="w-4 h-4 text-amber-400" />
+              <span className="hidden sm:inline">Appreciation Studio</span>
+            </Link>
+
+            <Link
+              to="/wizard"
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-blue-500/30 hover:bg-blue-500/40 text-blue-200 border border-blue-400/40 text-xs font-black transition-all shadow-xs cursor-pointer"
+              title="15-Document Dossier & Completion Certificate Wizard"
+            >
+              <Wand2 className="w-4 h-4 text-blue-300" />
+              <span className="hidden sm:inline">15-Doc Wizard</span>
+            </Link>
+
             {/* Switch Portal Modal Button */}
             <button
               onClick={() => setShowSwitchModal(true)}
