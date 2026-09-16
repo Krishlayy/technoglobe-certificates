@@ -452,11 +452,19 @@ export const DocumentEditorPage: React.FC = () => {
 
                 {/* Stamp Box (Cols 6-7) */}
                 <div className="col-span-2 text-center">
-                  <div className="w-14 h-14 mx-auto border border-dashed border-slate-400 rounded-sm flex flex-col items-center justify-center text-[6.5px] text-slate-400 uppercase font-semibold">
-                    <span>OFFICIAL</span>
-                    <span>CENTRE</span>
-                    <span>SEAL</span>
-                  </div>
+                  {isPoswal ? (
+                    <div className="w-14 h-14 mx-auto border border-amber-300 bg-white rounded-sm flex flex-col items-center justify-center p-1 shadow-sm">
+                      <img src="/msme_logo.png" alt="MSME Logo" className="w-8 h-8 object-contain mb-0.5" />
+                      <span className="text-[5.5px] font-bold text-blue-950 leading-tight">GOVT. OF INDIA</span>
+                      <span className="text-[5px] font-semibold text-slate-600 leading-tight">MSME REG.</span>
+                    </div>
+                  ) : (
+                    <div className="w-14 h-14 mx-auto border border-dashed border-slate-400 rounded-sm flex flex-col items-center justify-center text-[6.5px] text-slate-400 uppercase font-semibold">
+                      <span>OFFICIAL</span>
+                      <span>COLLEGE</span>
+                      <span>SEAL</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Signatures (Cols 8-12) */}

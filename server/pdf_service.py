@@ -1425,23 +1425,54 @@ def generate_completion_certificate(internship_id: int) -> str:
     c.setFillColor(colors.HexColor("#059669"))
     c.drawString(text_x, box_y + 3.0 * mm, f"✓ Cryptographic Signature: {sig[:8]}... (Authentic)")
 
-    # Center: Empty Space for Physical Ink Stamp
+    # Center: Seal Container (Official MSME Logo for Poswal, Empty Ink Box for Poddar)
     stamp_x = 111 * mm
     stamp_y = 14 * mm
     stamp_w = 34 * mm
     stamp_h = 36 * mm
     c.saveState()
-    c.setStrokeColor(colors.HexColor("#94A3B8"))
-    c.setLineWidth(0.8)
-    c.setDash(2, 1.5)
-    c.setFillColor(colors.HexColor("#FFFFFF"))
-    c.roundRect(stamp_x, stamp_y, stamp_w, stamp_h, 2*mm, fill=1, stroke=1)
-    c.setFont("Helvetica-Bold", 5.5)
-    c.setFillColor(colors.HexColor("#64748B"))
-    seal_label = "[ OFFICIAL COMPANY SEAL ]" if is_poswal else "[ OFFICIAL COLLEGE SEAL ]"
-    c.drawCentredString(stamp_x + stamp_w/2.0, stamp_y + stamp_h/2.0 + 3*mm, seal_label)
-    c.setFont("Helvetica-Oblique", 5)
-    c.drawCentredString(stamp_x + stamp_w/2.0, stamp_y + stamp_h/2.0 - 3*mm, "(Apply Ink Stamp Here)")
+    if is_poswal:
+        msme_logo_path = os.path.join(os.path.dirname(__file__), "msme_logo.png")
+        c.setStrokeColor(c_primary)
+        c.setLineWidth(0.9)
+        c.setFillColor(colors.HexColor("#FFFFFF"))
+        c.roundRect(stamp_x, stamp_y, stamp_w, stamp_h, 2 * mm, fill=1, stroke=1)
+
+        # Subtle decorative inner border
+        c.setStrokeColor(colors.HexColor("#E2E8F0"))
+        c.setLineWidth(0.5)
+        c.roundRect(stamp_x + 1.2 * mm, stamp_y + 1.2 * mm, stamp_w - 2.4 * mm, stamp_h - 2.4 * mm, 1.5 * mm, fill=0, stroke=1)
+
+        if os.path.exists(msme_logo_path):
+            logo_sz = 22 * mm
+            img_x = stamp_x + (stamp_w - logo_sz) / 2.0
+            img_y = stamp_y + stamp_h - logo_sz - 3.2 * mm
+            c.drawImage(msme_logo_path, img_x, img_y, width=logo_sz, height=logo_sz, mask='auto', preserveAspectRatio=True)
+
+            c.setFont("Helvetica-Bold", 5.2)
+            c.setFillColor(colors.HexColor("#1E3A8A"))
+            c.drawCentredString(stamp_x + stamp_w / 2.0, stamp_y + 6.2 * mm, "GOVT. OF INDIA")
+
+            c.setFont("Helvetica-Bold", 4.6)
+            c.setFillColor(colors.HexColor("#475569"))
+            c.drawCentredString(stamp_x + stamp_w / 2.0, stamp_y + 2.8 * mm, "MSME REGISTERED")
+        else:
+            c.setFont("Helvetica-Bold", 6.5)
+            c.setFillColor(c_primary)
+            c.drawCentredString(stamp_x + stamp_w / 2.0, stamp_y + stamp_h / 2.0 + 2 * mm, "MSME REGISTERED")
+            c.setFont("Helvetica", 5.5)
+            c.drawCentredString(stamp_x + stamp_w / 2.0, stamp_y + stamp_h / 2.0 - 3 * mm, "ENTERPRISE")
+    else:
+        c.setStrokeColor(colors.HexColor("#94A3B8"))
+        c.setLineWidth(0.8)
+        c.setDash(2, 1.5)
+        c.setFillColor(colors.HexColor("#FFFFFF"))
+        c.roundRect(stamp_x, stamp_y, stamp_w, stamp_h, 2 * mm, fill=1, stroke=1)
+        c.setFont("Helvetica-Bold", 5.5)
+        c.setFillColor(colors.HexColor("#64748B"))
+        c.drawCentredString(stamp_x + stamp_w / 2.0, stamp_y + stamp_h / 2.0 + 3 * mm, "[ OFFICIAL COLLEGE SEAL ]")
+        c.setFont("Helvetica-Oblique", 5)
+        c.drawCentredString(stamp_x + stamp_w / 2.0, stamp_y + stamp_h / 2.0 - 3 * mm, "(Apply Ink Stamp Here)")
     c.restoreState()
 
     # Right: Dual Signatures (Trainer / Faculty on Left, Authority on Right)
