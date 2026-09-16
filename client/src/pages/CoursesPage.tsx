@@ -85,15 +85,15 @@ export const CoursesPage: React.FC = () => {
         </div>
 
         {/* Course Selection Tabs */}
-        <div className="flex space-x-2 bg-slate-200/70 p-1 rounded-xl">
+        <div className="flex flex-wrap gap-1.5 bg-slate-200/70 p-1.5 rounded-xl max-w-full">
           {courses.map((c) => (
             <button
               key={c.id}
               onClick={() => handleSelectCourse(c.id)}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 selectedCourse?.id === c.id
-                  ? 'bg-brand-700 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-brand-700 text-white shadow-sm ring-1 ring-brand-800'
+                  : 'text-slate-700 hover:text-slate-900 bg-white/60 hover:bg-white'
               }`}
             >
               {c.name} ({c.code})

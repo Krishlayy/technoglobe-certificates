@@ -1522,9 +1522,15 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
         cursor.execute("SELECT * FROM institutions ORDER BY id ASC LIMIT 1")
         inst_row = cursor.fetchone()
     inst = dict(inst_row) if inst_row else {}
+    is_poswal = (inst.get("code") == "POSWAL" or inst_id == 2 or "Poswal" in inst.get("name", ""))
 
     # 2. Student Email & Record
     student_email = req.email.strip() if req.email and req.email.strip() else f"{req.full_name.lower().replace(' ', '.')}@example.com"
+    default_college = "Poswal Developers Technical Training Division, Bharatpur" if is_poswal else "Poddar College of Technology & Management, Bharatpur"
+    college_name = req.college_name.strip() if req.college_name and req.college_name.strip() else default_college
+    degree_name = req.degree.strip() if req.degree and req.degree.strip() else ("Diploma / B.Tech (Solar & Electrical)" if is_poswal else "BCA")
+    branch_name = req.branch.strip() if req.branch and req.branch.strip() else ("Solar Energy Systems" if is_poswal else "Computer Science")
+
     cursor.execute("""
     INSERT INTO students (
         full_name, father_mother_name, dob, gender, mobile, email, address, city, state,
@@ -1533,29 +1539,41 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
     """, (
         req.full_name.strip(), req.father_mother_name.strip(), req.dob, req.gender,
         req.mobile.strip(), student_email, req.address, req.city, req.state,
-        req.college_name, req.degree, req.branch, req.semester_year, req.academic_session
+        college_name, degree_name, branch_name, req.semester_year, req.academic_session
     ))
     student_id = cursor.lastrowid
 
-    # 3. Course Track & Faculty Mentor Resolution
-    track = req.course_track.upper()
-    valid_tracks = ("DA", "DM", "FS", "AI", "CS", "CC", "JV", "BI", "AD")
-    if track not in valid_tracks:
-        track = "DA"
+    # 3. Course Track & Faculty Mentor Resolution (Strict Separation)
+    track = req.course_track.strip().upper()
+    solar_tracks = ("SOL-01", "SOL-02", "SOL-03", "SOL-04", "SOL-05", "SOL-06", "SOL-07", "SOL-08")
+    it_tracks = ("DA", "DM", "FS", "AI", "CS", "CC", "JV", "BI", "AD")
+
+    if is_poswal:
+        if track not in solar_tracks:
+            track = "SOL-01"
+    else:
+        if track not in it_tracks:
+            track = "DA"
     
     cursor.execute("SELECT * FROM courses WHERE code = ?", (track,))
     course = cursor.fetchone()
     if not course:
-        cursor.execute("SELECT * FROM courses ORDER BY id ASC LIMIT 1")
+        if is_poswal:
+            cursor.execute("SELECT * FROM courses WHERE code LIKE 'SOL%' ORDER BY id ASC LIMIT 1")
+        else:
+            cursor.execute("SELECT * FROM courses WHERE code NOT LIKE 'SOL%' ORDER BY id ASC LIMIT 1")
         course = cursor.fetchone()
     course = dict(course)
     course_id = course["id"]
     
-    # Faculty supervisor resolution (Prof. Krishlay vs Prof. Rahul)
-    if req.mentor_id and req.mentor_id in (1, 2):
-        mentor_id = req.mentor_id
+    # Faculty supervisor resolution
+    if is_poswal:
+        mentor_id = 1  # Mahesh Chand Saini (Trainer - Poswal Developers)
     else:
-        mentor_id = 1 if track in ('DA', 'AI', 'FS', 'JV', 'CS', 'CC', 'AD', 'BI') else 2
+        if req.mentor_id and req.mentor_id in (2, 3):
+            mentor_id = req.mentor_id
+        else:
+            mentor_id = 3 if track in ('DM', 'AD') else 2  # Krishlay / Rahul (Poddar College)
 
     # 4. Internship Record
     cursor.execute("""
@@ -1567,13 +1585,19 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
     internship_id = cursor.lastrowid
 
     # 5. Compliance Record (Approved)
+    coord_name = "Mahesh Chand Saini" if is_poswal else "Prof. Anjali Mathur"
+    coord_desig = "Technical Training Head" if is_poswal else "Internship Coordinator"
+    appr_ref = "POSWAL/BPT/2026/088" if is_poswal else "PC/INT/2026/042"
+    dept_label = f"Technical Division of {branch_name}" if is_poswal else f"Department of {branch_name}"
+    affil_ref = "MSME/SOLAR/2026/044" if is_poswal else "BTER/TPO/2026/019"
+
     cursor.execute("""
     INSERT INTO compliance_records (
         internship_id, university_name, department, faculty_coordinator, faculty_designation,
         approval_status, approval_ref, approval_date, required_duration, required_hours, required_attendance_pct,
         affiliation_ref
-    ) VALUES (?, ?, ?, 'Prof. Anjali Mathur', 'Internship Coordinator', 'APPROVED', 'PC/INT/2026/042', '2026-05-28', '6 Weeks', 120, 75.0, 'BTER/TPO/2026/019')
-    """, (internship_id, req.college_name, f"Department of {req.branch}"))
+    ) VALUES (?, ?, ?, ?, ?, 'APPROVED', ?, '2026-05-28', '6 Weeks', 120, 75.0, ?)
+    """, (internship_id, college_name, dept_label, coord_name, coord_desig, appr_ref, affil_ref))
 
     # 6. 36 Working Days Attendance & Logbook Entries
     leave_set = set()
@@ -1590,6 +1614,127 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
     total_hours = 0.0
     present_count = 0
 
+    # --- Solar Curriculums (SOL-01 to SOL-08) ---
+    sol01_topics = [
+        "Solar PV Fundamentals & Semiconductor Physics", "Solar Geometry: Azimuth, Zenith & Sun Path Charts", "Solar Irradiance, Peak Sun Hours (PSH) & Air Mass",
+        "Monocrystalline vs Polycrystalline vs Bifacial Panels", "Rooftop Site Survey: Structural Load & Shading Obstacles", "Civil Ballast vs Anchor Fastener Layout Calculations",
+        "Building Integrated Photovoltaics (BIPV) Facades", "BIPV Architectural Glass & Thermal Dissipation", "Module Mounting Structure (MMS) HDGI Assembly",
+        "Purlin, Rafter & Column Assembly Specifications", "Mid-Clamps & End-Clamps Torque Tightening Protocols", "Solar DC Cable Sizing & TUV 2 Pfg 1169 Standards",
+        "DC Array Junction Box (AJB) & Surge Protection (SPD)", "MC4 Connector Crimping & Pull-Out Force Testing", "String Inverter Architecture & Efficiency Curves",
+        "Maximum Power Point Tracking (MPPT) Multi-Channel Design", "AC Distribution Board (ACDB) Wiring & Isolation MCBs", "Grid Synchronization: Voltage, Frequency & Phase Matching",
+        "Chemical Earthing Pit Excavation & Bentonite Mix", "Earth Resistance Testing with Fall-of-Potential (< 2 Ohm)", "Early Streamer Emission (ESE) Lightning Protection",
+        "DC Isolators, Fire Safety & Rapid Shutdown Protocols", "Insulation Resistance Testing (Megger 1000V DC)", "Open-Circuit Voltage (Voc) & Short-Circuit (Isc) Verification",
+        "DISCOM Net-Metering Bi-Directional Meter Setup", "Solar SCADA Telemetry & Remote Inverter Monitoring", "Preventive Cleaning Protocols & Deionized Water Systems",
+        "IV-Curve Diagnostics & Degradation Rate Analysis", "Thermal Hotspot Detection via Infrared Thermography", "BIPV Power Loss Minimization & Shading Bypasses",
+        "Commercial 50 kWp Rooftop Installation Case Study", "Safety Gear: Full-Body Harness, Static Life Lines & PPE", "Single Line Diagram (SLD) Drafting & Bill of Materials",
+        "Techno-Commercial Plant Inspection & Quality Punch-Lists", "DISCOM Grid Compliance & Handover Documentation", "Final Practical Commissioning & Performance Ratio Defense"
+    ]
+
+    sol02_topics = [
+        "Solar Structure Engineering & Material Metallurgy", "Hot-Dip Galvanized Iron (HDGI) vs Aluminum 6063 Alloy", "Civil Foundation Types: Stub, Ballast & Ground Screws",
+        "Wind Load Calculations as per IS 875 Part 3 Standards", "Dead Load, Live Load & Seismic Vibration Analysis", "Topographical Contouring & Land Leveling for Ground Mount",
+        "Rooftop Tin Shed Mounting: Klip-Lok vs Rivet Fasteners", "RCC Roof Water-Proofing & Chemical Anchor Grouting", "Purlin & Rafter Alignment using Optical Level & Plumb Line",
+        "Precision Torque Wrench Calibration & ISO 898 Standards", "Galvanic Corrosion Prevention between Dissimilar Metals", "Module Clamping Dynamics & Thermal Expansion Gaps",
+        "Elevated Superstructure Design for Dual-Use Roofs", "Tracker Systems: Single-Axis vs Dual-Axis Mechanics", "Structural Rigidity Testing & Dynamic Deflection Checks",
+        "Array Pitch & Row-to-Row Inter-Row Shadow Analysis", "Panel Laying Sequence & Anti-Scratch Handling", "Ground Mount Drainage & Cable Trench Construction",
+        "Perimeter Fencing, Gate Grounding & Access Roads", "Structural Quality Audit & Weld Defect Inspection", "Tilt Angle Optimization for Seasonal Sunlight Tracking",
+        "Module Mounting Structural Bill of Quantities (BOQ)", "Foundation Pull-Out Strength & Torque Testing", "Assembly of 4-Panel Ground Table with Heavy Cross-Bracing",
+        "Structural Layout for Industrial Tin Shed Factory Roofs", "Rooftop Walkways, Safety Handrails & Parapet Cleats", "Anti-Theft Fasteners & High-Security Nut Installation",
+        "MMS Corrosion Resistance & 25-Year Durability Audits", "Wind Deflector Fitting & Aerodynamic Drag Mitigation", "Structural Load Certification Preparation for Clients",
+        "Ground Mount Piling Machine Operations & Depth Control", "Pre-Assembly Sub-Structure Quality Verification Checklist", "Site Safety Protocols for Heavy Steel Structure Erection",
+        "Final Alignment Check using Laser Distance Meters", "Structural Commissioning Report & As-Built Layout", "Capstone Structure Design Viva Voce & Technical Defense"
+    ]
+
+    sol03_topics = [
+        "Solar Electrical Engineering & AC/DC Power Systems", "Solar DC Generation Characteristics & MPPT Algorithms", "Grid-Tied String Inverter vs Central Inverter Topologies",
+        "Micro-Inverter Architecture & Panel-Level Electronics", "Solar DC Cable Selection, Voltage Drop & Ampacity", "DC Disconnect Switches, High-Voltage Fuses & Surge Arrestors",
+        "AC Distribution Board (ACDB) Multi-Pole Circuit Breakers", "Residual Current Circuit Breakers (RCCB) & Earth Leakage", "Bi-Directional Net-Metering & Gross Metering Principles",
+        "DISCOM Interconnection Standards & IEEE 1547 Rules", "Phase Synchronization: Active Power, Reactive Power & Cos Phi", "Harmonic Distortion (THD) Measurement & Filtering",
+        "Solar Transformer Sizing: Step-Up & Distribution Units", "LT & HT Switchgear Operation & Busbar Sizing", "Anti-Islanding Protection & Loss-of-Mains Detection",
+        "Battery Storage Integration with Hybrid Bi-Directional Inverters", "Power Quality Analyzers & Grid Fault Ride-Through (GFRT)", "Modbus RTU / RS485 Industrial Inverter Communication",
+        "Energy Management System (EMS) & Smart Metering", "DC Arc Fault Circuit Interrupter (AFCI) Testing", "Cable Tray Installation, Perforated Trays & Gland Sealing",
+        "Chemical Earth Pit Connection & Copper Strip Grounding", "Lightning Arrestor Early Streamer Emission Integration", "Insulation Resistance (Megger) & Hi-Pot Testing",
+        "Zero-Export Controllers for Diesel Generator Synchronization", "EV Charging Station Integration with Rooftop Solar PV", "Solar Power Factor Correction & Capacitor Banks",
+        "Electrical Safety Gear: 11kV Insulated Gloves & Arc-Flash Suits", "Pre-Commissioning Electrical Inspection Checklist", "CEA Central Electricity Authority Regulations 2023",
+        "Single-Line Diagram (SLD) Design in AutoCAD Electrical", "DISCOM Inspection Dossier & Synchronization Testing", "Electrical Loss Minimization & Cable Schedule Optimization",
+        "Plant Energization Protocol & Voltage Step-Up Testing", "As-Built Electrical Drawings & Warranty Documentation", "Solar Electrical Systems Capstone Project Presentation"
+    ]
+
+    sol04_topics = [
+        "Utility-Scale Solar Power Plant Overview & O&M Paradigms", "Preventive, Corrective & Predictive Maintenance Strategies", "Solar SCADA Telemetry & Remote Operations Center (ROC)",
+        "Weather Monitoring Stations (WMS): Pyranometers & Anemometers", "Performance Ratio (PR) & Plant Availability Factoring", "Soiling Loss Measurement & Dust Deposition Indices",
+        "Robotic Dry Cleaning vs Semi-Automated Water Sprinklers", "Water Quality Requirements for Panel Cleaning (< 200 TDS)", "Thermal Imaging & Drone-Based Thermography Audits",
+        "Hotspot Classification, Snail Trails & Cell Cracking", "IV-Curve Tracing: Degradation, Shunt & Series Resistance", "String Monitoring & Combiner Box Fuse Inspection",
+        "Inverter Preventive Maintenance: Fan, Filter & IGBT Testing", "Inverter Error Codes, Alarm Diagnostics & Reset Protocols", "Transformer Oil DGA Testing & Dielectric Breakdown Voltage",
+        "HT Breaker Tripping Mechanism & Relay Coordination Checks", "Earth Pit Resistance Annual Audit & Moisture Recharging", "Lightning Protection System Inspection & Continuity Testing",
+        "Vegetation Management, Weed Control & Drainage Clearing", "Module Delamination, EVA Yellowing & Backsheet Chalking", "PID (Potential Induced Degradation) Diagnosis & Anti-PID Boxes",
+        "Spares Inventory Management & Critical Spares Strategy", "Health, Safety & Environment (HSE) Protocols in Solar O&M", "Work Permits: Lock-Out Tag-Out (LOTO) & Confined Space",
+        "Daily Generation Loss Breakdown & Anomaly Root Cause Analysis", "Monthly O&M Generation Report & Client KPI Dashboard", "SCADA Alarms Optimization & False Alarm Filtering",
+        "Degradation Rate Modeling (PVSyst vs Actual Yield)", "Warranty Claims Processing for Modules & Inverters", "Annual Comprehensive Plant Health Audit & Efficiency Index",
+        "Solar Plant Cybersecurity & Industrial Firewall Protection", "Emergency Response Plan: Fire, Grid Failure & High Wind", "Drone Inspection Data Processing & AI Anomaly Tagging",
+        "Preventive O&M Audit Checklist & Handover Dossier", "Plant Life Extension & Inverter Repowering Strategies", "Industrial O&M Capstone Audit Defense & Review"
+    ]
+
+    sol05_topics = [
+        "Solar Thermal & Pumping Systems Engineering", "Solar Water Heating: Flat Plate Collectors (FPC) Physics", "Evacuated Tube Collectors (ETC) Heat Pipe Technology",
+        "Thermosyphon vs Forced Circulation Active Systems", "Solar Thermal Storage Tanks, PUF Insulation & Heat Exchangers", "Solar Agricultural Pumping: PMDC, BLDC & AC Induction",
+        "Solar Variable Frequency Drive (VFD) Pump Controllers", "Solar Photovoltaic Array Sizing for Water Pumping", "Dynamic Head Calculation: Static Lift, Friction & Pipe Losses",
+        "Submersible Solar Pumps vs Surface Monoblock Pumps", "Agricultural Micro-Irrigation (Drip & Sprinkler) Coupling", "Sensors in Solar Pumps: Dry Run & Tank Full Floats",
+        "MPPT Solar Pump Inverter Programming & V/F Profiles", "Solar Water Heating System Hydraulic Piping Layout", "Expansion Tanks, Air Release Valves & Pressure Relief Valves",
+        "Anti-Freezing & Anti-Scaling Protection in Solar Heaters", "Solar Thermal Collector Efficiency Curves (ASHRAE 93)", "Domestic 200 LPD vs Industrial 5000 LPD Heating Design",
+        "PM-KUSUM Scheme Guidelines & DISCOM Feeder Solarization", "Solar Water Pumping Installation & Civil Foundation", "Structure Assembly for Solar Agricultural Arrays",
+        "Wiring, Earthing & Lightning Protection for Rural Pumps", "Solar Thermal Collector Tilt & Orientation Optimization", "Flow Rate (LPH) Measurement & Discharge Head Verification",
+        "Solar Pumping Daily Water Yield Modeling (m3/day)", "Dual-Axis Solar Tracker Integration on Agricultural Pumps", "Maintenance of Solar Pumps: Impeller, Strainer & Cable",
+        "Commercial Boiler Pre-Heating with Solar Thermal Energy", "Techno-Economic Feasibility: Diesel Pump vs Solar Pump", "Water Tank Sizing & Energy Balance Calculations",
+        "Safety Standards & Non-Return Valve (NRV) Installation", "Troubleshooting Solar Pump VFD Error Alarms (Under-Voltage)", "Remote GSM/GPRS IoT Telemetry for Agricultural Pumps",
+        "Pre-Commissioning Checklist for Solar Thermal & Pumping", "Client Handover Documentation & User Training Guidelines", "Solar Thermal & Pumping Capstone Project Defense"
+    ]
+
+    sol06_topics = [
+        "Off-Grid Solar Energy Fundamentals & Storage Systems", "Battery Chemistry: Lead-Acid, Tubular Gel & Lithium LiFePO4", "Depth of Discharge (DoD), Cycle Life & Energy Density",
+        "C-Rating, Peukert's Law & Battery Capacity Sizing", "Battery Management System (BMS): Cell Balancing & Thermal", "Over-Charge, Over-Discharge & Short-Circuit Protection",
+        "PWM vs MPPT Solar Charge Controllers: Efficiency Comparison", "Off-Grid Pure Sine Wave Inverters & Transformer Topology", "Hybrid Inverters: Grid-Tie with Battery Backup (ESS)",
+        "Daily Load Profiling: Connected Wattage & Watt-Hour Calculations", "Days of Autonomy Calculation for Continuous Reliability", "DC System Voltage Selection: 12V, 24V, 48V vs High-Voltage",
+        "Series & Parallel Battery Bank Wiring & Equalization", "Battery Interconnection Cable Sizing & Voltage Drop", "Ventilation & Hydrogen Safety in Battery Enclosures",
+        "Lithium Battery Communication Protocols: CANBUS & RS485", "AC-Coupled vs DC-Coupled Micro-Grid Architectures", "Diesel Generator Auto-Start Synchronization with Hybrid Inverter",
+        "Peak Shaving, Time-of-Use (TOU) & Self-Consumption Sizing", "Off-Grid Solar Power System Single-Line Diagram (SLD)", "Charge Controller Configuration: Bulk, Absorption & Float",
+        "State of Charge (SoC) & State of Health (SoH) Estimation", "Battery Bank Temperature Compensation Factors", "DC Fuse & Circuit Breaker Selection for Battery Banks",
+        "Micro-Grid Remote Area Power Supply (RAPS) Case Study", "Solar Off-Grid Power System for Telecom Tower Sites", "Lithium Battery Pack Assembly & Spot Welding Protocols",
+        "Active Cell Balancers vs Passive Resistance Balancers", "Off-Grid System Efficiency Loss Breakdown & Modeling", "Preventive Maintenance of Tubular Battery Specific Gravity",
+        "Fire Suppression Standards for Lithium Storage Rooms (NFPA 855)", "Off-Grid System Troubleshooting: Low Voltage Disconnect", "Hybrid Solar Energy Storage Commissioning Checklist",
+        "Client Energy Audit & Load Optimization Report", "Off-Grid Storage System As-Built Dossier & Warranty", "Off-Grid Solar Storage Capstone Viva Voce & Defense"
+    ]
+
+    sol07_topics = [
+        "Solar PV System Design Principles & Design Workflows", "Solar Radiation Data Sources: NASA, Meteonorm & NREL", "Global Horizontal Irradiance (GHI) & Direct Normal (DNI)",
+        "Tilt Angle Optimization & Transposition Factor (GTI)", "PVsyst Software Overview, Workspace & Project Setup", "Geographical Site Creation & Synthetic Hourly Meteo Data",
+        "PV Module & Inverter Database Selection in PVsyst", "String Sizing Calculation: Minimum & Maximum Voc Rules", "Inverter Sizing Ratio (DC/AC Overloading Ratio 1.25 - 1.4)",
+        "3D Shading Scene Construction in PVsyst: Buildings & Trees", "Near Shading vs Far Shading Loss Computation", "Module Layout & Electrical String Partitioning in 3D",
+        "PVsyst Detailed Loss Parameters: Soiling, Thermal & LID", "Ohmic Wiring Losses (DC & AC Cable Resistance)", "Module Quality Loss, Mismatch Loss & Inverter Efficiency",
+        "PVsyst Simulation Execution & Comprehensive PDF Report Analysis", "Key PVsyst Output Metrics: Performance Ratio (PR) & Specific Yield", "P50 vs P90 Energy Generation Probability Modeling",
+        "HelioScope Web-Based Design & Layout Generation", "AutoCAD Solar Engineering: 2D Civil Layout & Cable Routing", "Single Line Diagram (SLD) Drafting in AutoCAD",
+        "Commercial 100 kWp Rooftop System Design Project", "Industrial 1 MW Ground-Mounted Solar Design Project", "BOM (Bill of Materials) Generation & Cost Estimation",
+        "Levelized Cost of Energy (LCOE) Calculation & Financial Modeling", "Internal Rate of Return (IRR), NPV & Payback Period", "Carbon Offset & Greenhouse Gas (GHG) Reduction Metrics",
+        "Grid Evacuation Voltage & Transmission Loss Sizing", "Transformer & Switchgear Rating Calculations", "DISCOM Grid Interconnection Application Technical Annexures",
+        "Solar PV Design Quality Checklist & Peer Review", "Shading Optimization Strategies: Portrait vs Landscape Mounting", "Final Detailed Project Report (DPR) Compilation",
+        "Techno-Economic Feasibility Dossier Presentation", "PVsyst Simulation Capstone Project Submission & Defense"
+    ]
+
+    sol08_topics = [
+        "Solar Electrical Safety Regulations & Indian Standards", "Central Electricity Authority (CEA) Safety Regulations 2023", "IS 3043: Code of Practice for Earthing Systems",
+        "IS/IEC 62305: Protection Against Lightning in Solar Plants", "Dedicated Solar Earthing Networks vs General Building Grounding", "Chemical Earth Pit Construction: Electrodes & Backfill Compound",
+        "Earth Resistance Measurement using 4-Terminal Earth Tester", "Soil Resistivity Testing using Wenner 4-Point Method", "Step Potential & Touch Potential Safety Calculations",
+        "Early Streamer Emission (ESE) Lightning Conductor Installation", "Down Conductors, Test Links & Lightning Strike Counters", "Surge Protection Devices (SPD): Type 1, Type 2 & Type 3",
+        "Equipotential Bonding of Solar Module Frames & Structures", "DC Cable Insulation Safety, Fire Retardance & UV Rating", "Personal Protective Equipment (PPE) for Solar Field Technicians",
+        "Working at Heights: Safety Harness, Anchor Points & Lifelines", "Lock-Out / Tag-Out (LOTO) Energy Isolation Protocols", "Arc-Flash Hazards, Risk Categories & Protective Clothing",
+        "DISCOM Net-Metering Policies, Regulations & Solar Rooftop Schemes", "Solar Rooftop Subsidy Guidelines (PM Surya Ghar Yojana)", "Bi-Directional Net-Meter Working Principle & Accuracy Class",
+        "Solar Generation Meter vs Net Consumer Energy Meter", "Anti-Islanding Safety Testing & DISCOM Inspector Guidelines", "Pre-Commissioning Electrical Safety Checklist & Inspection",
+        "Emergency Shutdown Procedures & Fire Department Interlocks", "Earth Fault Alarm Diagnostics & RCD Sensitivity Settings", "Ground Continuity Testing across 100% of Solar Modules",
+        "Solar Plant Safety Signage, Danger Boards & Danger Notices", "Environmental Safety, Battery Recycling & Hazardous Disposal", "Preparation of DISCOM Net-Metering Handover Dossier",
+        "Electrical Inspectorate (CEIG / RREC) Approval Documentation", "Safety Audit Protocols for Commercial Rooftop Installations", "Safety Standards & Compliance Capstone Project Defense"
+    ]
+
+    # --- Poddar IT Curriculums (DA, DM, FS, AI, CS, CC, JV, BI, AD) ---
     da_topics = [
         "Advanced Excel Formulae & Logical Functions", "VLOOKUP, XLOOKUP & Nested Logic", "Pivot Tables & Dynamic Aggregations",
         "Conditional Formatting & Error Trapping", "Advanced Financial & Statistical Modeling", "Relational Database Concepts & Schema Design",
@@ -1728,6 +1873,14 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
     ]
 
     topics_map = {
+        'SOL-01': (sol01_topics, "PVsyst / AutoCAD Solar / Fluke Solar Testers / Clamp Meter"),
+        'SOL-02': (sol02_topics, "Torque Wrench / Optical Level / HDGI Structure / IS 875"),
+        'SOL-03': (sol03_topics, "String Inverters / ACDB / Megger 1000V / Net-Meter"),
+        'SOL-04': (sol04_topics, "SCADA Telemetry / FLIR Thermal Camera / IV Tracer / Pyranometer"),
+        'SOL-05': (sol05_topics, "Solar VFD / PMDC Pumps / Flow Meters / Thermal Collectors"),
+        'SOL-06': (sol06_topics, "LiFePO4 Batteries / BMS / MPPT Charge Controller / Hybrid Inverter"),
+        'SOL-07': (sol07_topics, "PVsyst 7.4 / HelioScope / AutoCAD Solar / Meteonorm"),
+        'SOL-08': (sol08_topics, "Earth Resistance Tester / ESE Lightning Conductor / CEA Safety Standards"),
         'DA': (da_topics, "Python / SQL / Power BI / Excel"),
         'DM': (dm_topics, "Meta Ads / GA4 / SEO Tools / Canva"),
         'FS': (fs_topics, "React / Node.js / MongoDB / Docker"),
@@ -1738,7 +1891,10 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
         'BI': (bi_topics, "BioPython / NCBI BLAST / PyMOL / Pandas"),
         'AD': (ad_topics, "Kotlin / Jetpack Compose / Room / Retrofit")
     }
-    topics_list, tools_label = topics_map.get(track, (da_topics, "Python / SQL / Power BI / Excel"))
+    
+    default_fallback_topics = sol01_topics if is_poswal else da_topics
+    default_fallback_tools = "PVsyst / AutoCAD Solar / Fluke Solar" if is_poswal else "Python / SQL / Power BI / Excel"
+    topics_list, tools_label = topics_map.get(track, (default_fallback_topics, default_fallback_tools))
 
     while day_count < 36:
         if current_dt.weekday() != 6:  # Skip Sundays
@@ -1749,7 +1905,7 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
             if is_leave:
                 cursor.execute("""
                 INSERT INTO attendance (internship_id, date, day_of_week, start_time, end_time, total_hours, topic_covered, status, student_signed, mentor_signed, remarks)
-                VALUES (?, ?, ?, '10:00 AM', '01:30 PM', 0.0, ?, 'AUTHORIZED LEAVE', 1, 1, 'Approved College/Medical Leave')
+                VALUES (?, ?, ?, '10:00 AM', '01:30 PM', 0.0, ?, 'AUTHORIZED LEAVE', 1, 1, 'Approved Medical/Institutional Leave')
                 """, (internship_id, date_str, day_name, f"Module Session {day_count + 1} (Approved Leave)"))
             else:
                 total_hours += 3.5
@@ -1762,7 +1918,7 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
 
                 cursor.execute("""
                 INSERT INTO daily_logs (internship_id, date, day_of_week, module_name, topic, work_performed, practical_activity, tools_used, learning_outcome, hours, mentor_remarks, student_signed, mentor_signed)
-                VALUES (?, ?, ?, 'Core Curriculum Track', ?, 'Completed structured exercises and hands-on laboratory implementation.', 'Executed practical lab assignments and data exercises.', ?, 'Attained verified technical competency and applied problem solving.', 3.5, 'Satisfactory progress and active participation demonstrated.', 1, 1)
+                VALUES (?, ?, ?, 'Core Curriculum Track', ?, 'Completed structured exercises and hands-on laboratory implementation.', 'Executed practical lab assignments and field exercises.', ?, 'Attained verified technical competency and applied problem solving.', 3.5, 'Satisfactory progress and active participation demonstrated.', 1, 1)
                 """, (internship_id, date_str, day_name, topic, tools_label))
 
             day_count += 1
@@ -1775,8 +1931,16 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
         VALUES (?, ?, ?, ?, 'Structured Curriculum & Practical Review', 'Hands-on laboratory implementation', 'Milestone deliverables submitted and verified', 'Technical competencies mastered according to syllabus', 21.0, 'Consistent progress and disciplined execution shown.', 1, 1)
         """, (internship_id, w, f"2026-06-0{w}" if w < 10 else f"2026-06-{w}", f"2026-06-{w+5}"))
 
-    # 8. Capstone Project Configuration (All 9 Tracks)
+    # 8. Capstone Project Configuration (All Solar & IT Tracks)
     default_titles = {
+        'SOL-01': "50 kWp Commercial Rooftop Solar PV & Building-Integrated (BIPV) System Installation",
+        'SOL-02': "100 kWp Ground-Mounted Fixed-Tilt Solar Array Structural Layout & Alignment",
+        'SOL-03': "Grid-Connected 25 kW Solar Inverter & Net-Metering Synchronization Facility",
+        'SOL-04': "Preventive O&M Audit & SCADA Telemetry Protocol for 500 kWp Industrial Plant",
+        'SOL-05': "7.5 HP Solar Agricultural Irrigation Pumping & Micro-Grid Distribution",
+        'SOL-06': "Hybrid 10 kVA Off-Grid Solar Energy Storage & Battery Management Facility",
+        'SOL-07': "Comprehensive Techno-Economic PVsyst Simulation for 100 kWp Rooftop System",
+        'SOL-08': "High-Integrity Earthing Grid & DISCOM Net-Metering Compliance Architecture",
         'DA': "Retail Sales Performance & Customer Churn Analytics Dashboard",
         'DM': "Omnichannel Lead Generation & SEO Growth Campaign for Regional Healthcare Clinic",
         'FS': "MediConnect: Full Stack MERN Healthcare Appointment & Patient Portal",
@@ -1787,9 +1951,89 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
         'BI': "Genomic Sequence Alignment & Cancer Mutation Biomarker Discovery Pipeline",
         'AD': "CityPulse: Native Android Mobile Community & Services Portal with Jetpack Compose"
     }
-    proj_title = req.custom_project_title or default_titles.get(track, "Industrial Capstone Project Implementation")
+    proj_title = req.custom_project_title or default_titles.get(track, ("Solar Energy Infrastructure Project" if is_poswal else "Industrial Capstone Project Implementation"))
 
     projects_map = {
+        'SOL-01': {
+            "project_title": proj_title,
+            "problem_statement": "An industrial commercial facility required a 50 kWp grid-interactive rooftop solar PV installation integrated into modern building architectural facades (BIPV) to reduce grid power reliance and lower carbon footprint.",
+            "dataset": "3D Shadow profile data, roof structural load charts, solar irradiance (GHI/DNI) logs, and electrical single-line diagrams.",
+            "tools": "PVsyst 7.4, AutoCAD Solar, Fluke 376 Solar Clamp Meter, Megger 1000V Insulation Tester, Torque Calibration Wrench.",
+            "objectives": "1. Conduct 3D shading analysis and structural load audit.\n2. Design BIPV facade and rooftop mounting array.\n3. Execute DC stringing, ACDB wiring, and inverter sync.\n4. Complete DISCOM net-metering pre-commissioning.",
+            "findings": "Generated 73,500 kWh annually with a Performance Ratio of 81.4%, offsetting 60 tonnes of CO2 emissions each year.",
+            "recommendations": "Deploy automated spray cleaning nozzles to mitigate seasonal dust soiling losses.",
+            "conclusion": "Turnkey rooftop and BIPV solar engineering solution fully compliant with CEA 2023 grid standards."
+        },
+        'SOL-02': {
+            "project_title": proj_title,
+            "problem_statement": "A 100 kWp ground-mounted solar farm required structural layout optimization to withstand 150 km/h wind gusts and achieve optimal seasonal sun tracking.",
+            "dataset": "Soil geotechnical pull-out data, IS 875 Part 3 wind pressure curves, and topography elevation surveys.",
+            "tools": "Optical Theodolite, Laser Distance Meter, HDGI Mounting Racks, Torque Wrench, Concrete Rebound Hammer.",
+            "objectives": "1. Layout foundation coordinates and civil stub anchors.\n2. Assemble purlin/rafter structural frames with 25-degree tilt.\n3. Apply precision torque tightening specifications.\n4. Conduct structural vibration and pull-out resistance tests.",
+            "findings": "Attained zero structural deflection under simulated 150 km/h wind loads with uniform 25-degree azimuth alignment.",
+            "recommendations": "Apply anti-corrosive cold galvanizing compound to all field-drilled mounting holes.",
+            "conclusion": "Robust, 25-year design-life structural framework installed to complete engineering precision."
+        },
+        'SOL-03': {
+            "project_title": proj_title,
+            "problem_statement": "A commercial facility experienced high electrical grid tariffs and required a 25 kW grid-tied solar inverter with bi-directional net-metering and lightning safety protection.",
+            "dataset": "Three-phase LT grid voltage logs, harmonic distortion (THD) records, and inverter efficiency curves.",
+            "tools": "Solar String Inverters, ACDB/DCDB, Type-2 Surge Arrestors (SPD), Power Quality Analyzer, Fluke 1587 FC.",
+            "objectives": "1. Wire multi-channel MPPT string configurations.\n2. Integrate ACDB with four-pole isolation breakers.\n3. Implement anti-islanding and zero-export controls.\n4. Synchronize solar generation with DISCOM grid.",
+            "findings": "Achieved inverter conversion efficiency of 98.2% with total harmonic distortion (THD) below 2.8%.",
+            "recommendations": "Install automated Phase-Angle monitoring relays to protect against grid voltage surges.",
+            "conclusion": "High-efficiency grid-tied electrical infrastructure operating with full net-metering synchronization."
+        },
+        'SOL-04': {
+            "project_title": proj_title,
+            "problem_statement": "A 500 kWp utility-scale solar plant experienced a 7% drop in monthly generation due to unmonitored hot-spots and string fuse failures.",
+            "dataset": "SCADA 15-minute generation telemetry, pyranometer irradiance records, and thermal IR images.",
+            "tools": "FLIR Thermal Imaging Camera, Solmetric PVA-1500 IV Curve Tracer, SCADA Remote Portal, Calibrated Pyranometer.",
+            "objectives": "1. Execute drone-assisted thermal infrared hotspot audit.\n2. Perform string-level IV curve tracing for degradation.\n3. Implement preventive cleaning schedule.\n4. Optimize SCADA alarm thresholds.",
+            "findings": "Identified and replaced 6 defective bypass diodes and 12 soiled module strings, restoring 34 kW of lost power.",
+            "recommendations": "Schedule bi-monthly automated IV-curve scans to catch cell micro-cracks early.",
+            "conclusion": "Standardized O&M procedure restoring plant Performance Ratio from 74.2% back to 82.5%."
+        },
+        'SOL-05': {
+            "project_title": proj_title,
+            "problem_statement": "An agricultural farm required a 7.5 HP solar PV powered submersible irrigation water pump to replace expensive diesel generator irrigation.",
+            "dataset": "Borewell static water table depth, seasonal irrigation flow demand (m3/day), and daily solar irradiance curves.",
+            "tools": "7.5 HP Solar VFD Pump Controller, Submersible BLDC Motor, Ultrasonic Flow Meter, Earth Tester.",
+            "objectives": "1. Calculate dynamic head and water flow discharge.\n2. Size PV array and solar VFD inverter parameters.\n3. Wire dry-run and overflow sensor safety cut-offs.\n4. Commission micro-irrigation drip coupling.",
+            "findings": "Delivered 180,000 liters of water daily at 65m total dynamic head, saving Rs. 1.8 Lakhs annually in diesel fuel.",
+            "recommendations": "Integrate GSM-based mobile IoT switch for remote farmer pump activation.",
+            "conclusion": "Clean solar agricultural pumping system providing dependable zero-emission irrigation."
+        },
+        'SOL-06': {
+            "project_title": proj_title,
+            "problem_statement": "A rural healthcare centre experienced frequent grid blackouts and needed a 10 kVA hybrid off-grid solar energy storage system with Lithium LiFePO4 battery management.",
+            "dataset": "Critical medical equipment load profiles, battery charge/discharge cycle logs, and solar generation curves.",
+            "tools": "10 kVA Hybrid Inverter, 48V 200Ah LiFePO4 Battery Bank, Smart BMS with CANBus, Digital Multimeter.",
+            "objectives": "1. Size daily essential watt-hour energy load.\n2. Configure smart BMS cell balancing and thermal cut-offs.\n3. Integrate MPPT hybrid charge controller.\n4. Validate automatic transfer switch (ATS) < 15ms transfer.",
+            "findings": "Maintained 24/7 uninterrupted power for emergency medical storage with 36 hours of battery autonomy.",
+            "recommendations": "Add modular battery expansion racks as medical facility footprint expands.",
+            "conclusion": "Resilient off-grid solar energy storage system guaranteeing mission-critical healthcare continuity."
+        },
+        'SOL-07': {
+            "project_title": proj_title,
+            "problem_statement": "An institutional client required a comprehensive techno-economic feasibility study and PVsyst 3D shading simulation for a 100 kWp rooftop installation.",
+            "dataset": "Meteonorm hourly weather data, AutoCAD architectural drawings, and utility tariff rate schedules.",
+            "tools": "PVsyst 7.4 Professional, HelioScope, AutoCAD Solar, Google Earth Pro, Microsoft Excel Financial Modeling.",
+            "objectives": "1. Build 3D CAD rooftop obstruction model in PVsyst.\n2. Calculate near-shading, ohmic, and thermal losses.\n3. Generate P50/P90 energy generation forecasts.\n4. Compute Levelized Cost of Energy (LCOE), IRR, and Payback.",
+            "findings": "Simulated annual energy generation of 148,200 kWh with 82.1% PR, delivering equity IRR of 18.4% and 3.8 year payback.",
+            "recommendations": "Use portrait module orientation with 18-degree tilt to minimize inter-row shading.",
+            "conclusion": "Bankable DPR and simulation package approved by institutional project appraisal committee."
+        },
+        'SOL-08': {
+            "project_title": proj_title,
+            "problem_statement": "A rooftop solar installation required comprehensive grounding, lightning arrestor protection, and CEA electrical safety certification for DISCOM grid energization.",
+            "dataset": "Soil resistivity logs, fall-of-potential resistance curves, and CEA 2023 compliance checklists.",
+            "tools": "Digital 4-Terminal Earth Tester, ESE Lightning Strike Counter, 1000V Megger, Torque Wrench, PPE Kits.",
+            "objectives": "1. Excavate and build 3 chemical earthing pits (< 2 Ohms).\n2. Install ESE lightning conductor with 60m protective radius.\n3. Complete equipotential bonding across all module tables.\n4. File DISCOM net-metering safety inspection dossier.",
+            "findings": "Achieved 1.4 Ohm combined earth grid resistance and 100% ground continuity across all structural steel.",
+            "recommendations": "Recharge chemical earth pits with conductive compound prior to summer monsoon season.",
+            "conclusion": "Zero-defect safety and earthing infrastructure certified by state electrical inspectorate."
+        },
         'DA': {
             "project_title": proj_title,
             "problem_statement": "An omnichannel retail chain operating across North India faced a 14% year-over-year dip in customer repeat purchase rate. The management lacked a consolidated real-time dashboard to track store performance and customer churn.",
@@ -1884,7 +2128,7 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
             "conclusion": "Modern native Android application engineered according to Google's official architecture guide."
         }
     }
-    proj_data = projects_map.get(track, projects_map['DA'])
+    proj_data = projects_map.get(track, (projects_map['SOL-01'] if is_poswal else projects_map['DA']))
 
     cursor.execute("""
     INSERT INTO projects (internship_id, project_title, project_type, project_description, objectives, fields_json, status, submitted_at, approved_at)
@@ -1909,11 +2153,11 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
     VALUES (?, ?, ?, ?, ?, '2026-07-12 15:00:00', 1)
     """, (internship_id, mentor_id, json.dumps(criteria_scores), total_eval, req.mentor_remarks))
 
-    # 10. Finalize & Lock Certificate
+    # 10. Finalize & Lock Certificate with Cryptographic HMAC Signature
     cursor.execute("SELECT COUNT(*) FROM certificates")
     seq = cursor.fetchone()[0] + 1
     year = datetime.now().year
-    cert_p = inst.get("cert_prefix") or s.get("cert_prefix", "TG-BPT")
+    cert_p = inst.get("cert_prefix") or s.get("cert_prefix", "POSWAL" if is_poswal else "PCTM")
     cert_num = f"{cert_p}-{track}-{year}-{seq:04d}"
     ver_code = f"VER-{cert_p}-{track}-{datetime.now().strftime('%m%d')}{seq:03d}"
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -1923,16 +2167,20 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
     if "192.168." in raw_base or "localhost" in raw_base:
         raw_base = os.environ.get("VERIFICATION_BASE_URL", "https://technoglobe-certificates.onrender.com")
     base_url = raw_base.rstrip("/")
-    deg_text = req.degree or ""
+    deg_text = degree_name or ""
     sem_text = req.semester_year or ""
+    issue_date = now_str[:10]
+    sig = pdf_service.compute_certificate_signature(cert_num, req.full_name.strip(), course['name'], issue_date)
+
     params = urllib.parse.urlencode({
         "cert": cert_num,
         "name": req.full_name.strip(),
         "course": course['name'],
         "sem": f"{deg_text} ({sem_text})",
-        "college": req.college_name,
+        "college": college_name,
         "ver_id": ver_code,
-        "date": now_str[:10]
+        "date": issue_date,
+        "sig": sig
     })
     qr_payload_json = f"{base_url}/verify?{params}"
 
@@ -1943,9 +2191,10 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
     """, (cert_num, ver_code, qr_payload_json, now_str, total_hours, internship_id))
 
     cursor.execute("""
-    INSERT INTO certificates (internship_id, cert_type, certificate_number, verification_code, qr_payload_json, issue_date, is_finalized, finalized_by)
-    VALUES (?, 'COMPLETION', ?, ?, ?, ?, 1, ?)
-    """, (internship_id, cert_num, ver_code, qr_payload_json, now_str[:10], s["signatory_name"]))
+    INSERT INTO certificates (
+        internship_id, cert_type, certificate_number, verification_code, qr_payload_json, issue_date, is_finalized, finalized_by, version
+    ) VALUES (?, 'COMPLETION', ?, ?, ?, ?, 1, ?, 1)
+    """, (internship_id, cert_num, ver_code, qr_payload_json, issue_date, "Madhuvan Singh Gurjar (Authority)" if is_poswal else "Nitin Agarwal (Authority)"))
 
     conn.commit()
     conn.close()
@@ -1971,9 +2220,9 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
         "certificate_number": cert_num,
         "verification_code": ver_code,
         "institution_id": inst_id,
-        "institution_name": inst.get("name", "TechnoGlobe"),
-        "institution_code": inst.get("code", "TG"),
-        "institution_full_name": inst.get("full_name", "TechnoGlobe IT Solutions Pvt. Ltd."),
+        "institution_name": inst.get("name", "Poswal Developers" if is_poswal else "Poddar College"),
+        "institution_code": inst.get("code", "POSWAL" if is_poswal else "PODDAR"),
+        "institution_full_name": inst.get("full_name", "Poswal Developers" if is_poswal else "Poddar College of Technology & Management"),
         "qr_payload": qr_payload_json,
         "attendance_pct": round(present_count / 36 * 100, 1),
         "total_hours": total_hours,

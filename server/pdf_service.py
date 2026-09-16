@@ -221,7 +221,7 @@ def build_official_header(settings, doc_ref, doc_date, doc_title, institution=No
         header_elements.append(Paragraph("GST NO. 08ABIFP2454N1ZQ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; !! Shri Ganeshay Namah !! &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Mob. 9414694727", meta_style))
         header_elements.append(Spacer(1, 1.5 * mm))
         if os.path.exists(logo_full_path):
-            header_elements.append(RLImage(logo_full_path, width=58 * mm, height=12.2 * mm, hAlign='CENTER'))
+            header_elements.append(RLImage(logo_full_path, width=78 * mm, height=16.5 * mm, hAlign='CENTER'))
         else:
             header_elements.append(Paragraph("POSWAL DEVELOPERS", org_style))
         header_elements.append(Spacer(1, 1 * mm))
@@ -229,7 +229,7 @@ def build_official_header(settings, doc_ref, doc_date, doc_title, institution=No
         header_elements.append(Paragraph("MSME Udyam: UDYAM-RJ-06-0052498 | Solar Energy Generation & Infrastructure", addr_style))
     else:
         if os.path.exists(logo_full_path):
-            header_elements.append(RLImage(logo_full_path, width=20 * mm, height=20 * mm, hAlign='CENTER'))
+            header_elements.append(RLImage(logo_full_path, width=28 * mm, height=28 * mm, hAlign='CENTER'))
             header_elements.append(Spacer(1, 1 * mm))
         header_elements.append(Paragraph("PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT", org_style))
         header_elements.append(Paragraph("Bharatpur, Rajasthan", centre_style))
@@ -1233,7 +1233,7 @@ def generate_completion_certificate(internship_id: int) -> str:
             c.setStrokeAlpha(0.065)
         except Exception:
             pass
-        wm_size = 90 * mm
+        wm_size = 110 * mm
         c.drawImage(watermark_logo_path, (width - wm_size)/2.0, (height - wm_size)/2.0 - 5*mm, width=wm_size, height=wm_size, mask='auto', preserveAspectRatio=True)
         c.restoreState()
 
@@ -1248,13 +1248,13 @@ def generate_completion_certificate(internship_id: int) -> str:
 
         logo_full_path = os.path.join(os.path.dirname(__file__), prof["logo_path"])
         if os.path.exists(logo_full_path):
-            logo_w = 64 * mm
-            logo_h = 13.5 * mm
+            logo_w = 102 * mm
+            logo_h = 18 * mm
             logo_x = (width - logo_w) / 2.0
-            logo_y = height - 32.5 * mm
+            logo_y = height - 32.0 * mm
             c.drawImage(logo_full_path, logo_x, logo_y, width=logo_w, height=logo_h, mask='auto', preserveAspectRatio=True)
         else:
-            c.setFont("Helvetica-Bold", 18)
+            c.setFont("Helvetica-Bold", 20)
             c.setFillColor(c_primary)
             c.drawCentredString(width / 2.0, height - 28 * mm, "POSWAL DEVELOPERS")
 
@@ -1269,9 +1269,9 @@ def generate_completion_certificate(internship_id: int) -> str:
         # Poddar College Official Header
         poddar_logo_path = os.path.join(os.path.dirname(__file__), "poddar_logo.png")
         if os.path.exists(poddar_logo_path):
-            logo_size = 18 * mm
+            logo_size = 28 * mm
             logo_x = (width - logo_size) / 2.0
-            logo_y = height - 30.5 * mm
+            logo_y = height - 31.0 * mm
             c.drawImage(poddar_logo_path, logo_x, logo_y, width=logo_size, height=logo_size, mask='auto', preserveAspectRatio=True)
 
         c.setFont("Helvetica-Bold", 13)

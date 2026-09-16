@@ -311,6 +311,36 @@ export const StepByStepWizardPage: React.FC = () => {
     }
   }, [formData]);
 
+  // Sync with global institution context changes
+  React.useEffect(() => {
+    if (globalInstId && globalInstId !== formData.institution_id) {
+      handleInstitutionChange(globalInstId);
+    }
+  }, [globalInstId]);
+
+  // Ensure course_track strictly matches active institution
+  React.useEffect(() => {
+    if (formData.institution_id === 2 && !formData.course_track.startsWith('SOL-')) {
+      setFormData(prev => ({
+        ...prev,
+        course_track: 'SOL-01',
+        mentor_id: 1,
+        college_name: 'Poswal Developers Training Division, Bharatpur',
+        degree: 'Diploma / B.Tech (Solar & Electrical)',
+        branch: 'Solar PV Systems & Grid-Tied Technology'
+      }));
+    } else if (formData.institution_id === 1 && formData.course_track.startsWith('SOL-')) {
+      setFormData(prev => ({
+        ...prev,
+        course_track: 'DA',
+        mentor_id: 2,
+        college_name: 'Poddar College, Bharatpur',
+        degree: 'BCA',
+        branch: 'Computer Science'
+      }));
+    }
+  }, [formData.institution_id, formData.course_track]);
+
   const toTitleCase = (str: string) => {
     return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
   };
@@ -1173,7 +1203,7 @@ export const StepByStepWizardPage: React.FC = () => {
               <div className="inline-flex items-center space-x-1.5 px-3 py-0.5 rounded-full bg-emerald-800/60 text-emerald-100 text-xs font-bold uppercase tracking-wider">
                 <CheckCircle2 className="w-4 h-4 text-emerald-300" />
                 <span>
-                  {generationResult.institution_name || (formData.institution_id === 2 ? 'Poddar College' : 'Poswal Developers')} — Package Complete & Verified
+                  {generationResult.institution_name || (formData.institution_id === 2 ? 'Poswal Developers' : 'Poddar College')} — Package Complete & Verified
                 </span>
               </div>
               <h2 className="text-2xl font-bold">
