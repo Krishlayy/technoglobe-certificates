@@ -774,60 +774,113 @@ def save_attendance(id: int, item: AttendanceItem, user = Depends(get_current_us
 # 9B. Bulk & Multi-Student Batch Attendance Engine (50+ Students)
 # -------------------------------------------------------------
 class BulkAttendanceStudentItem(BaseModel):
+    id: Optional[str] = None
     full_name: str
-    father_mother_name: Optional[str] = "Father Name"
+    father_mother_name: Optional[str] = ""
     roll_no: Optional[str] = None
-    college_name: Optional[str] = "Poddar College, Bharatpur"
+    college_name: Optional[str] = "TechnoGlobe Institute of Information Technology, Bharatpur"
     degree: Optional[str] = "BCA"
     branch: Optional[str] = "Computer Science"
     attendance_pct: float = 100.0
+    day_overrides: Optional[Dict[str, str]] = {}
 
 class BulkAttendanceRequest(BaseModel):
-    institution_id: int = 1  # 1: TechnoGlobe, 2: Poddar College
-    course_track: str = "DA"  # DA, DM, FS, AI, CS, CC, JV, BI, AD, or Custom
+    institution_id: Optional[int] = 1
+    course_track: Optional[str] = "DA"
+    course_code: Optional[str] = None
+    batch_name: Optional[str] = None
     custom_track_name: Optional[str] = None
-    total_days: int = 50
-    start_date: str = "2026-06-01"
-    start_time: str = "10:00 AM"
-    end_time: str = "01:30 PM"
-    daily_hours: float = 3.5
+    total_days: Optional[int] = 36
+    start_date: Optional[str] = "2026-06-01"
+    end_date: Optional[str] = "2026-07-12"
+    start_time: Optional[str] = "10:00 AM"
+    end_time: Optional[str] = "01:30 PM"
+    daily_hours: Optional[float] = 3.5
     mentor_id: Optional[int] = 1
     mentor_name: Optional[str] = None
     mentor_designation: Optional[str] = None
     selected_day: Optional[int] = 1
-    layout_mode: Optional[str] = "1_page_per_day"  # "1_page_per_day" or "2_pages_per_day"
-    students: List[BulkAttendanceStudentItem]
+    layout_mode: Optional[str] = "1_page_per_day"
+    students: Optional[List[BulkAttendanceStudentItem]] = []
+    student_ids: Optional[List[int]] = []
+
+def _resolve_batch_data(req: BulkAttendanceRequest):
+    track = (req.course_track or req.course_code or "DA").upper()
+    students_list = [s.dict() for s in req.students] if req.students else []
+    if not students_list and req.student_ids:
+        conn = get_db()
+        cursor = conn.cursor()
+        for sid in req.student_ids:
+            cursor.execute("SELECT * FROM students WHERE id = ?", (sid,))
+            s_row = cursor.fetchone()
+            if s_row:
+                s_dict = dict(s_row)
+                students_list.append({
+                    "id": str(s_dict["id"]),
+                    "full_name": s_dict["full_name"],
+                    "father_mother_name": s_dict.get("father_mother_name", ""),
+                    "roll_no": s_dict.get("enrollment_roll_no") or f"TG-2026-{s_dict['id']:03d}",
+                    "college_name": s_dict.get("college_name") or "TechnoGlobe Institute of Information Technology, Bharatpur",
+                    "degree": s_dict.get("degree") or "BCA",
+                    "branch": s_dict.get("branch") or "Computer Science",
+                    "attendance_pct": 100.0,
+                    "day_overrides": {}
+                })
+        conn.close()
+    if not students_list:
+        students_list = [
+            {
+                "id": "1",
+                "full_name": "Aarav Sharma",
+                "father_mother_name": "Sh. R. K. Sharma",
+                "roll_no": "TG-2026-001",
+                "college_name": "TechnoGlobe Institute of Information Technology, Bharatpur",
+                "degree": "BCA",
+                "branch": "Computer Science",
+                "attendance_pct": 100.0,
+                "day_overrides": {}
+            }
+        ]
+    batch_meta = {
+        "institution_id": req.institution_id or 1,
+        "course_track": track,
+        "custom_track_name": req.custom_track_name or req.batch_name or f"Course-Based Internship ({track})",
+        "total_days": req.total_days or 36,
+        "start_date": req.start_date or "2026-06-01",
+        "start_time": req.start_time or "10:00 AM",
+        "end_time": req.end_time or "01:30 PM",
+        "daily_hours": req.daily_hours or 3.5,
+        "mentor_id": req.mentor_id or 1,
+        "mentor_name": req.mentor_name or "Nitin Agarwal",
+        "mentor_designation": req.mentor_designation or "Director / Center Head"
+    }
+    return batch_meta, students_list
 
 @app.post("/api/attendance/bulk-generate-preview")
 def bulk_generate_attendance_preview(req: BulkAttendanceRequest):
-    """
-    Computes day-by-day attendance schedules for all students in the batch and returns JSON preview data.
-    """
-    if not req.students:
-        raise HTTPException(status_code=400, detail="Student roster cannot be empty.")
-    
-    working_days = pdf_service.compute_batch_working_days(req.start_date, req.total_days)
-    topics = pdf_service.get_batch_track_topics(req.course_track, req.total_days)
-    inst = pdf_service.resolve_institution_profile(req.institution_id)
+    batch_meta, students_list = _resolve_batch_data(req)
+    working_days = pdf_service.compute_batch_working_days(batch_meta["start_date"], batch_meta["total_days"])
+    topics = pdf_service.get_batch_track_topics(batch_meta["course_track"], batch_meta["total_days"])
+    inst = pdf_service.resolve_institution_profile(batch_meta["institution_id"])
     
     students_data = [
         pdf_service.compute_batch_student_attendance(
-            s.dict(), working_days, topics, req.start_time, req.end_time, req.daily_hours
+            s, working_days, topics, batch_meta["start_time"], batch_meta["end_time"], batch_meta["daily_hours"]
         )
-        for s in req.students
+        for s in students_list
     ]
 
     return {
         "institution": inst,
         "batch_meta": {
-            "course_track": req.course_track,
-            "custom_track_name": req.custom_track_name or f"Course-Based Internship ({req.course_track})",
-            "total_days": req.total_days,
-            "start_date": req.start_date,
-            "end_date": working_days[-1]["date"] if working_days else req.start_date,
-            "start_time": req.start_time,
-            "end_time": req.end_time,
-            "daily_hours": req.daily_hours,
+            "course_track": batch_meta["course_track"],
+            "custom_track_name": batch_meta["custom_track_name"],
+            "total_days": batch_meta["total_days"],
+            "start_date": batch_meta["start_date"],
+            "end_date": working_days[-1]["date"] if working_days else batch_meta["start_date"],
+            "start_time": batch_meta["start_time"],
+            "end_time": batch_meta["end_time"],
+            "daily_hours": batch_meta["daily_hours"],
             "total_students": len(students_data),
             "layout_mode": req.layout_mode or "1_page_per_day"
         },
@@ -836,61 +889,31 @@ def bulk_generate_attendance_preview(req: BulkAttendanceRequest):
     }
 
 @app.post("/api/attendance/bulk-generate-pdf")
+@app.post("/api/internships/bulk-attendance-pdf")
 def bulk_generate_attendance_pdf(req: BulkAttendanceRequest):
-    """
-    Generates and returns Master Batch Attendance Register (Landscape A4 PDF).
-    """
-    if not req.students:
-        raise HTTPException(status_code=400, detail="Student roster cannot be empty.")
-    
-    batch_meta = req.dict(exclude={"students"})
-    students_list = [s.dict() for s in req.students]
-    
+    batch_meta, students_list = _resolve_batch_data(req)
     filepath = pdf_service.generate_master_batch_attendance_pdf(batch_meta, students_list)
     return FileResponse(filepath, media_type="application/pdf", filename=os.path.basename(filepath))
 
 @app.post("/api/attendance/daily-day-pdf")
 def generate_daily_day_pdf(req: BulkAttendanceRequest):
-    """
-    Generates and returns official A4 Portrait Daily Attendance Sheet for a single day (e.g. Day 1).
-    """
-    if not req.students:
-        raise HTTPException(status_code=400, detail="Student roster cannot be empty.")
-    
-    batch_meta = req.dict(exclude={"students"})
-    students_list = [s.dict() for s in req.students]
+    batch_meta, students_list = _resolve_batch_data(req)
     day_num = req.selected_day or 1
     layout = req.layout_mode or "1_page_per_day"
-    
     filepath = pdf_service.generate_daily_day_attendance_pdf(day_num, batch_meta, students_list, layout_mode=layout)
     return FileResponse(filepath, media_type="application/pdf", filename=os.path.basename(filepath))
 
 @app.post("/api/attendance/daily-book-pdf")
 def generate_daily_book_pdf(req: BulkAttendanceRequest):
-    """
-    Generates and returns All-Days Daily Batch Attendance Register Book PDF (A4 format).
-    """
-    if not req.students:
-        raise HTTPException(status_code=400, detail="Student roster cannot be empty.")
-    
-    batch_meta = req.dict(exclude={"students"})
-    students_list = [s.dict() for s in req.students]
+    batch_meta, students_list = _resolve_batch_data(req)
     layout = req.layout_mode or "1_page_per_day"
-    
     filepath = pdf_service.generate_all_daily_batch_attendance_book_pdf(batch_meta, students_list, layout_mode=layout)
     return FileResponse(filepath, media_type="application/pdf", filename=os.path.basename(filepath))
 
 @app.post("/api/attendance/bulk-generate-zip")
+@app.post("/api/attendance/bulk-package-zip")
 def bulk_generate_attendance_zip(req: BulkAttendanceRequest):
-    """
-    Generates and returns complete Batch Attendance ZIP Archive (All Daily Sheets + Master Book + Matrix + CSV).
-    """
-    if not req.students:
-        raise HTTPException(status_code=400, detail="Student roster cannot be empty.")
-    
-    batch_meta = req.dict(exclude={"students"})
-    students_list = [s.dict() for s in req.students]
-    
+    batch_meta, students_list = _resolve_batch_data(req)
     zip_path = pdf_service.generate_batch_attendance_zip_bundle(batch_meta, students_list)
     return FileResponse(zip_path, media_type="application/zip", filename=os.path.basename(zip_path))
 
@@ -1120,7 +1143,19 @@ def download_document_pdf(internship_id: int, doc_type: str):
         "5": "attendance_sheet", "6": "attendance_summary", "7": "daily_log",
         "8": "weekly_report", "9": "project_assignment", "10": "project_report",
         "11": "evaluation", "12": "performance", "13": "feedback",
-        "14": "certificate", "15": "experience", "16": "consolidated"
+        "14": "certificate", "15": "experience", "16": "consolidated",
+        "completion_certificate": "certificate",
+        "internship_completion_certificate": "certificate",
+        "completion": "certificate",
+        "experience_certificate": "experience",
+        "offer_letter": "offer",
+        "joining_letter": "joining",
+        "training_schedule": "schedule",
+        "daily_logbook": "daily_log",
+        "weekly_progress_report": "weekly_report",
+        "mentor_evaluation": "evaluation",
+        "performance_report": "performance",
+        "student_feedback": "feedback"
     }
     normalized_type = num_map.get(str(doc_type).lower(), str(doc_type).lower())
 
@@ -1159,6 +1194,9 @@ def download_document_pdf(internship_id: int, doc_type: str):
     return FileResponse(filepath, media_type="application/pdf", filename=os.path.basename(filepath))
 
 @app.get("/api/documents/{internship_id}/package-zip")
+@app.get("/api/internships/{internship_id}/zip")
+@app.get("/api/internships/{internship_id}/package-zip")
+@app.get("/api/documents/{internship_id}/zip")
 def download_complete_package_zip(internship_id: int):
     try:
         zip_path = pdf_service.generate_complete_package_zip(internship_id)
@@ -1642,7 +1680,7 @@ def update_document_template(template_key: str, req: TemplateUpdateRequest, user
 # -------------------------------------------------------------
 # 14d. Attendance Bulk Update & Planner Operations
 # -------------------------------------------------------------
-class BulkAttendanceRequest(BaseModel):
+class SingleInternshipBulkAttendanceRequest(BaseModel):
     dates: List[str]
     status: str = "PRESENT"
     topic_covered: Optional[str] = None
@@ -1651,7 +1689,7 @@ class BulkAttendanceRequest(BaseModel):
     total_hours: float = 3.5
 
 @app.post("/api/internships/{id}/attendance/bulk")
-def bulk_update_attendance(id: int, req: BulkAttendanceRequest, user = Depends(get_current_user)): 
+def bulk_update_attendance(id: int, req: SingleInternshipBulkAttendanceRequest, user = Depends(get_current_user)): 
     conn = get_db()
     cursor = conn.cursor()
     for d_str in req.dates:
@@ -1682,124 +1720,6 @@ def clear_attendance(id: int, user = Depends(get_current_user)):
     conn.commit()
     conn.close()
     return {"success": True, "message": "Attendance records cleared"}
-
-# -------------------------------------------------------------
-# 14d-2. Batch Master Attendance Matrix & Register Endpoints
-# -------------------------------------------------------------
-class BatchAttendanceRequest(BaseModel):
-    institution_id: Optional[int] = 1
-    course_track: Optional[str] = "DA"
-    course_code: Optional[str] = None
-    batch_name: Optional[str] = None
-    custom_track_name: Optional[str] = None
-    total_days: Optional[int] = 36
-    start_date: Optional[str] = "2026-06-01"
-    end_date: Optional[str] = "2026-07-12"
-    start_time: Optional[str] = "10:00 AM"
-    end_time: Optional[str] = "01:30 PM"
-    daily_hours: Optional[float] = 3.5
-    mentor_id: Optional[int] = 1
-    mentor_name: Optional[str] = None
-    mentor_designation: Optional[str] = None
-    students: Optional[List[Dict[str, Any]]] = []
-    student_ids: Optional[List[int]] = []
-    selected_day: Optional[int] = 1
-    layout_mode: Optional[str] = "1_page_per_day"
-
-def _resolve_batch_data(req: BatchAttendanceRequest):
-    track = (req.course_track or req.course_code or "DA").upper()
-    students_list = list(req.students or [])
-    if not students_list and req.student_ids:
-        conn = get_db()
-        cursor = conn.cursor()
-        for sid in req.student_ids:
-            cursor.execute("SELECT * FROM students WHERE id = ?", (sid,))
-            s_row = cursor.fetchone()
-            if s_row:
-                s_dict = dict(s_row)
-                students_list.append({
-                    "id": str(s_dict["id"]),
-                    "full_name": s_dict["full_name"],
-                    "father_mother_name": s_dict.get("father_mother_name", ""),
-                    "roll_no": s_dict.get("enrollment_roll_no") or f"TG-2026-{s_dict['id']:03d}",
-                    "college_name": s_dict.get("college_name") or "TechnoGlobe Institute of Information Technology, Bharatpur",
-                    "degree": s_dict.get("degree") or "BCA",
-                    "branch": s_dict.get("branch") or "Computer Science",
-                    "attendance_pct": 100.0,
-                    "day_overrides": {}
-                })
-        conn.close()
-    if not students_list:
-        students_list = [
-            {
-                "id": "1",
-                "full_name": "Aarav Sharma",
-                "father_mother_name": "Sh. R. K. Sharma",
-                "roll_no": "TG-2026-001",
-                "college_name": "TechnoGlobe Institute of Information Technology, Bharatpur",
-                "degree": "BCA",
-                "branch": "Computer Science",
-                "attendance_pct": 100.0,
-                "day_overrides": {}
-            }
-        ]
-    batch_meta = {
-        "institution_id": req.institution_id or 1,
-        "course_track": track,
-        "custom_track_name": req.custom_track_name or req.batch_name or f"Course-Based Internship ({track})",
-        "total_days": req.total_days or 36,
-        "start_date": req.start_date or "2026-06-01",
-        "start_time": req.start_time or "10:00 AM",
-        "end_time": req.end_time or "01:30 PM",
-        "daily_hours": req.daily_hours or 3.5,
-        "mentor_id": req.mentor_id or 1,
-        "mentor_name": req.mentor_name or "Nitin Agarwal",
-        "mentor_designation": req.mentor_designation or "Director / Center Head"
-    }
-    return batch_meta, students_list
-
-@app.post("/api/attendance/bulk-generate-preview")
-def bulk_attendance_preview_endpoint(req: BatchAttendanceRequest, user = Depends(get_current_user)):
-    batch_meta, students_list = _resolve_batch_data(req)
-    working_days = pdf_service.compute_batch_working_days(batch_meta["start_date"], batch_meta["total_days"])
-    topics = pdf_service.get_batch_track_topics(batch_meta["course_track"], batch_meta["total_days"])
-    computed_students = [
-        pdf_service.compute_batch_student_attendance(s, working_days, topics, batch_meta["start_time"], batch_meta["end_time"], batch_meta["daily_hours"])
-        for s in students_list
-    ]
-    return {
-        "success": True,
-        "batch_meta": batch_meta,
-        "working_days": working_days,
-        "topics": topics,
-        "students": computed_students
-    }
-
-@app.post("/api/attendance/bulk-generate-pdf")
-@app.post("/api/internships/bulk-attendance-pdf")
-def bulk_attendance_pdf_endpoint(req: BatchAttendanceRequest, user = Depends(get_current_user)):
-    batch_meta, students_list = _resolve_batch_data(req)
-    filepath = pdf_service.generate_master_batch_attendance_pdf(batch_meta, students_list)
-    return FileResponse(filepath, media_type="application/pdf", filename=os.path.basename(filepath))
-
-@app.post("/api/attendance/daily-day-pdf")
-def bulk_attendance_daily_day_pdf_endpoint(req: BatchAttendanceRequest, user = Depends(get_current_user)):
-    batch_meta, students_list = _resolve_batch_data(req)
-    day_num = req.selected_day or 1
-    filepath = pdf_service.generate_daily_day_attendance_pdf(day_num, batch_meta, students_list, layout_mode=req.layout_mode or "1_page_per_day")
-    return FileResponse(filepath, media_type="application/pdf", filename=os.path.basename(filepath))
-
-@app.post("/api/attendance/daily-book-pdf")
-def bulk_attendance_daily_book_pdf_endpoint(req: BatchAttendanceRequest, user = Depends(get_current_user)):
-    batch_meta, students_list = _resolve_batch_data(req)
-    filepath = pdf_service.generate_all_daily_batch_attendance_book_pdf(batch_meta, students_list, layout_mode=req.layout_mode or "1_page_per_day")
-    return FileResponse(filepath, media_type="application/pdf", filename=os.path.basename(filepath))
-
-@app.post("/api/attendance/bulk-package-zip")
-def bulk_attendance_package_zip_endpoint(req: BatchAttendanceRequest, user = Depends(get_current_user)):
-    batch_meta, students_list = _resolve_batch_data(req)
-    zip_path = pdf_service.generate_batch_attendance_zip_bundle(batch_meta, students_list)
-    return FileResponse(zip_path, media_type="application/zip", filename=os.path.basename(zip_path))
 
 # -------------------------------------------------------------
 # 14e. Guided Quick-Generate Wizard API
