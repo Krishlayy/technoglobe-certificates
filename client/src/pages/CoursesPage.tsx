@@ -5,7 +5,7 @@ import { Course, CourseModule } from '../types';
 import { useInstitution } from '../contexts/InstitutionContext';
 
 export const CoursesPage: React.FC = () => {
-  const { activeInstitution, institutionId, isPoswal } = useInstitution();
+  const { institutionId, activeInstitution, selectInstitution, isTechnoglobe, institutions } = useInstitution();
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [expandedModule, setExpandedModule] = useState<number | null>(null);

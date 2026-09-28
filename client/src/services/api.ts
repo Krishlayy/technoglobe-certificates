@@ -38,9 +38,25 @@ export const api = {
     return res.json();
   },
 
-  // Institutions (Multi-Institution Support: Poddar College & Poswal Developers)
+  // Institutions & Settings
   getInstitutions: async (): Promise<Institution[]> => {
     const res = await fetch(`${API_BASE}/institutions`);
+    return res.json();
+  },
+
+  getSettings: async (institution_id?: number): Promise<CentreSettings> => {
+    const q = institution_id ? `?institution_id=${institution_id}` : '';
+    const res = await fetch(`${API_BASE}/settings${q}`);
+    return res.json();
+  },
+
+  updateSettings: async (data: Partial<CentreSettings>): Promise<CentreSettings> => {
+    const res = await fetch(`${API_BASE}/settings`, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Failed to update settings');
     return res.json();
   },
 
@@ -189,22 +205,6 @@ export const api = {
   saveEvaluation: async (internshipId: number, data: { mentor_id: number; criteria_scores: Record<string, any>; overall_score: number; final_remark: string }) => {
     const res = await fetch(`${API_BASE}/internships/${internshipId}/evaluation`, {
       method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify(data),
-    });
-    return res.json();
-  },
-
-  // Settings
-  getSettings: async (institution_id?: number): Promise<CentreSettings> => {
-    const q = institution_id ? `?institution_id=${institution_id}` : '';
-    const res = await fetch(`${API_BASE}/settings${q}`, { headers: authHeaders() });
-    return res.json();
-  },
-
-  updateSettings: async (data: Partial<CentreSettings>) => {
-    const res = await fetch(`${API_BASE}/settings`, {
-      method: 'PUT',
       headers: authHeaders(),
       body: JSON.stringify(data),
     });

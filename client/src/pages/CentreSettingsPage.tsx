@@ -5,7 +5,7 @@ import { CentreSettings } from '../types';
 import { useInstitution } from '../contexts/InstitutionContext';
 
 export const CentreSettingsPage: React.FC = () => {
-  const { activeInstitution, institutionId, isPoswal } = useInstitution();
+  const { institutionId, activeInstitution, selectInstitution, isTechnoglobe, institutions } = useInstitution();
   const [settings, setSettings] = useState<CentreSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

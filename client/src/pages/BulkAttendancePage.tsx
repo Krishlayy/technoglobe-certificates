@@ -74,7 +74,7 @@ const COURSE_TRACKS = [
 export const BulkAttendancePage: React.FC = () => {
   const { institutionId: globalInstId, selectInstitution } = useInstitution();
 
-  // 1. Institution selection (1 = Poddar College, 2 = Poswal Developers)
+  // 1. Institution selection (1 = TechnoGlobe Bharatpur, 2 = TechnoGlobe Bharatpur)
   const [institutionId, setInstitutionId] = useState<number>(globalInstId || 1);
 
   // 2. Batch configuration
@@ -132,11 +132,11 @@ export const BulkAttendancePage: React.FC = () => {
     setInstitutionId(id);
     selectInstitution(id);
     if (id === 2) {
-      // Poswal Developers -> Solar track & Mahesh Chand Saini
+      // TechnoGlobe Bharatpur -> Solar track & Krishlay
       setCourseTrack('SOL-01');
       setMentorId(1);
     } else {
-      // Poddar College -> Data Analytics & Krishlay
+      // TechnoGlobe Bharatpur -> Data Analytics & Krishlay
       setCourseTrack('DA');
       setMentorId(2);
     }
@@ -145,8 +145,8 @@ export const BulkAttendancePage: React.FC = () => {
 
   const loadSampleStudents = (count = 5, defaultPct = 100, forInstId = institutionId) => {
     const list: BatchStudent[] = [];
-    const prefix = forInstId === 2 ? 'POSWAL-2026' : 'PCTM-2026';
-    const college = forInstId === 2 ? 'Poswal Developers Training Division' : 'Poddar College, Bharatpur';
+    const prefix = forInstId === 2 ? 'TG-2026' : 'TG-2026';
+    const college = forInstId === 2 ? 'TechnoGlobe Bharatpur Training Division' : 'TechnoGlobe Bharatpur, Bharatpur';
 
     for (let i = 0; i < count; i++) {
       const name = SAMPLE_NAMES[i % SAMPLE_NAMES.length];
@@ -192,8 +192,8 @@ export const BulkAttendancePage: React.FC = () => {
   };
 
   const handleAddStudent = () => {
-    const prefix = institutionId === 2 ? 'POSWAL-2026' : 'PCTM-2026';
-    const college = institutionId === 2 ? 'Poswal Developers Training Division' : 'Poddar College, Bharatpur';
+    const prefix = institutionId === 2 ? 'TG-2026' : 'TG-2026';
+    const college = institutionId === 2 ? 'TechnoGlobe Bharatpur Training Division' : 'TechnoGlobe Bharatpur, Bharatpur';
     const newIdx = students.length + 1;
     const newStudent: BatchStudent = {
       id: `stu_${Date.now()}_${newIdx}`,
@@ -289,8 +289,8 @@ export const BulkAttendancePage: React.FC = () => {
   const handleBulkPaste = () => {
     if (!pasteText.trim()) return;
     const lines = pasteText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-    const prefix = institutionId === 2 ? 'POSWAL-2026' : 'PCTM-2026';
-    const college = institutionId === 2 ? 'Poswal Developers Training Division' : 'Poddar College, Bharatpur';
+    const prefix = institutionId === 2 ? 'TG-2026' : 'TG-2026';
+    const college = institutionId === 2 ? 'TechnoGlobe Bharatpur Training Division' : 'TechnoGlobe Bharatpur, Bharatpur';
 
     const newStudents: BatchStudent[] = lines.map((line, idx) => {
       const parts = line.split(/[\t,|]+/).map(p => p.trim());
@@ -333,7 +333,7 @@ export const BulkAttendancePage: React.FC = () => {
       full_name: s.full_name,
       father_mother_name: s.father_mother_name || 'Father Name',
       roll_no: s.roll_no || '',
-      college_name: s.college_name || (institutionId === 2 ? 'Poswal Developers Training Division' : 'Poddar College, Bharatpur'),
+      college_name: s.college_name || (institutionId === 2 ? 'TechnoGlobe Bharatpur Training Division' : 'TechnoGlobe Bharatpur, Bharatpur'),
       degree: s.degree || (institutionId === 2 ? 'Diploma / B.Tech' : 'BCA'),
       branch: s.branch || (institutionId === 2 ? 'Electrical & Solar' : 'Computer Science'),
       attendance_pct: s.attendance_pct,
@@ -434,7 +434,7 @@ export const BulkAttendancePage: React.FC = () => {
       setShowResetDbModal(false);
       setStatusMessage({
         type: 'success',
-        text: `Database wiped clean! (Preserved: Poddar College & Poswal Developers, all courses, faculty & authorities).`
+        text: `Database wiped clean! (Preserved: TechnoGlobe Bharatpur, all courses, faculty & authorities).`
       });
       loadSampleStudents(5, 100);
       setPreviewData(null);
@@ -467,7 +467,7 @@ export const BulkAttendancePage: React.FC = () => {
           <div>
             <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-semibold mb-2 border border-amber-500/30">
               <Sun className="w-3.5 h-3.5 text-amber-400" />
-              <span>Poddar College & Poswal Developers Training Portal</span>
+              <span>TechnoGlobe Bharatpur Training Portal</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-serif font-black tracking-tight text-white">
               Bulk Attendance & Day-Wise Register Generator
@@ -525,7 +525,7 @@ export const BulkAttendancePage: React.FC = () => {
         </div>
       )}
 
-      {/* 1. Institution Selector (Poddar College vs Poswal Developers) */}
+      {/* 1. Institution Selector (TechnoGlobe Bharatpur vs TechnoGlobe Bharatpur) */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <div>
@@ -538,12 +538,12 @@ export const BulkAttendancePage: React.FC = () => {
             </p>
           </div>
           <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-            Active: {institutionId === 2 ? 'Poswal Developers' : 'Poddar College'}
+            Active: {institutionId === 2 ? 'TechnoGlobe Bharatpur' : 'TechnoGlobe Bharatpur'}
           </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Card 1: Poddar College */}
+          {/* Card 1: TechnoGlobe Bharatpur */}
           <div
             onClick={() => handleInstitutionChange(1)}
             className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
@@ -555,10 +555,10 @@ export const BulkAttendancePage: React.FC = () => {
             <div className="flex items-start justify-between">
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 rounded-lg bg-slate-900 text-amber-400 flex items-center justify-center font-black text-xs shadow-sm">
-                  PCTM
+                  TG
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-sm">Poddar College of Technology & Management</h3>
+                  <h3 className="font-bold text-slate-900 text-sm">TechnoGlobe Institute of Information Technology</h3>
                   <p className="text-xs text-slate-500">Bharatpur, Rajasthan | Phone: 9414293370</p>
                 </div>
               </div>
@@ -569,12 +569,12 @@ export const BulkAttendancePage: React.FC = () => {
             <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-slate-600 bg-white/80 p-2.5 rounded-lg border border-slate-100">
               <div><span className="font-semibold text-slate-700">Authority:</span> Nitin Agarwal (Authority)</div>
               <div><span className="font-semibold text-slate-700">Faculty:</span> Krishlay / Rahul</div>
-              <div><span className="font-semibold text-slate-700">Ref Code:</span> PCTM/BPT/DAILY-ATT</div>
+              <div><span className="font-semibold text-slate-700">Ref Code:</span> TG/BPT/DAILY-ATT</div>
               <div><span className="font-semibold text-slate-700">Email:</span> nitin@pctm</div>
             </div>
           </div>
 
-          {/* Card 2: Poswal Developers */}
+          {/* Card 2: TechnoGlobe Bharatpur */}
           <div
             onClick={() => handleInstitutionChange(2)}
             className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
@@ -589,7 +589,7 @@ export const BulkAttendancePage: React.FC = () => {
                   PD
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-sm">Poswal Developers</h3>
+                  <h3 className="font-bold text-slate-900 text-sm">TechnoGlobe Bharatpur</h3>
                   <p className="text-xs text-slate-500">Solar Power & Industrial Development (Mob: 9414694727)</p>
                 </div>
               </div>
@@ -598,8 +598,8 @@ export const BulkAttendancePage: React.FC = () => {
               )}
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-slate-600 bg-white/80 p-2.5 rounded-lg border border-slate-100">
-              <div><span className="font-semibold text-slate-700">Authority:</span> Madhuvan Singh Gurjar</div>
-              <div><span className="font-semibold text-slate-700">Trainer:</span> Mahesh Chand Saini</div>
+              <div><span className="font-semibold text-slate-700">Authority:</span> Nitin Agarwal</div>
+              <div><span className="font-semibold text-slate-700">Trainer:</span> Krishlay</div>
               <div><span className="font-semibold text-slate-700">GST No:</span> 08ABIFP2454N1ZQ</div>
               <div><span className="font-semibold text-slate-700">MSME Udyam:</span> UDYAM-RJ-06-0052498</div>
             </div>
@@ -715,7 +715,7 @@ export const BulkAttendancePage: React.FC = () => {
               className="w-full text-xs font-semibold px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
             >
               {institutionId === 2 ? (
-                <option value={1}>Mahesh Chand Saini (Trainer - Solar Energy & Power Systems)</option>
+                <option value={1}>Krishlay (Trainer - Solar Energy & Power Systems)</option>
               ) : (
                 <>
                   <option value={2}>Krishlay (Faculty - Computing, Data Science & AI)</option>
@@ -1000,7 +1000,7 @@ export const BulkAttendancePage: React.FC = () => {
           <div className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-2xl bg-slate-900 text-white shadow-md">
             <div>
               <h3 className="font-serif font-bold text-base text-amber-400">
-                Official PDF Downloads ({institutionId === 2 ? 'Poswal Developers' : 'Poddar College'})
+                Official PDF Downloads ({institutionId === 2 ? 'TechnoGlobe Bharatpur' : 'TechnoGlobe Bharatpur'})
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
                 Download single day sheet, all-days register book, master landscape matrix, or complete ZIP bundle.
@@ -1236,7 +1236,7 @@ export const BulkAttendancePage: React.FC = () => {
               rows={8}
               value={pasteText}
               onChange={(e) => setPasteText(e.target.value)}
-              placeholder={`Aarav Sharma\tMr. Ramesh Sharma\t${institutionId === 2 ? 'POSWAL' : 'PCTM'}-2026-001\t100\nBhavya Gupta\tMr. Suresh Gupta\t${institutionId === 2 ? 'POSWAL' : 'PCTM'}-2026-002\t95`}
+              placeholder={`Aarav Sharma\tMr. Ramesh Sharma\t${institutionId === 2 ? 'TG' : 'TG'}-2026-001\t100\nBhavya Gupta\tMr. Suresh Gupta\t${institutionId === 2 ? 'TG' : 'TG'}-2026-002\t95`}
               className="w-full font-mono text-xs p-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
             />
             <div className="flex items-center justify-end space-x-3">
@@ -1273,7 +1273,7 @@ export const BulkAttendancePage: React.FC = () => {
             <p className="text-xs text-slate-600 leading-relaxed">
               This will wipe all test student records, internships, daily logs, and certificates.
               <br/><br/>
-              <b>Preserved:</b> Poddar College & Poswal Developers organizations, all courses & modules, faculty & authority profiles.
+              <b>Preserved:</b> TechnoGlobe Bharatpur organizations, all courses & modules, faculty & authority profiles.
             </p>
             <div className="flex items-center justify-end space-x-3 pt-2">
               <button

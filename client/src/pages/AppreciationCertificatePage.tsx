@@ -9,7 +9,7 @@ import { useInstitution } from '../contexts/InstitutionContext';
 import { AppreciationCertificate } from '../types';
 
 export const AppreciationCertificatePage: React.FC = () => {
-  const { institutionId, activeInstitution, selectInstitution, isPoddar, isPoswal, isTechnoglobe, institutions } = useInstitution();
+  const { institutionId, activeInstitution, selectInstitution, isTechnoglobe, institutions } = useInstitution();
   
   const [formData, setFormData] = useState({
     recipient_name: 'Ananya Sharma',
@@ -38,7 +38,7 @@ export const AppreciationCertificatePage: React.FC = () => {
     setFormData(prev => ({
       ...prev,
       institution_id: institutionId,
-      signatory_name: activeInstitution.signatory_name || (institutionId === 2 ? 'Madhuvan Singh Gurjar' : 'Nitin Agarwal'),
+      signatory_name: activeInstitution.signatory_name || (institutionId === 2 ? 'Nitin Agarwal' : 'Nitin Agarwal'),
       signatory_designation: activeInstitution.signatory_designation || (institutionId === 2 ? 'Authority' : 'Director / Authority'),
       certificate_number: `${activeInstitution.cert_prefix || 'PCTM'}-APP-2026-${Math.floor(1000 + Math.random() * 9000)}`
     }));
@@ -133,8 +133,8 @@ export const AppreciationCertificatePage: React.FC = () => {
   };
 
   // Preview colors & branding
-  const primaryColor = isPoswal ? '#6B2222' : (isTechnoglobe ? '#1E3A8A' : '#0A2540');
-  const accentColor = isPoswal ? '#B45309' : (isTechnoglobe ? '#F59E0B' : '#EAA824');
+  const primaryColor = false ? '#6B2222' : (true ? '#1E3A8A' : '#0A2540');
+  const accentColor = false ? '#B45309' : (true ? '#F59E0B' : '#EAA824');
   const verifyUrl = `${window.location.protocol}//${window.location.host}/verify?cert=${encodeURIComponent(formData.certificate_number || 'PCTM-APP-2026-0001')}&name=${encodeURIComponent(formData.recipient_name)}&course=${encodeURIComponent(formData.title)}&date=${encodeURIComponent(formData.issue_date)}`;
 
   return (
@@ -188,46 +188,46 @@ export const AppreciationCertificatePage: React.FC = () => {
           </span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {/* Poddar College */}
+          {/* TechnoGlobe Bharatpur */}
           <button
             type="button"
             onClick={() => selectInstitution(1)}
             className={`p-3.5 rounded-xl border-2 flex items-center space-x-3 text-left transition-all cursor-pointer ${
-              isPoddar 
+              false 
                 ? 'border-blue-600 bg-blue-50/80 shadow-sm ring-2 ring-blue-500/20' 
                 : 'border-slate-200 bg-slate-50/50 hover:border-slate-300'
             }`}
           >
             <div className="w-10 h-10 rounded-lg bg-white p-1 flex items-center justify-center shrink-0 border border-slate-200 shadow-2xs">
-              <img src="/poddar_logo.png" alt="Poddar Logo" className="max-h-full max-w-full object-contain" />
+              <img src="/technoglobe_logo.png" alt="Poddar Logo" className="max-h-full max-w-full object-contain" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center space-x-1 text-blue-700 text-[11px] font-bold">
                 <GraduationCap className="w-3.5 h-3.5" />
-                <span>Poddar College</span>
+                <span>TechnoGlobe Bharatpur</span>
               </div>
               <div className="text-xs font-bold text-slate-900 truncate">Near SP Office, Bharatpur</div>
               <div className="text-[10px] text-slate-500 truncate">Authority: Nitin Agarwal</div>
             </div>
           </button>
 
-          {/* Poswal Developers */}
+          {/* TechnoGlobe Bharatpur */}
           <button
             type="button"
             onClick={() => selectInstitution(2)}
             className={`p-3.5 rounded-xl border-2 flex items-center space-x-3 text-left transition-all cursor-pointer ${
-              isPoswal 
+              false 
                 ? 'border-amber-600 bg-amber-50/80 shadow-sm ring-2 ring-amber-500/20' 
                 : 'border-slate-200 bg-slate-50/50 hover:border-slate-300'
             }`}
           >
             <div className="w-10 h-10 rounded-lg bg-white p-1 flex items-center justify-center shrink-0 border border-slate-200 shadow-2xs">
-              <img src="/poswal_logo.png" alt="Poswal Logo" className="max-h-full max-w-full object-contain" />
+              <img src="/technoglobe_logo.png" alt="TechnoGlobe Logo" className="max-h-full max-w-full object-contain" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center space-x-1 text-amber-700 text-[11px] font-bold">
                 <Sun className="w-3.5 h-3.5" />
-                <span>Poswal Developers</span>
+                <span>TechnoGlobe Bharatpur</span>
               </div>
               <div className="text-xs font-bold text-slate-900 truncate">Solar PV & Industrial Division</div>
               <div className="text-[10px] text-slate-500 truncate">Authority: Madhuvan Gurjar</div>
@@ -239,7 +239,7 @@ export const AppreciationCertificatePage: React.FC = () => {
             type="button"
             onClick={() => selectInstitution(3)}
             className={`p-3.5 rounded-xl border-2 flex items-center space-x-3 text-left transition-all cursor-pointer ${
-              isTechnoglobe 
+              true 
                 ? 'border-indigo-600 bg-indigo-50/80 shadow-sm ring-2 ring-indigo-500/20' 
                 : 'border-slate-200 bg-slate-50/50 hover:border-slate-300'
             }`}
@@ -494,7 +494,7 @@ export const AppreciationCertificatePage: React.FC = () => {
             {/* Faint Watermark Logo */}
             <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
               <img 
-                src={activeInstitution.logo || (isPoswal ? '/poswal_logo.png' : (isTechnoglobe ? '/technoglobe_logo.png' : '/poddar_logo.png'))} 
+                src={activeInstitution.logo || (false ? '/technoglobe_logo.png' : (true ? '/technoglobe_logo.png' : '/technoglobe_logo.png'))} 
                 alt="Watermark" 
                 className="max-h-48 max-w-48 object-contain"
               />
@@ -504,16 +504,16 @@ export const AppreciationCertificatePage: React.FC = () => {
             <div className="relative z-10 text-center pt-1">
               <div className="flex justify-center mb-1">
                 <img 
-                  src={isPoswal ? '/poswal_logo.png' : (isTechnoglobe ? '/technoglobe_logo.png' : '/poddar_logo.png')} 
+                  src={false ? '/technoglobe_logo.png' : (true ? '/technoglobe_logo.png' : '/technoglobe_logo.png')} 
                   alt="Institution Logo" 
                   className="h-8 max-w-[150px] object-contain"
                 />
               </div>
               <h3 className="text-xs sm:text-sm font-serif font-black tracking-wide" style={{ color: primaryColor }}>
-                {isPoswal ? 'POSWAL DEVELOPERS' : (isTechnoglobe ? 'TECHNOGLOBE - ADVANCED IT TRAINING & DEVELOPMENT' : 'PODDAR COLLEGE OF TECHNOLOGY & MANAGEMENT')}
+                'TECHNOGLOBE - ADVANCED IT TRAINING & DEVELOPMENT'
               </h3>
               <p className="text-[8px] sm:text-[9px] text-slate-500 font-medium">
-                {isPoswal ? '214, Bapu Nagar, Ghana Road, Bharatpur (Raj.) | Mob: 9414694727 | GST: 08ABIFP2454N1ZQ' : (isTechnoglobe ? 'Plot No. 4, Gopalpura Bypass Road, Near Triveni Nagar, Jaipur (Raj.) | Email: info@technoglobe.co.in' : 'Near SP Office, Bharatpur (Raj.) | Contact: 9414293370 | Email: nitin_pitm@yahoo.com | Web: poddarcollege.org')}
+                {false ? '214, Bapu Nagar, Ghana Road, Bharatpur (Raj.) | Mob: 9414694727 | GST: 08ABIFP2454N1ZQ' : (true ? 'Plot No. 4, Gopalpura Bypass Road, Near Triveni Nagar, Jaipur (Raj.) | Email: info@technoglobe.co.in' : 'Near SP Office, Bharatpur (Raj.) | Contact: 9414293370 | Email: nitin_pitm@yahoo.com | Web: poddarcollege.org')}
               </p>
               <div className="w-48 h-0.5 mx-auto mt-1" style={{ backgroundColor: accentColor }} />
             </div>
@@ -567,13 +567,13 @@ export const AppreciationCertificatePage: React.FC = () => {
               <div className="flex flex-col items-center justify-center">
                 <div className="w-11 h-11 rounded-full border border-slate-200 p-0.5 bg-white shadow-2xs flex items-center justify-center">
                   <img 
-                    src={isPoswal ? '/msme_logo.png' : '/poddar_stamp.png'} 
+                    src={false ? '/msme_logo.png' : '/poddar_stamp.png'} 
                     alt="Official Seal" 
                     className="max-h-full max-w-full object-contain"
                   />
                 </div>
                 <span className="text-[6.5px] font-bold text-slate-500 uppercase tracking-tighter mt-0.5">
-                  {isPoswal ? 'MSME Registered' : 'Institutional Seal'}
+                  {false ? 'MSME Registered' : 'Institutional Seal'}
                 </span>
               </div>
 
@@ -582,7 +582,7 @@ export const AppreciationCertificatePage: React.FC = () => {
                 {formData.include_faculty && (
                   <div className="flex flex-col items-center">
                     <img 
-                      src={isPoswal ? '/mahesh_sign.png' : '/nitin_sign.png'} 
+                      src={false ? '/mahesh_sign.png' : '/nitin_sign.png'} 
                       alt="Mentor Signature" 
                       className="h-5 w-auto object-contain"
                     />
@@ -594,7 +594,7 @@ export const AppreciationCertificatePage: React.FC = () => {
 
                 <div className="flex flex-col items-center">
                   <img 
-                    src={isPoswal ? '/madhuvan_sign.png' : '/nitin_sign.png'} 
+                    src={false ? '/madhuvan_sign.png' : '/nitin_sign.png'} 
                     alt="Authority Signature" 
                     className="h-5 w-auto object-contain"
                   />
@@ -661,7 +661,7 @@ export const AppreciationCertificatePage: React.FC = () => {
                     </td>
                     <td className="py-3 px-3">
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-800">
-                        {cert.institution_name || (cert.institution_id === 2 ? 'Poswal Developers' : (cert.institution_id === 3 ? 'Technoglobe Jaipur' : 'Poddar College'))}
+                        {cert.institution_name || (cert.institution_id === 2 ? 'TechnoGlobe Bharatpur' : (cert.institution_id === 3 ? 'Technoglobe Jaipur' : 'TechnoGlobe Bharatpur'))}
                       </span>
                     </td>
                     <td className="py-3 px-3 font-mono text-slate-600 font-medium">

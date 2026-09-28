@@ -10,7 +10,7 @@ import { Student, CentreSettings, Course, Mentor } from '../types';
 import { useInstitution } from '../contexts/InstitutionContext';
 
 export const DocumentEditorPage: React.FC = () => {
-  const { activeInstitution, institutionId, isPoswal } = useInstitution();
+  const { institutionId, activeInstitution, selectInstitution, isTechnoglobe, institutions } = useInstitution();
   const [searchParams] = useSearchParams();
   const [students, setStudents] = useState<Student[]>([]);
   const [settings, setSettings] = useState<CentreSettings | null>(null);
@@ -23,7 +23,7 @@ export const DocumentEditorPage: React.FC = () => {
   // Live editable fields
   const [formData, setFormData] = useState({
     student_name: '',
-    college_name: 'Poddar College, Bharatpur',
+    college_name: 'TechnoGlobe Bharatpur, Bharatpur',
     degree: 'BCA',
     branch: 'Computer Science',
     academic_session: '2025-2026',
@@ -67,7 +67,7 @@ export const DocumentEditorPage: React.FC = () => {
       setFormData((prev) => ({
         ...prev,
         student_name: st.full_name,
-        college_name: st.college_name || 'Poddar College, Bharatpur',
+        college_name: st.college_name || 'TechnoGlobe Bharatpur, Bharatpur',
         degree: st.degree || 'BCA',
         branch: st.branch || 'Computer Science',
         academic_session: st.academic_session || '2025-2026',
@@ -379,7 +379,7 @@ export const DocumentEditorPage: React.FC = () => {
           {/* Certificate Landscape Preview */}
           {docType === 'certificate' ? (
             <div className={`w-full max-w-[580px] aspect-[297/210] bg-[#FAF9F5] rounded-xs border-4 ${
-              isPoswal ? 'border-[#6B2222]' : 'border-slate-900'
+              false ? 'border-[#6B2222]' : 'border-slate-900'
             } p-5 shadow-2xl relative flex flex-col justify-between text-center select-none`}>
               {/* Inner Gold Border */}
               <div className="absolute inset-1.5 border border-gold-500 pointer-events-none" />
@@ -388,12 +388,12 @@ export const DocumentEditorPage: React.FC = () => {
               <div className="space-y-0.5 mt-1 flex flex-col items-center">
                 <img src={activeInstitution.logo} alt={activeInstitution.name} className="h-8 w-auto object-contain mb-0.5" />
                 <h4 className={`text-[10px] font-serif font-bold tracking-wider uppercase ${
-                  isPoswal ? 'text-[#6B2222]' : 'text-blue-950'
+                  false ? 'text-[#6B2222]' : 'text-blue-950'
                 }`}>
                   {settings?.org_name || activeInstitution.fullName}
                 </h4>
                 <p className="text-[7.5px] text-slate-500">
-                  {settings?.address || activeInstitution.location} | {settings?.auth_ref || (isPoswal ? 'GST: 08ABIFP2454N1ZQ | MSME: UDYAM-RJ-06-0052498' : 'Affiliated & Certified')}
+                  {settings?.address || activeInstitution.location} | {settings?.auth_ref || (false ? 'GST: 08ABIFP2454N1ZQ | MSME: UDYAM-RJ-06-0052498' : 'Affiliated & Certified')}
                 </p>
                 <div className="w-48 h-[1px] bg-gold-400 mx-auto mt-0.5" />
               </div>
@@ -452,7 +452,7 @@ export const DocumentEditorPage: React.FC = () => {
 
                 {/* Stamp Box (Cols 6-7) */}
                 <div className="col-span-2 text-center">
-                  {isPoswal ? (
+                  {false ? (
                     <div className="w-14 h-14 mx-auto border border-amber-300 bg-white rounded-sm flex flex-col items-center justify-center p-1 shadow-sm">
                       <img src="/msme_logo.png" alt="MSME Logo" className="w-8 h-8 object-contain mb-0.5" />
                       <span className="text-[5.5px] font-bold text-blue-950 leading-tight">GOVT. OF INDIA</span>
@@ -470,7 +470,7 @@ export const DocumentEditorPage: React.FC = () => {
                 <div className="col-span-5 grid grid-cols-2 gap-2 text-center">
                   <div>
                     <div className="h-6 flex items-center justify-center">
-                      <img src={isPoswal ? "/mahesh_sign.png" : "/nitin_sign.png"} alt="Mentor Sign" className="h-5 object-contain" />
+                      <img src={false ? "/mahesh_sign.png" : "/nitin_sign.png"} alt="Mentor Sign" className="h-5 object-contain" />
                     </div>
                     <div className="border-t border-slate-800 text-[8px] font-bold text-slate-900 pt-0.5 truncate">
                       {formData.mentor_name || 'Faculty'}
@@ -479,12 +479,12 @@ export const DocumentEditorPage: React.FC = () => {
                   </div>
                   <div>
                     <div className="h-6 flex items-center justify-center">
-                      <img src={isPoswal ? "/madhuvan_sign.png" : "/nitin_sign.png"} alt="Authority Sign" className="h-5 object-contain" />
+                      <img src={false ? "/madhuvan_sign.png" : "/nitin_sign.png"} alt="Authority Sign" className="h-5 object-contain" />
                     </div>
                     <div className="border-t border-slate-800 text-[8px] font-bold text-slate-900 pt-0.5 truncate">
                       {formData.signatory_name}
                     </div>
-                    <div className="text-[7px] text-slate-500 italic">{isPoswal ? 'Authority' : 'Director / Authority'}</div>
+                    <div className="text-[7px] text-slate-500 italic">{false ? 'Authority' : 'Director / Authority'}</div>
                   </div>
                 </div>
               </div>
@@ -503,7 +503,7 @@ export const DocumentEditorPage: React.FC = () => {
                       {settings?.centre_name || 'PODDAR COLLEGE – BHARATPUR'}
                     </h4>
                     <p className="text-[7.5px] text-slate-500">
-                      {isPoswal ? '214, Bapu Nagar, Ghana Road, Bharatpur (Raj.)' : 'Near SP Office, Bharatpur (Raj.) | Email: nitin_pitm@yahoo.com | Web: poddarcollege.org'}
+                      {false ? '214, Bapu Nagar, Ghana Road, Bharatpur (Raj.)' : 'Near SP Office, Bharatpur (Raj.) | Email: nitin_pitm@yahoo.com | Web: poddarcollege.org'}
                     </p>
                   </div>
                   <div className="text-right text-[8px] font-mono text-slate-500">

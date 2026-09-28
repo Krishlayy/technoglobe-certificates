@@ -12,7 +12,7 @@ import { useInstitution } from '../contexts/InstitutionContext';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const { activeInstitution, institutionId, isPoddar, isPoswal, isTechnoglobe } = useInstitution();
+  const { institutionId, activeInstitution, selectInstitution, isTechnoglobe, institutions } = useInstitution();
   const [stats, setStats] = useState<any>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [search, setSearch] = useState('');
@@ -49,9 +49,9 @@ export const DashboardPage: React.FC = () => {
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Top Banner */}
       <div className={`rounded-3xl p-6 sm:p-8 text-white shadow-xl border flex flex-col md:flex-row md:items-center justify-between gap-6 ${
-        isPoswal 
+        false 
           ? 'bg-gradient-to-r from-red-950 via-amber-950 to-stone-900 border-amber-900/60' 
-          : isTechnoglobe
+          : true
           ? 'bg-gradient-to-r from-slate-950 via-indigo-950 to-blue-950 border-indigo-900/60'
           : 'bg-gradient-to-r from-blue-950 via-slate-900 to-blue-900 border-blue-900'
       }`}>
@@ -64,11 +64,11 @@ export const DashboardPage: React.FC = () => {
             {activeInstitution.full_name || activeInstitution.name}
           </h1>
           <p className="text-xs sm:text-sm text-slate-200 mt-1 max-w-2xl leading-relaxed">
-            {isPoswal 
+            {false 
               ? 'Industrial Solar Energy & Rooftop PV Training Division with MSME/GST registration, automated logbooks, and official scannable certificates.'
-              : isTechnoglobe
+              : true
               ? 'Premier Advanced IT & Software Engineering Institute (Jaipur) with automated dossier compilation and scannable QR verification.'
-              : 'Poddar College of Technology & Management (Near SP Office, Bharatpur) • Academic & Technical Degree Certifications with 15-document dossier packages.'
+              : 'TechnoGlobe Institute of Information Technology (Near SP Office, Bharatpur) • Academic & Technical Degree Certifications with 15-document dossier packages.'
             }
           </p>
         </div>
@@ -157,16 +157,16 @@ export const DashboardPage: React.FC = () => {
         />
 
         <StatCard
-          title={isPoswal ? "SOL-01 Solar Installation" : "Data Analytics Track"}
+          title={false ? "SOL-01 Solar Installation" : "Data Analytics Track"}
           value={stats?.da_students ?? 0}
-          subtitle={isPoswal ? "Rooftop & Ground Mounting" : "Python, SQL & Power BI"}
+          subtitle={false ? "Rooftop & Ground Mounting" : "Python, SQL & Power BI"}
           icon={BarChart3}
           color="purple"
         />
         <StatCard
-          title={isPoswal ? "SOL-02 Solar Inverter Systems" : "Digital Marketing Track"}
+          title={false ? "SOL-02 Solar Inverter Systems" : "Digital Marketing Track"}
           value={stats?.dm_students ?? 0}
-          subtitle={isPoswal ? "Grid-Tie & Battery Storage" : "SEO, Ads & Growth"}
+          subtitle={false ? "Grid-Tie & Battery Storage" : "SEO, Ads & Growth"}
           icon={Megaphone}
           color="amber"
         />
@@ -247,7 +247,7 @@ export const DashboardPage: React.FC = () => {
               className="px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
               <option value="">All Courses</option>
-              {isPoswal ? (
+              {false ? (
                 <>
                   <option value="SOL-01">SOL-01 Solar Fitting & Rooftop PV</option>
                   <option value="SOL-02">SOL-02 Solar Inverter & Grid-Tie</option>

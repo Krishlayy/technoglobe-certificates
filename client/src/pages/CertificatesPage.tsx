@@ -6,7 +6,7 @@ import { Student } from '../types';
 import { useInstitution } from '../contexts/InstitutionContext';
 
 export const CertificatesPage: React.FC = () => {
-  const { activeInstitution, institutionId, isPoswal } = useInstitution();
+  const { institutionId, activeInstitution, selectInstitution, isTechnoglobe, institutions } = useInstitution();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);

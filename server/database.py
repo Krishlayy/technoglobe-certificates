@@ -23,7 +23,7 @@ def init_db():
         name TEXT NOT NULL,
         email TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
-        role TEXT NOT NULL DEFAULT 'CENTRE_ADMIN', -- SUPER_ADMIN, CENTRE_ADMIN, MENTOR, VIEWER
+        role TEXT NOT NULL DEFAULT 'SUPER_ADMIN', -- SUPER_ADMIN, CENTRE_ADMIN, MENTOR, VIEWER
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     """)
@@ -32,24 +32,24 @@ def init_db():
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS centre_settings (
         id INTEGER PRIMARY KEY CHECK (id = 1),
-        org_name TEXT NOT NULL,
-        centre_name TEXT NOT NULL,
-        centre_code TEXT NOT NULL,
-        default_college TEXT NOT NULL DEFAULT 'Poddar College, Bharatpur',
-        address TEXT NOT NULL,
-        phone TEXT NOT NULL,
-        email TEXT NOT NULL,
-        website TEXT NOT NULL,
-        auth_ref TEXT,
-        signatory_name TEXT NOT NULL,
-        signatory_designation TEXT NOT NULL,
-        logo_url TEXT,
-        signature_url TEXT,
-        stamp_url TEXT,
-        show_digital_signature INTEGER DEFAULT 0,
-        show_digital_stamp INTEGER DEFAULT 0,
-        cert_prefix TEXT DEFAULT 'PCTM',
-        doc_prefix TEXT DEFAULT 'PCTM/BPT',
+        org_name TEXT NOT NULL DEFAULT 'TECHNOGLOBE',
+        centre_name TEXT NOT NULL DEFAULT 'TECHNOGLOBE – BHARATPUR',
+        centre_code TEXT NOT NULL DEFAULT 'TG-BPT-01',
+        default_college TEXT NOT NULL DEFAULT 'TechnoGlobe Institute of Information Technology, Bharatpur',
+        address TEXT NOT NULL DEFAULT 'Near SP Office, Bharatpur (Raj.) 321001',
+        phone TEXT NOT NULL DEFAULT '9414293370',
+        email TEXT NOT NULL DEFAULT 'nitin_pitm@yahoo.com',
+        website TEXT NOT NULL DEFAULT 'https://technoglobe.co.in',
+        auth_ref TEXT DEFAULT 'TG/RAJ/BPT/2026-001',
+        signatory_name TEXT NOT NULL DEFAULT 'Nitin Agarwal',
+        signatory_designation TEXT NOT NULL DEFAULT 'Director / Center Head',
+        logo_url TEXT DEFAULT 'technoglobe_logo.png',
+        signature_url TEXT DEFAULT 'nitin_sign.png',
+        stamp_url TEXT DEFAULT 'poddar_stamp.png',
+        show_digital_signature INTEGER DEFAULT 1,
+        show_digital_stamp INTEGER DEFAULT 1,
+        cert_prefix TEXT DEFAULT 'TG',
+        doc_prefix TEXT DEFAULT 'TG/BPT',
         default_required_hours INTEGER DEFAULT 120,
         default_required_attendance_pct REAL DEFAULT 75.0,
         verification_base_url TEXT DEFAULT 'https://technoglobe-certificates.onrender.com',
@@ -57,12 +57,7 @@ def init_db():
     );
     """)
 
-    # 2.1 Institutions Table (Multi-Institution Support)
-    cursor.execute("PRAGMA table_info(institutions)")
-    cols = [r[1] for r in cursor.fetchall()]
-    if cols and "full_name" not in cols:
-        cursor.execute("DROP TABLE institutions")
-
+    # 2.1 Institutions Table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS institutions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -80,11 +75,11 @@ def init_db():
         secondary_color TEXT DEFAULT '#1E3A8A',
         accent_color TEXT DEFAULT '#EAA824',
         signatory_name TEXT NOT NULL DEFAULT 'Nitin Agarwal',
-        signatory_designation TEXT NOT NULL DEFAULT 'Authority',
-        stamp_mode TEXT NOT NULL DEFAULT 'EMPTY_INK_PAD_BOX',
-        watermark_mode TEXT NOT NULL DEFAULT 'PODDAR_LOGO_TRANSLUCENT',
-        doc_prefix TEXT DEFAULT 'PCTM/BPT',
-        cert_prefix TEXT DEFAULT 'PCTM',
+        signatory_designation TEXT NOT NULL DEFAULT 'Director / Center Head',
+        stamp_mode TEXT NOT NULL DEFAULT 'OFFICIAL_SEAL',
+        watermark_mode TEXT NOT NULL DEFAULT 'TECHNOGLOBE_LOGO_TRANSLUCENT',
+        doc_prefix TEXT DEFAULT 'TG/BPT',
+        cert_prefix TEXT DEFAULT 'TG',
         is_active INTEGER DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -94,13 +89,13 @@ def init_db():
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS courses (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        code TEXT UNIQUE NOT NULL, -- DA, DM, etc.
+        code TEXT UNIQUE NOT NULL,
         name TEXT NOT NULL,
         title TEXT NOT NULL,
         description TEXT,
         duration_weeks INTEGER NOT NULL DEFAULT 6,
         total_hours INTEGER NOT NULL DEFAULT 120,
-        default_mode TEXT NOT NULL DEFAULT 'Offline', -- Offline, Online, Hybrid
+        default_mode TEXT NOT NULL DEFAULT 'Offline',
         is_active INTEGER DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -146,14 +141,14 @@ def init_db():
         start_date TEXT NOT NULL,
         end_date TEXT NOT NULL,
         mentor_id INTEGER,
-        max_students INTEGER DEFAULT 30,
+        max_students INTEGER DEFAULT 35,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE RESTRICT,
         FOREIGN KEY (mentor_id) REFERENCES mentors (id) ON DELETE SET NULL
     );
     """)
 
-    # 7. Students (SIMPLIFIED: PRN and Roll Number completely removed; College is Poddar College, Bharatpur)
+    # 7. Students
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS students (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -166,9 +161,9 @@ def init_db():
         address TEXT,
         city TEXT DEFAULT 'Bharatpur',
         state TEXT DEFAULT 'Rajasthan',
-        college_name TEXT NOT NULL DEFAULT 'Poddar College, Bharatpur',
-        degree TEXT NOT NULL,
-        branch TEXT NOT NULL,
+        college_name TEXT NOT NULL DEFAULT 'TechnoGlobe Institute of Information Technology, Bharatpur',
+        degree TEXT NOT NULL DEFAULT 'BCA',
+        branch TEXT NOT NULL DEFAULT 'Computer Science',
         semester_year TEXT DEFAULT '6th Semester',
         academic_session TEXT DEFAULT '2025-2026',
         is_demo INTEGER DEFAULT 0,
@@ -192,8 +187,8 @@ def init_db():
         end_date TEXT NOT NULL,
         total_days INTEGER NOT NULL DEFAULT 36,
         total_training_hours INTEGER NOT NULL DEFAULT 120,
-        mode TEXT NOT NULL DEFAULT 'Offline', -- Offline, Online, Hybrid
-        status TEXT NOT NULL DEFAULT 'REGISTERED', -- REGISTERED, TRAINING, PROJECT_SUBMITTED, EVALUATED, COMPLETED, CERTIFIED
+        mode TEXT NOT NULL DEFAULT 'Offline',
+        status TEXT NOT NULL DEFAULT 'REGISTERED',
         certificate_number TEXT UNIQUE,
         verification_code TEXT UNIQUE,
         qr_payload_json TEXT,
@@ -204,27 +199,22 @@ def init_db():
         FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
         FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE RESTRICT,
         FOREIGN KEY (batch_id) REFERENCES batches (id) ON DELETE SET NULL,
-        FOREIGN KEY (mentor_id) REFERENCES mentors (id) ON DELETE RESTRICT,
+        FOREIGN KEY (mentor_id) REFERENCES mentors (id) ON DELETE SET NULL,
         FOREIGN KEY (institution_id) REFERENCES institutions (id) ON DELETE SET DEFAULT
     );
     """)
-    cursor.execute("PRAGMA table_info(internships)")
-    i_cols = [r[1] for r in cursor.fetchall()]
-    if "institution_id" not in i_cols:
-        cursor.execute("ALTER TABLE internships ADD COLUMN institution_id INTEGER DEFAULT 1")
 
-
-    # 9. University / College Compliance Records (Internal Only)
+    # 9. Compliance Records
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS compliance_records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         internship_id INTEGER UNIQUE NOT NULL,
-        university_name TEXT DEFAULT 'Poddar College, Bharatpur',
+        university_name TEXT DEFAULT 'TechnoGlobe Institute of Information Technology, Bharatpur',
         department TEXT,
         affiliation_ref TEXT,
         faculty_coordinator TEXT,
         faculty_designation TEXT,
-        approval_status TEXT NOT NULL DEFAULT 'APPROVED', -- PENDING, APPROVED, NOT_REQUIRED, REJECTED
+        approval_status TEXT NOT NULL DEFAULT 'APPROVED',
         approval_ref TEXT,
         approval_date TEXT,
         noc_document_url TEXT,
@@ -252,7 +242,7 @@ def init_db():
         end_time TEXT NOT NULL DEFAULT '01:30 PM',
         total_hours REAL NOT NULL DEFAULT 3.5,
         topic_covered TEXT,
-        status TEXT NOT NULL DEFAULT 'PRESENT', -- PRESENT, ABSENT, AUTHORIZED LEAVE, HOLIDAY, WEEK OFF
+        status TEXT NOT NULL DEFAULT 'PRESENT',
         student_signed INTEGER DEFAULT 1,
         mentor_signed INTEGER DEFAULT 1,
         remarks TEXT,
@@ -261,7 +251,7 @@ def init_db():
     );
     """)
 
-    # 11. Daily Logs / Logbook
+    # 11. Daily Logs
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS daily_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -315,7 +305,7 @@ def init_db():
         objectives TEXT,
         fields_json TEXT NOT NULL DEFAULT '{}',
         file_attachments_json TEXT NOT NULL DEFAULT '[]',
-        status TEXT NOT NULL DEFAULT 'IN_PROGRESS', -- IN_PROGRESS, SUBMITTED, APPROVED
+        status TEXT NOT NULL DEFAULT 'IN_PROGRESS',
         submitted_at TIMESTAMP,
         approved_at TIMESTAMP,
         FOREIGN KEY (internship_id) REFERENCES internships (id) ON DELETE CASCADE
@@ -329,12 +319,12 @@ def init_db():
         internship_id INTEGER UNIQUE NOT NULL,
         mentor_id INTEGER,
         criteria_scores_json TEXT NOT NULL DEFAULT '{}',
-        overall_score INTEGER NOT NULL DEFAULT 0, -- out of 100
+        overall_score INTEGER NOT NULL DEFAULT 0,
         final_remark TEXT,
         evaluated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         mentor_signed INTEGER DEFAULT 1,
         FOREIGN KEY (internship_id) REFERENCES internships (id) ON DELETE CASCADE,
-        FOREIGN KEY (mentor_id) REFERENCES mentors (id) ON DELETE RESTRICT
+        FOREIGN KEY (mentor_id) REFERENCES mentors (id) ON DELETE SET NULL
     );
     """)
 
@@ -355,12 +345,12 @@ def init_db():
     );
     """)
 
-    # 16. Certificates (Internal Registry)
+    # 16. Certificates
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS certificates (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         internship_id INTEGER NOT NULL,
-        cert_type TEXT NOT NULL DEFAULT 'COMPLETION', -- COMPLETION, EXPERIENCE
+        cert_type TEXT NOT NULL DEFAULT 'COMPLETION',
         certificate_number TEXT UNIQUE NOT NULL,
         verification_code TEXT UNIQUE NOT NULL,
         qr_payload_json TEXT NOT NULL DEFAULT '{}',
@@ -374,7 +364,7 @@ def init_db():
     );
     """)
 
-    # 17. Document Templates (Visual Block Customizer)
+    # 17. Document Templates
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS document_templates (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -400,7 +390,7 @@ def init_db():
         certificate_number TEXT UNIQUE NOT NULL,
         verification_code TEXT UNIQUE NOT NULL,
         signatory_name TEXT NOT NULL DEFAULT 'Nitin Agarwal',
-        signatory_designation TEXT NOT NULL DEFAULT 'Director / Authority',
+        signatory_designation TEXT NOT NULL DEFAULT 'Director / Center Head',
         mentor_name TEXT,
         mentor_designation TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -422,12 +412,6 @@ def init_db():
     );
     """)
 
-    # Column migrations
-    cursor.execute("PRAGMA table_info(internships)")
-    int_cols = [col[1] for col in cursor.fetchall()]
-    if "institution_id" not in int_cols:
-        cursor.execute("ALTER TABLE internships ADD COLUMN institution_id INTEGER DEFAULT 1")
-
     # Performance indexes
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_internships_student_id ON internships(student_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_internships_course_id ON internships(course_id)")
@@ -447,4 +431,4 @@ def init_db():
 
 if __name__ == "__main__":
     init_db()
-    print("Database schema updated successfully!")
+    print("TechnoGlobe database initialized successfully.")

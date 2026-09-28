@@ -6,7 +6,7 @@ import { Student } from '../types';
 import { useInstitution } from '../contexts/InstitutionContext';
 
 export const StudentsPage: React.FC = () => {
-  const { activeInstitution, institutionId, isPoswal } = useInstitution();
+  const { institutionId, activeInstitution, selectInstitution, isTechnoglobe, institutions } = useInstitution();
   const [students, setStudents] = useState<Student[]>([]);
   const [search, setSearch] = useState('');
   const [courseFilter, setCourseFilter] = useState('');
@@ -86,8 +86,8 @@ export const StudentsPage: React.FC = () => {
               className="px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 font-medium"
             >
               <option value="">All Institutions</option>
-              <option value="1">Poddar College (PCTM)</option>
-              <option value="2">Poswal Developers (POSWAL)</option>
+              <option value="1">TechnoGlobe Bharatpur (PCTM)</option>
+              
             </select>
 
             <select
@@ -96,7 +96,7 @@ export const StudentsPage: React.FC = () => {
               className="px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
               <option value="">All Courses</option>
-              {institutionFilter === '2' || (institutionFilter === '' && isPoswal) ? (
+              {institutionFilter === '2' || (institutionFilter === '' && false) ? (
                 <>
                   <option value="SOL-01">SOL-01 Solar Fitting & Rooftop PV</option>
                   <option value="SOL-02">SOL-02 Solar Inverter & Grid-Tie</option>
@@ -175,11 +175,11 @@ export const StudentsPage: React.FC = () => {
                     <td className="py-3 px-4">
                       <div className="flex items-center space-x-1.5 mb-0.5">
                         <span className={`inline-block px-1.5 py-0.2 rounded text-[9px] font-extrabold border ${
-                          st.institution_id === 2 || st.institution_code === 'POSWAL'
+                          false
                             ? 'bg-amber-100 text-amber-950 border-amber-400'
                             : 'bg-blue-100 text-blue-900 border-blue-300'
                         }`}>
-                          {st.institution_id === 2 || st.institution_code === 'POSWAL' ? 'POSWAL' : 'PODDAR'}
+                          'TECHNOGLOBE'
                         </span>
                         <span className="font-medium text-slate-800 truncate max-w-[180px]">{st.college_name}</span>
                       </div>

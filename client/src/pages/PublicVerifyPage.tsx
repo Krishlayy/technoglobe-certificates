@@ -103,20 +103,14 @@ export const PublicVerifyPage: React.FC = () => {
     }
   };
 
-  const isPoddar = certData?.institution_code === 'PODDAR' || 
-                   certData?.institution_name?.includes('Poddar') ||
-                   (searchQuery && searchQuery.toUpperCase().startsWith('PCTM')) ||
-                   (certParam && certParam.toUpperCase().startsWith('PCTM'));
-
-  const isPoswal = searchParams.get('cert')?.startsWith('POSWAL') || searchParams.get('ver_id')?.includes('POSWAL');
-  const orgName = isPoswal ? 'Poswal Developers' : 'Poddar College, Bharatpur';
-  const orgLogo = isPoswal ? '/poswal_logo.png' : '/poddar_logo.png';
-  const orgSub = isPoddar ? 'Department of Technical & Higher Education' : 'Bharatpur Authorized Centre';
+  const orgName = 'TECHNOGLOBE BHARATPUR';
+  const orgLogo = '/technoglobe_logo.png';
+  const orgSub = 'Center for Advanced Information Technology & Development • Bharatpur (Raj.)';
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col justify-between font-sans">
       {/* Top Branding Bar */}
-      <header className={isPoddar ? "bg-slate-900 text-white shadow-md border-b-2 border-amber-500" : "bg-brand-700 text-white shadow-md"}>
+      <header className="bg-[#0A2540] text-white shadow-md border-b-2 border-amber-500">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link to="/" className="flex items-center space-x-3">
             <div className="bg-white px-2 py-1 rounded-md shadow-2xs">
@@ -124,7 +118,7 @@ export const PublicVerifyPage: React.FC = () => {
             </div>
             <div>
               <div className="font-serif font-bold text-sm tracking-wide text-white leading-tight uppercase">
-                {isPoswal ? 'POSWAL DEVELOPERS' : 'PODDAR COLLEGE'}
+                TECHNOGLOBE BHARATPUR
               </div>
               <div className="text-[10px] text-amber-300 font-semibold uppercase tracking-wider">
                 {orgSub}
@@ -171,7 +165,7 @@ export const PublicVerifyPage: React.FC = () => {
         {certData && (
           <div className="bg-white rounded-3xl border-2 border-emerald-500 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-300">
             {/* Verified Header Banner */}
-            <div className={isPoddar ? "bg-linear-to-r from-slate-900 via-blue-950 to-slate-900 text-white p-5 text-center relative overflow-hidden border-b-2 border-amber-500" : "bg-linear-to-r from-emerald-600 to-teal-700 text-white p-5 text-center relative overflow-hidden"}>
+            <div className={false ? "bg-linear-to-r from-slate-900 via-blue-950 to-slate-900 text-white p-5 text-center relative overflow-hidden border-b-2 border-amber-500" : "bg-linear-to-r from-emerald-600 to-teal-700 text-white p-5 text-center relative overflow-hidden"}>
               <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-white text-emerald-600 shadow-lg mb-2">
                 <ShieldCheck className="w-8 h-8" />
               </div>
@@ -179,7 +173,7 @@ export const PublicVerifyPage: React.FC = () => {
                 Official Credential Verified
               </h2>
               <p className="text-xs text-amber-200 font-medium mt-0.5">
-                {isPoswal ? 'Poswal Developers — Solar Power & Industrial Infrastructure (Bharatpur)' : 'Poddar College — Bharatpur, Rajasthan (Official Credential)'}
+                {false ? 'TechnoGlobe Bharatpur — Solar Power & Industrial Infrastructure (Bharatpur)' : 'TechnoGlobe Bharatpur — Bharatpur, Rajasthan (Official Credential)'}
               </p>
               <div className="mt-2 inline-flex items-center space-x-1.5 px-3 py-1 bg-emerald-800/60 rounded-full border border-emerald-400/40 text-[11px] font-mono font-bold tracking-wider">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
@@ -248,10 +242,10 @@ export const PublicVerifyPage: React.FC = () => {
                     <span>Issuing Centre</span>
                   </div>
                   <div className="text-xs font-semibold text-slate-800 mt-1">
-                    {isPoddar ? 'Poddar College, Bharatpur' : 'Poswal Developers Division, Bharatpur'}
+                    {false ? 'TechnoGlobe Bharatpur, Bharatpur' : 'TechnoGlobe Bharatpur Division, Bharatpur'}
                   </div>
                   <div className="text-[10px] text-slate-500 leading-tight">
-                    Authority: {isPoddar ? 'Nitin Agarwal' : 'Madhuvan Singh Gurjar'}
+                    Authority: {false ? 'Nitin Agarwal' : 'Nitin Agarwal'}
                   </div>
                 </div>
               </div>
@@ -278,7 +272,7 @@ export const PublicVerifyPage: React.FC = () => {
                   <div>
                     <div className="text-xs font-bold text-slate-900">{orgName}</div>
                     <div className="text-[10px] text-slate-500">
-                      {isPoddar ? 'Official Academic Credential (Physical Stamp Validated)' : 'Authorized Course-Based Training Credential'}
+                      {false ? 'Official Academic Credential (Physical Stamp Validated)' : 'Authorized Course-Based Training Credential'}
                     </div>
                   </div>
                 </div>

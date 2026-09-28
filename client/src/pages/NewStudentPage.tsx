@@ -7,7 +7,7 @@ import { useInstitution } from '../contexts/InstitutionContext';
 
 export const NewStudentPage: React.FC = () => {
   const navigate = useNavigate();
-  const { activeInstitution, institutionId, isPoswal } = useInstitution();
+  const { institutionId, activeInstitution, selectInstitution, isTechnoglobe, institutions } = useInstitution();
   const [courses, setCourses] = useState<Course[]>([]);
   const [mentors, setMentors] = useState<Mentor[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -27,16 +27,16 @@ export const NewStudentPage: React.FC = () => {
     state: 'Rajasthan',
 
     // Academic Details
-    college_name: isPoswal ? 'Poswal Developers Training Division' : 'Poddar College, Bharatpur',
-    degree: isPoswal ? 'Diploma / B.Tech (Solar & Electrical)' : 'BCA',
-    branch: isPoswal ? 'Solar Energy Systems' : 'Computer Science',
+    college_name: false ? 'TechnoGlobe Bharatpur Training Division' : 'TechnoGlobe Bharatpur, Bharatpur',
+    degree: false ? 'Diploma / B.Tech (Solar & Electrical)' : 'BCA',
+    branch: false ? 'Solar Energy Systems' : 'Computer Science',
     semester_year: '6th Semester',
     academic_session: '2025-2026',
 
     // Internship Details
     institution_id: institutionId,
     course_id: 1,
-    mentor_id: isPoswal ? 1 : 2,
+    mentor_id: false ? 1 : 2,
     batch_id: 1,
     internship_title: '',
     internship_type: 'Course-Based Internship',
@@ -51,10 +51,10 @@ export const NewStudentPage: React.FC = () => {
     setFormData(prev => ({
       ...prev,
       institution_id: institutionId,
-      college_name: isPoswal ? 'Poswal Developers Training Division' : 'Poddar College, Bharatpur',
-      degree: isPoswal ? 'Diploma / B.Tech (Solar & Electrical)' : 'BCA',
-      branch: isPoswal ? 'Solar Energy Systems' : 'Computer Science',
-      mentor_id: isPoswal ? 1 : 2
+      college_name: false ? 'TechnoGlobe Bharatpur Training Division' : 'TechnoGlobe Bharatpur, Bharatpur',
+      degree: false ? 'Diploma / B.Tech (Solar & Electrical)' : 'BCA',
+      branch: false ? 'Solar Energy Systems' : 'Computer Science',
+      mentor_id: false ? 1 : 2
     }));
 
     Promise.all([

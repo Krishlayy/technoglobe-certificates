@@ -68,6 +68,11 @@ def on_startup():
     init_db()
     seed()
 
+@app.get("/api/health")
+@app.get("/health")
+def health_check():
+    return {"status": "ok", "organization": "TechnoGlobe Bharatpur", "timestamp": datetime.utcnow().isoformat()}
+
 # -------------------------------------------------------------
 # Helpers & Audit
 # -------------------------------------------------------------
@@ -203,7 +208,7 @@ def get_dashboard_stats(institution_id: Optional[int] = None):
     }
 
 # -------------------------------------------------------------
-# 2.5 Institutions Management (Multi-Institution Support)
+# 2.5 Institutions & Centre Settings
 # -------------------------------------------------------------
 @app.get("/api/institutions")
 def list_institutions():
@@ -213,6 +218,58 @@ def list_institutions():
     institutions = [dict(r) for r in cursor.fetchall()]
     conn.close()
     return institutions
+
+@app.get("/api/settings")
+def get_centre_settings(institution_id: Optional[int] = 1):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM centre_settings WHERE id = 1")
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="Settings not found")
+    return dict(row)
+
+class CentreSettingsUpdate(BaseModel):
+    org_name: Optional[str] = None
+    centre_name: Optional[str] = None
+    centre_code: Optional[str] = None
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    website: Optional[str] = None
+    auth_ref: Optional[str] = None
+    signatory_name: Optional[str] = None
+    signatory_designation: Optional[str] = None
+    logo_url: Optional[str] = None
+    signature_url: Optional[str] = None
+    stamp_url: Optional[str] = None
+    show_digital_signature: Optional[int] = None
+    show_digital_stamp: Optional[int] = None
+    cert_prefix: Optional[str] = None
+    doc_prefix: Optional[str] = None
+    default_required_hours: Optional[int] = None
+    default_required_attendance_pct: Optional[float] = None
+    verification_base_url: Optional[str] = None
+
+@app.put("/api/settings")
+def update_centre_settings(req: CentreSettingsUpdate, user = Depends(get_current_user)):
+    conn = get_db()
+    cursor = conn.cursor()
+    fields = []
+    values = []
+    for k, v in req.dict(exclude_unset=True).items():
+        fields.append(f"{k} = ?")
+        values.append(v)
+    if fields:
+        values.append(1)
+        cursor.execute(f"UPDATE centre_settings SET {', '.join(fields)}, updated_at = CURRENT_TIMESTAMP WHERE id = ?", values)
+        conn.commit()
+    cursor.execute("SELECT * FROM centre_settings WHERE id = 1")
+    row = dict(cursor.fetchone())
+    conn.close()
+    log_audit("UPDATE_SETTINGS", "CENTRE_SETTINGS", 1, req.dict(exclude_unset=True))
+    return row
 
 # -------------------------------------------------------------
 # 3. Students Management
@@ -373,12 +430,7 @@ def create_student(req: StudentCreate, user = Depends(get_current_user)):
 def list_courses(institution_id: Optional[int] = None):
     conn = get_db()
     cursor = conn.cursor()
-    if institution_id == 1:
-        cursor.execute("SELECT * FROM courses WHERE code NOT LIKE 'SOL%' ORDER BY id ASC")
-    elif institution_id == 2:
-        cursor.execute("SELECT * FROM courses WHERE code LIKE 'SOL%' ORDER BY id ASC")
-    else:
-        cursor.execute("SELECT * FROM courses ORDER BY id ASC")
+    cursor.execute("SELECT * FROM courses WHERE is_active = 1 ORDER BY id ASC")
     courses = [dict(r) for r in cursor.fetchall()]
     for c in courses:
         cursor.execute("SELECT * FROM course_modules WHERE course_id = ? ORDER BY module_number ASC", (c["id"],))
@@ -429,12 +481,7 @@ def update_module(id: int, req: CourseModuleUpdate, user = Depends(get_current_u
 def list_mentors(institution_id: Optional[int] = None):
     conn = get_db()
     cursor = conn.cursor()
-    if institution_id == 1:
-        cursor.execute("SELECT * FROM mentors WHERE is_active = 1 AND name IN ('Krishlay', 'Rahul') ORDER BY id ASC")
-    elif institution_id == 2:
-        cursor.execute("SELECT * FROM mentors WHERE is_active = 1 AND name LIKE '%Mahesh%' ORDER BY id ASC")
-    else:
-        cursor.execute("SELECT * FROM mentors WHERE is_active = 1 ORDER BY id ASC")
+    cursor.execute("SELECT * FROM mentors WHERE is_active = 1 ORDER BY id ASC")
     mentors = [dict(r) for r in cursor.fetchall()]
     conn.close()
     return mentors
@@ -443,32 +490,13 @@ def list_mentors(institution_id: Optional[int] = None):
 def list_batches(institution_id: Optional[int] = None):
     conn = get_db()
     cursor = conn.cursor()
-    if institution_id == 1:
-        cursor.execute("""
-        SELECT b.*, c.name as course_name, m.name as mentor_name
-        FROM batches b
-        JOIN courses c ON b.course_id = c.id
-        LEFT JOIN mentors m ON b.mentor_id = m.id
-        WHERE c.code NOT LIKE 'SOL%'
-        ORDER BY b.id DESC
-        """)
-    elif institution_id == 2:
-        cursor.execute("""
-        SELECT b.*, c.name as course_name, m.name as mentor_name
-        FROM batches b
-        JOIN courses c ON b.course_id = c.id
-        LEFT JOIN mentors m ON b.mentor_id = m.id
-        WHERE c.code LIKE 'SOL%'
-        ORDER BY b.id DESC
-        """)
-    else:
-        cursor.execute("""
-        SELECT b.*, c.name as course_name, m.name as mentor_name
-        FROM batches b
-        JOIN courses c ON b.course_id = c.id
-        LEFT JOIN mentors m ON b.mentor_id = m.id
-        ORDER BY b.id DESC
-        """)
+    cursor.execute("""
+    SELECT b.*, c.name as course_name, m.name as mentor_name
+    FROM batches b
+    JOIN courses c ON b.course_id = c.id
+    LEFT JOIN mentors m ON b.mentor_id = m.id
+    ORDER BY b.id DESC
+    """)
     batches = [dict(r) for r in cursor.fetchall()]
     conn.close()
     return batches
@@ -1085,7 +1113,17 @@ def save_evaluation(id: int, req: EvaluationSaveRequest, user = Depends(get_curr
 # 13. PDF & ZIP Document Generation Endpoints
 # -------------------------------------------------------------
 @app.get("/api/documents/{internship_id}/{doc_type}/pdf")
+@app.get("/api/internships/{internship_id}/documents/{doc_type}/pdf")
 def download_document_pdf(internship_id: int, doc_type: str):
+    num_map = {
+        "1": "offer", "2": "joining", "3": "syllabus", "4": "schedule",
+        "5": "attendance_sheet", "6": "attendance_summary", "7": "daily_log",
+        "8": "weekly_report", "9": "project_assignment", "10": "project_report",
+        "11": "evaluation", "12": "performance", "13": "feedback",
+        "14": "certificate", "15": "experience", "16": "consolidated"
+    }
+    normalized_type = num_map.get(str(doc_type).lower(), str(doc_type).lower())
+
     generators = {
         "offer": pdf_service.generate_offer_letter,
         "joining": pdf_service.generate_joining_letter,
@@ -1104,7 +1142,7 @@ def download_document_pdf(internship_id: int, doc_type: str):
         "consolidated": pdf_service.generate_consolidated_report
     }
 
-    if doc_type == "syllabus":
+    if normalized_type == "syllabus":
         conn = get_db()
         cursor = conn.cursor()
         cursor.execute("SELECT course_id FROM internships WHERE id = ?", (internship_id,))
@@ -1113,8 +1151,8 @@ def download_document_pdf(internship_id: int, doc_type: str):
         if not row:
             raise HTTPException(status_code=404, detail="Internship not found")
         filepath = pdf_service.generate_course_syllabus(row["course_id"])
-    elif doc_type in generators:
-        filepath = generators[doc_type](internship_id)
+    elif normalized_type in generators:
+        filepath = generators[normalized_type](internship_id)
     else:
         raise HTTPException(status_code=400, detail=f"Invalid document type: {doc_type}")
 
@@ -1155,6 +1193,8 @@ def get_certificate_qr_data(internship_id: int):
     }
 
 @app.get("/api/certificates/verify/{query_code}")
+@app.get("/api/public/verify/{query_code}")
+@app.get("/api/public/verify-code/{query_code}")
 def verify_certificate_endpoint(query_code: str, sig: Optional[str] = None):
     conn = get_db()
     cursor = conn.cursor()
@@ -1314,7 +1354,7 @@ def create_and_generate_appreciation_cert(req: AppreciationCreateRequest, user =
         cursor.execute("SELECT * FROM institutions WHERE id = 1")
         inst_row = cursor.fetchone()
     inst = dict(inst_row) if inst_row else {}
-    prefix = inst.get("cert_prefix") or ("POSWAL" if inst_id == 2 else ("TG-JPR" if inst_id == 3 else "PCTM"))
+    prefix = inst.get("cert_prefix") or "TG"
     
     issue_dt = req.issue_date or datetime.now().strftime("%Y-%m-%d")
     import random
@@ -1323,8 +1363,8 @@ def create_and_generate_appreciation_cert(req: AppreciationCreateRequest, user =
     cert_num = req.certificate_number or f"{prefix}-APP-{datetime.now().strftime('%Y')}-{ts:04d}{rand_part}"
     ver_code = f"VER-{cert_num}"
     
-    signatory_name = req.signatory_name or inst.get("signatory_name", "Nitin Agarwal" if inst_id != 2 else "Madhuvan Singh Gurjar")
-    signatory_desig = req.signatory_designation or inst.get("signatory_designation", "Director / Authority" if inst_id != 2 else "Authority")
+    signatory_name = req.signatory_name or inst.get("signatory_name", "Nitin Agarwal")
+    signatory_desig = req.signatory_designation or inst.get("signatory_designation", "Director / Center Head")
     
     cursor.execute("""
     INSERT INTO appreciation_certificates (
@@ -1644,11 +1684,129 @@ def clear_attendance(id: int, user = Depends(get_current_user)):
     return {"success": True, "message": "Attendance records cleared"}
 
 # -------------------------------------------------------------
+# 14d-2. Batch Master Attendance Matrix & Register Endpoints
+# -------------------------------------------------------------
+class BatchAttendanceRequest(BaseModel):
+    institution_id: Optional[int] = 1
+    course_track: Optional[str] = "DA"
+    course_code: Optional[str] = None
+    batch_name: Optional[str] = None
+    custom_track_name: Optional[str] = None
+    total_days: Optional[int] = 36
+    start_date: Optional[str] = "2026-06-01"
+    end_date: Optional[str] = "2026-07-12"
+    start_time: Optional[str] = "10:00 AM"
+    end_time: Optional[str] = "01:30 PM"
+    daily_hours: Optional[float] = 3.5
+    mentor_id: Optional[int] = 1
+    mentor_name: Optional[str] = None
+    mentor_designation: Optional[str] = None
+    students: Optional[List[Dict[str, Any]]] = []
+    student_ids: Optional[List[int]] = []
+    selected_day: Optional[int] = 1
+    layout_mode: Optional[str] = "1_page_per_day"
+
+def _resolve_batch_data(req: BatchAttendanceRequest):
+    track = (req.course_track or req.course_code or "DA").upper()
+    students_list = list(req.students or [])
+    if not students_list and req.student_ids:
+        conn = get_db()
+        cursor = conn.cursor()
+        for sid in req.student_ids:
+            cursor.execute("SELECT * FROM students WHERE id = ?", (sid,))
+            s_row = cursor.fetchone()
+            if s_row:
+                s_dict = dict(s_row)
+                students_list.append({
+                    "id": str(s_dict["id"]),
+                    "full_name": s_dict["full_name"],
+                    "father_mother_name": s_dict.get("father_mother_name", ""),
+                    "roll_no": s_dict.get("enrollment_roll_no") or f"TG-2026-{s_dict['id']:03d}",
+                    "college_name": s_dict.get("college_name") or "TechnoGlobe Institute of Information Technology, Bharatpur",
+                    "degree": s_dict.get("degree") or "BCA",
+                    "branch": s_dict.get("branch") or "Computer Science",
+                    "attendance_pct": 100.0,
+                    "day_overrides": {}
+                })
+        conn.close()
+    if not students_list:
+        students_list = [
+            {
+                "id": "1",
+                "full_name": "Aarav Sharma",
+                "father_mother_name": "Sh. R. K. Sharma",
+                "roll_no": "TG-2026-001",
+                "college_name": "TechnoGlobe Institute of Information Technology, Bharatpur",
+                "degree": "BCA",
+                "branch": "Computer Science",
+                "attendance_pct": 100.0,
+                "day_overrides": {}
+            }
+        ]
+    batch_meta = {
+        "institution_id": req.institution_id or 1,
+        "course_track": track,
+        "custom_track_name": req.custom_track_name or req.batch_name or f"Course-Based Internship ({track})",
+        "total_days": req.total_days or 36,
+        "start_date": req.start_date or "2026-06-01",
+        "start_time": req.start_time or "10:00 AM",
+        "end_time": req.end_time or "01:30 PM",
+        "daily_hours": req.daily_hours or 3.5,
+        "mentor_id": req.mentor_id or 1,
+        "mentor_name": req.mentor_name or "Nitin Agarwal",
+        "mentor_designation": req.mentor_designation or "Director / Center Head"
+    }
+    return batch_meta, students_list
+
+@app.post("/api/attendance/bulk-generate-preview")
+def bulk_attendance_preview_endpoint(req: BatchAttendanceRequest, user = Depends(get_current_user)):
+    batch_meta, students_list = _resolve_batch_data(req)
+    working_days = pdf_service.compute_batch_working_days(batch_meta["start_date"], batch_meta["total_days"])
+    topics = pdf_service.get_batch_track_topics(batch_meta["course_track"], batch_meta["total_days"])
+    computed_students = [
+        pdf_service.compute_batch_student_attendance(s, working_days, topics, batch_meta["start_time"], batch_meta["end_time"], batch_meta["daily_hours"])
+        for s in students_list
+    ]
+    return {
+        "success": True,
+        "batch_meta": batch_meta,
+        "working_days": working_days,
+        "topics": topics,
+        "students": computed_students
+    }
+
+@app.post("/api/attendance/bulk-generate-pdf")
+@app.post("/api/internships/bulk-attendance-pdf")
+def bulk_attendance_pdf_endpoint(req: BatchAttendanceRequest, user = Depends(get_current_user)):
+    batch_meta, students_list = _resolve_batch_data(req)
+    filepath = pdf_service.generate_master_batch_attendance_pdf(batch_meta, students_list)
+    return FileResponse(filepath, media_type="application/pdf", filename=os.path.basename(filepath))
+
+@app.post("/api/attendance/daily-day-pdf")
+def bulk_attendance_daily_day_pdf_endpoint(req: BatchAttendanceRequest, user = Depends(get_current_user)):
+    batch_meta, students_list = _resolve_batch_data(req)
+    day_num = req.selected_day or 1
+    filepath = pdf_service.generate_daily_day_attendance_pdf(day_num, batch_meta, students_list, layout_mode=req.layout_mode or "1_page_per_day")
+    return FileResponse(filepath, media_type="application/pdf", filename=os.path.basename(filepath))
+
+@app.post("/api/attendance/daily-book-pdf")
+def bulk_attendance_daily_book_pdf_endpoint(req: BatchAttendanceRequest, user = Depends(get_current_user)):
+    batch_meta, students_list = _resolve_batch_data(req)
+    filepath = pdf_service.generate_all_daily_batch_attendance_book_pdf(batch_meta, students_list, layout_mode=req.layout_mode or "1_page_per_day")
+    return FileResponse(filepath, media_type="application/pdf", filename=os.path.basename(filepath))
+
+@app.post("/api/attendance/bulk-package-zip")
+def bulk_attendance_package_zip_endpoint(req: BatchAttendanceRequest, user = Depends(get_current_user)):
+    batch_meta, students_list = _resolve_batch_data(req)
+    zip_path = pdf_service.generate_batch_attendance_zip_bundle(batch_meta, students_list)
+    return FileResponse(zip_path, media_type="application/zip", filename=os.path.basename(zip_path))
+
+# -------------------------------------------------------------
 # 14e. Guided Quick-Generate Wizard API
 # -------------------------------------------------------------
 class QuickGenerateRequest(BaseModel):
     # Step 0: Issuing Organization Selection
-    institution_id: int = 1  # 1 for Poddar College, 2 for Poswal Developers, 3 for Technoglobe Jaipur
+    institution_id: int = 1  # TechnoGlobe Bharatpur
 
     # Step 1: Student Information
     full_name: str
@@ -1698,14 +1856,13 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
         cursor.execute("SELECT * FROM institutions ORDER BY id ASC LIMIT 1")
         inst_row = cursor.fetchone()
     inst = dict(inst_row) if inst_row else {}
-    is_poswal = (inst.get("code") == "POSWAL" or inst_id == 2 or "Poswal" in inst.get("name", ""))
 
     # 2. Student Email & Record
     student_email = req.email.strip() if req.email and req.email.strip() else f"{req.full_name.lower().replace(' ', '.')}@example.com"
-    default_college = "Poswal Developers Technical Training Division, Bharatpur" if is_poswal else "Poddar College of Technology & Management, Bharatpur"
+    default_college = "TechnoGlobe Institute of Information Technology, Bharatpur"
     college_name = req.college_name.strip() if req.college_name and req.college_name.strip() else default_college
-    degree_name = req.degree.strip() if req.degree and req.degree.strip() else ("Diploma / B.Tech (Solar & Electrical)" if is_poswal else "BCA")
-    branch_name = req.branch.strip() if req.branch and req.branch.strip() else ("Solar Energy Systems" if is_poswal else "Computer Science")
+    degree_name = req.degree.strip() if req.degree and req.degree.strip() else "BCA"
+    branch_name = req.branch.strip() if req.branch and req.branch.strip() else "Computer Science"
 
     cursor.execute("""
     INSERT INTO students (
@@ -1719,60 +1876,35 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
     ))
     student_id = cursor.lastrowid
 
-    # 3. Course Track & Faculty Mentor Resolution (Strict Separation)
+    # 3. Course Track & Faculty Mentor Resolution (TechnoGlobe IT Tracks)
     track = req.course_track.strip().upper()
-    solar_tracks = ("SOL-01", "SOL-02", "SOL-03", "SOL-04", "SOL-05", "SOL-06", "SOL-07", "SOL-08")
-    it_tracks = ("DA", "DM", "FS", "AI", "CS", "CC", "JV", "BI", "AD")
-
-    if is_poswal:
-        if track not in solar_tracks:
-            track = "SOL-01"
-    else:
-        if track not in it_tracks:
-            track = "DA"
+    it_tracks = ("DA", "DM", "FS", "AI", "CS", "CC", "JV", "BI", "AD", "WD", "QA")
+    if track not in it_tracks:
+        track = "DA"
     
-    cursor.execute("SELECT * FROM courses WHERE code = ?", (track,))
+    cursor.execute("SELECT * FROM courses WHERE code = ? AND is_active = 1", (track,))
     course = cursor.fetchone()
     if not course:
-        if is_poswal:
-            cursor.execute("SELECT * FROM courses WHERE code LIKE 'SOL%' ORDER BY id ASC LIMIT 1")
-        else:
-            cursor.execute("SELECT * FROM courses WHERE code NOT LIKE 'SOL%' ORDER BY id ASC LIMIT 1")
+        cursor.execute("SELECT * FROM courses WHERE is_active = 1 ORDER BY id ASC LIMIT 1")
         course = cursor.fetchone()
     course = dict(course)
     course_id = course["id"]
     
     # Faculty supervisor resolution (Optional: if empty, mentor_id is None -> single authority Nitin Agarwal)
     mentor_id = None
-    if is_poswal:
-        if req.custom_faculty_name and req.custom_faculty_name.strip():
-            cursor.execute("SELECT id FROM mentors WHERE name = ?", (req.custom_faculty_name.strip(),))
-            m_row = cursor.fetchone()
-            if m_row:
-                mentor_id = m_row["id"]
-            else:
-                cursor.execute("INSERT INTO mentors (name, designation, email, is_active) VALUES (?, ?, '', 1)", 
-                               (req.custom_faculty_name.strip(), req.custom_faculty_designation or "Trainer - Poswal Developers"))
-                mentor_id = cursor.lastrowid
-        elif req.mentor_id:
-            mentor_id = req.mentor_id
+    if req.custom_faculty_name and req.custom_faculty_name.strip():
+        cursor.execute("SELECT id FROM mentors WHERE name = ?", (req.custom_faculty_name.strip(),))
+        m_row = cursor.fetchone()
+        if m_row:
+            mentor_id = m_row["id"]
         else:
-            mentor_id = 1  # Mahesh Chand Saini
+            cursor.execute("INSERT INTO mentors (name, designation, email, is_active) VALUES (?, ?, '', 1)", 
+                           (req.custom_faculty_name.strip(), req.custom_faculty_designation or "Technical Trainer / Faculty Guide"))
+            mentor_id = cursor.lastrowid
+    elif req.mentor_id and req.mentor_id > 0:
+        mentor_id = req.mentor_id
     else:
-        # Poddar & Technoglobe
-        if req.custom_faculty_name and req.custom_faculty_name.strip():
-            cursor.execute("SELECT id FROM mentors WHERE name = ?", (req.custom_faculty_name.strip(),))
-            m_row = cursor.fetchone()
-            if m_row:
-                mentor_id = m_row["id"]
-            else:
-                cursor.execute("INSERT INTO mentors (name, designation, email, is_active) VALUES (?, ?, '', 1)", 
-                               (req.custom_faculty_name.strip(), req.custom_faculty_designation or "Faculty Guide"))
-                mentor_id = cursor.lastrowid
-        elif req.mentor_id and req.mentor_id > 0:
-            mentor_id = req.mentor_id
-        else:
-            mentor_id = None  # None -> Single authority signature for Nitin Agarwal!
+        mentor_id = None  # None -> Single authority signature for Nitin Agarwal!
 
     # 4. Internship Record
     cursor.execute("""
@@ -1784,11 +1916,11 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
     internship_id = cursor.lastrowid
 
     # 5. Compliance Record (Approved)
-    coord_name = "Mahesh Chand Saini" if is_poswal else "Prof. Anjali Mathur"
-    coord_desig = "Technical Training Head" if is_poswal else "Internship Coordinator"
-    appr_ref = "POSWAL/BPT/2026/088" if is_poswal else "PC/INT/2026/042"
-    dept_label = f"Technical Division of {branch_name}" if is_poswal else f"Department of {branch_name}"
-    affil_ref = "MSME/SOLAR/2026/044" if is_poswal else "BTER/TPO/2026/019"
+    coord_name = "Er. Krishlay"
+    coord_desig = "Technical Training Coordinator"
+    appr_ref = "TG/BPT/2026/042"
+    dept_label = f"Department of {branch_name}"
+    affil_ref = "TG/HQ/2026/019"
 
     cursor.execute("""
     INSERT INTO compliance_records (
@@ -2091,8 +2223,8 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
         'AD': (ad_topics, "Kotlin / Jetpack Compose / Room / Retrofit")
     }
     
-    default_fallback_topics = sol01_topics if is_poswal else da_topics
-    default_fallback_tools = "PVsyst / AutoCAD Solar / Fluke Solar" if is_poswal else "Python / SQL / Power BI / Excel"
+    default_fallback_topics = da_topics
+    default_fallback_tools = "Python / SQL / Power BI / Excel"
     topics_list, tools_label = topics_map.get(track, (default_fallback_topics, default_fallback_tools))
 
     while day_count < 36:
@@ -2150,7 +2282,7 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
         'BI': "Genomic Sequence Alignment & Cancer Mutation Biomarker Discovery Pipeline",
         'AD': "CityPulse: Native Android Mobile Community & Services Portal with Jetpack Compose"
     }
-    proj_title = req.custom_project_title or default_titles.get(track, ("Solar Energy Infrastructure Project" if is_poswal else "Industrial Capstone Project Implementation"))
+    proj_title = req.custom_project_title or default_titles.get(track, "Industrial Capstone Project Implementation")
 
     projects_map = {
         'SOL-01': {
@@ -2327,7 +2459,7 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
             "conclusion": "Modern native Android application engineered according to Google's official architecture guide."
         }
     }
-    proj_data = projects_map.get(track, (projects_map['SOL-01'] if is_poswal else projects_map['DA']))
+    proj_data = projects_map.get(track, projects_map.get("DA"))
 
     cursor.execute("""
     INSERT INTO projects (internship_id, project_title, project_type, project_description, objectives, fields_json, status, submitted_at, approved_at)
@@ -2356,7 +2488,7 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
     cursor.execute("SELECT COUNT(*) FROM certificates")
     seq = cursor.fetchone()[0] + 1
     year = datetime.now().year
-    cert_p = inst.get("cert_prefix") or s.get("cert_prefix", "POSWAL" if is_poswal else "PCTM")
+    cert_p = inst.get("cert_prefix") or s.get("cert_prefix", "TG")
     cert_num = f"{cert_p}-{track}-{year}-{seq:04d}"
     ver_code = f"VER-{cert_p}-{track}-{datetime.now().strftime('%m%d')}{seq:03d}"
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -2393,7 +2525,7 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
     INSERT INTO certificates (
         internship_id, cert_type, certificate_number, verification_code, qr_payload_json, issue_date, is_finalized, finalized_by, version
     ) VALUES (?, 'COMPLETION', ?, ?, ?, ?, 1, ?, 1)
-    """, (internship_id, cert_num, ver_code, qr_payload_json, issue_date, "Madhuvan Singh Gurjar (Authority)" if is_poswal else "Nitin Agarwal (Authority)"))
+    """, (internship_id, cert_num, ver_code, qr_payload_json, issue_date, "Nitin Agarwal (Director / Center Head)"))
 
     conn.commit()
     conn.close()
@@ -2419,9 +2551,9 @@ def quick_generate_internship(req: QuickGenerateRequest, user = Depends(get_curr
         "certificate_number": cert_num,
         "verification_code": ver_code,
         "institution_id": inst_id,
-        "institution_name": inst.get("name", "Poswal Developers" if is_poswal else "Poddar College"),
-        "institution_code": inst.get("code", "POSWAL" if is_poswal else "PODDAR"),
-        "institution_full_name": inst.get("full_name", "Poswal Developers" if is_poswal else "Poddar College of Technology & Management"),
+        "institution_name": "TechnoGlobe Bharatpur",
+        "institution_code": "TECHNOGLOBE",
+        "institution_full_name": "TECHNOGLOBE - ADVANCED IT TRAINING & DEVELOPMENT",
         "qr_payload": qr_payload_json,
         "attendance_pct": round(present_count / 36 * 100, 1),
         "total_hours": total_hours,
@@ -2472,30 +2604,8 @@ class SettingsUpdate(BaseModel):
 
 @app.get("/api/settings")
 def get_settings(institution_id: Optional[int] = None, user = Depends(get_current_user)): 
-    if institution_id == 2:
-        prof = pdf_service.resolve_institution_profile(2)
-        return {
-            "id": 2,
-            "org_name": prof["full_name"],
-            "centre_name": prof["name"],
-            "centre_code": "POSWAL-01",
-            "default_college": "Poswal Developers Technical Division, Bharatpur",
-            "address": prof["address"],
-            "phone": prof["phone"],
-            "email": prof["email"],
-            "website": prof["website"],
-            "auth_ref": f"GST: {prof['gst_no']} | MSME: {prof['msme_no']}",
-            "signatory_name": prof["signatory_name"],
-            "signatory_designation": prof["signatory_designation"],
-            "logo_url": prof["logo_path"],
-            "show_digital_signature": 0,
-            "show_digital_stamp": 0,
-            "cert_prefix": "POSWAL",
-            "doc_prefix": "POSWAL/BPT",
-            "default_required_hours": 120,
-            "default_required_attendance_pct": 75.0,
-            "verification_base_url": "https://technoglobe-certificates.onrender.com"
-        }
+    # TechnoGlobe Bharatpur settings
+    prof = pdf_service.resolve_institution_profile(1)
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM centre_settings WHERE id = 1")
@@ -2607,8 +2717,9 @@ def system_health_check():
     att_count = cursor.fetchone()[0]
     conn.close()
 
-    logo_poddar_exists = os.path.exists(os.path.join(os.path.dirname(__file__), "poddar_logo.png"))
-    logo_poswal_exists = os.path.exists(os.path.join(os.path.dirname(__file__), "poswal_logo.png"))
+    logo_tg_exists = os.path.exists(os.path.join(os.path.dirname(__file__), "technoglobe_logo.png"))
+    sign_nitin_exists = os.path.exists(os.path.join(os.path.dirname(__file__), "nitin_sign.png"))
+    seal_exists = os.path.exists(os.path.join(os.path.dirname(__file__), "poddar_stamp.png"))
     gen_dir_exists = os.path.exists(os.path.join(os.path.dirname(__file__), "generated"))
 
     return {
@@ -2618,8 +2729,9 @@ def system_health_check():
         "total_certificates": cert_count,
         "total_attendance_records": att_count,
         "assets_status": {
-            "poddar_logo": logo_poddar_exists,
-            "poswal_logo": logo_poswal_exists,
+            "technoglobe_logo": logo_tg_exists,
+            "nitin_signature": sign_nitin_exists,
+            "official_seal": seal_exists,
             "generated_dir": gen_dir_exists
         },
         "system_time": datetime.now().isoformat(),
