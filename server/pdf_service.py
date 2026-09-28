@@ -1181,21 +1181,31 @@ def generate_completion_certificate(internship_id: int) -> str:
     pf = ctx["project_fields"]
     prof = resolve_institution_profile(1)
 
-    c_primary = colors.HexColor(prof["primary_color"])
-    c_secondary = colors.HexColor(prof["secondary_color"])
-    c_accent = colors.HexColor(prof["accent_color"])
+    # Colors strictly matching the reference template
+    BORDER_RED = colors.HexColor("#A81B1B")
+    TITLE_RED = colors.HexColor("#B91C1C")
+    HEADER_BLUE = colors.HexColor("#0B2545")
+    SUB_BLUE = colors.HexColor("#1E293B")
+    PURPLE_TITLE = colors.HexColor("#3730A3")
+    BODY_BLACK = colors.HexColor("#0F172A")
 
     cert_prefix = prof.get("cert_prefix", "TG")
     doc_prefix = prof.get("doc_prefix", "TG/BPT")
 
-    cert_num = it["certificate_number"] or f"{cert_prefix}-{it['course_code']}-2026-{it['id']:04d}"
-    ver_code = it["verification_code"] or f"VER-{cert_prefix}-{it['course_code']}-{it['id']:05d}"
+    cert_num = it.get("certificate_number") or f"{cert_prefix}-{it.get('course_code', 'DA')}-2026-{it['id']:04d}"
+    ver_code = it.get("verification_code") or f"VER-{cert_prefix}-{it.get('course_code', 'DA')}-{it['id']:05d}"
     certs_list = ctx.get("certificates", [])
     if certs_list and certs_list[0].get("issue_date"):
-        issue_date = certs_list[0]["issue_date"]
+        raw_issue = certs_list[0]["issue_date"]
     else:
         raw_issue = it.get("finalized_at")
-        issue_date = raw_issue[:10] if raw_issue else (it.get("end_date") or datetime.now().strftime("%Y-%m-%d"))
+        raw_issue = raw_issue[:10] if raw_issue else (it.get("end_date") or datetime.now().strftime("%Y-%m-%d"))
+
+    try:
+        dt_obj = datetime.strptime(str(raw_issue)[:10], '%Y-%m-%d')
+        issue_date = dt_obj.strftime('%d-%m-%Y')
+    except Exception:
+        issue_date = str(raw_issue)[:10]
 
     filename = f"14_Internship_Completion_Certificate_{it['student_name'].replace(' ', '_')}.pdf"
     filepath = os.path.join(GENERATED_DIR, filename)
@@ -1204,256 +1214,205 @@ def generate_completion_certificate(internship_id: int) -> str:
     c = canvas.Canvas(filepath, pagesize=landscape(A4))
     width, height = landscape(A4)
 
-    # 1. Double Decorative Borders
+    # 1. Double Red Borders
     c.saveState()
-    # Outer Border
-    c.setStrokeColor(c_primary)
-    c.setLineWidth(3.5)
-    c.rect(9 * mm, 9 * mm, width - 18 * mm, height - 18 * mm)
+    # Outer Red Border (Thick)
+    c.setStrokeColor(BORDER_RED)
+    c.setLineWidth(3.0)
+    c.rect(8 * mm, 8 * mm, width - 16 * mm, height - 16 * mm)
 
-    # Inner Accent Border
-    c.setStrokeColor(c_accent)
-    c.setLineWidth(1.2)
-    c.rect(12 * mm, 12 * mm, width - 24 * mm, height - 24 * mm)
-
-    # Corner Flourishes
-    orn_len = 14 * mm
-    c.setStrokeColor(c_accent)
-    c.setLineWidth(1.8)
-    # Top-Left
-    c.line(14.5*mm, height - 14.5*mm, 14.5*mm + orn_len, height - 14.5*mm)
-    c.line(14.5*mm, height - 14.5*mm, 14.5*mm, height - 14.5*mm - orn_len)
-    # Top-Right
-    c.line(width - 14.5*mm, height - 14.5*mm, width - 14.5*mm - orn_len, height - 14.5*mm)
-    c.line(width - 14.5*mm, height - 14.5*mm, width - 14.5*mm, height - 14.5*mm - orn_len)
-    # Bottom-Left
-    c.line(14.5*mm, 14.5*mm, 14.5*mm + orn_len, 14.5*mm)
-    c.line(14.5*mm, 14.5*mm, 14.5*mm, 14.5*mm + orn_len)
-    # Bottom-Right
-    c.line(width - 14.5*mm, 14.5*mm, width - 14.5*mm - orn_len, 14.5*mm)
-    c.line(width - 14.5*mm, 14.5*mm, width - 14.5*mm, 14.5*mm + orn_len)
-    c.restoreState()
-
-    # Translucent Background Watermark
-    watermark_logo_path = os.path.join(os.path.dirname(__file__), prof["logo_path"])
-    if os.path.exists(watermark_logo_path):
-        c.saveState()
-        try:
-            c.setFillAlpha(0.065)
-            c.setStrokeAlpha(0.065)
-        except Exception:
-            pass
-        wm_size = 110 * mm
-        c.drawImage(watermark_logo_path, (width - wm_size)/2.0, (height - wm_size)/2.0 - 5*mm, width=wm_size, height=wm_size, mask='auto', preserveAspectRatio=True)
-        c.restoreState()
-
-    # 2. Header / Branding - TechnoGlobe Bharatpur
-    tg_logo_path = os.path.join(os.path.dirname(__file__), "technoglobe_logo.png")
-    if os.path.exists(tg_logo_path):
-        logo_w = 70 * mm
-        logo_h = 16 * mm
-        logo_x = (width - logo_w) / 2.0
-        logo_y = height - 31.0 * mm
-        c.drawImage(tg_logo_path, logo_x, logo_y, width=logo_w, height=logo_h, mask='auto', preserveAspectRatio=True)
-
-    c.setFont("Helvetica-Bold", 13)
-    c.setFillColor(c_primary)
-    c.drawCentredString(width / 2.0, height - 35.5 * mm, "TECHNOGLOBE - ADVANCED IT TRAINING & DEVELOPMENT")
-
-    c.setFont("Helvetica", 8)
-    c.setFillColor(MUTED)
-    c.drawCentredString(width / 2.0, height - 39.5 * mm, f"{prof['address']} | Email: {prof['email']} | Web: {prof['website']} | Phone: {prof['phone']}")
-
-    # Gold Ribbon Line Under Header
-    c.saveState()
-    c.setStrokeColor(c_accent)
-    c.setLineWidth(1.5)
-    c.line(30 * mm, height - 42.5 * mm, width - 30 * mm, height - 42.5 * mm)
-    c.restoreState()
-
-    # 3. Certificate Title
-    c.setFont("Helvetica-Bold", 19)
-    c.setFillColor(c_primary)
-    c.drawCentredString(width / 2.0, height - 51.5 * mm, "CERTIFICATE OF TRAINING COMPLETION")
-
-    c.setFont("Helvetica-Bold", 9)
-    c.setFillColor(c_accent)
-    c.drawCentredString(width / 2.0, height - 56.5 * mm, "• COURSE-BASED ADVANCED TECHNICAL INTERNSHIP •")
-
-    # 4. Certificate Body Text
-    c.setFont("Helvetica", 10.5)
-    c.setFillColor(DARK)
-    c.drawCentredString(width / 2.0, height - 64 * mm, "This is to certify that")
-
-    # Candidate Name (Prominent & Elegant)
-    c.setFont("Helvetica-Bold", 17)
-    c.setFillColor(c_secondary)
-    student_name_str = it["student_name"].upper()
-    c.drawCentredString(width / 2.0, height - 72.5 * mm, student_name_str)
-
-    c.saveState()
-    c.setStrokeColor(c_accent)
+    # Inner Red Border (Thin)
+    c.setStrokeColor(BORDER_RED)
     c.setLineWidth(1.0)
-    name_w = min(c.stringWidth(student_name_str, "Helvetica-Bold", 17) + 20, width - 60 * mm)
-    c.line((width - name_w) / 2.0, height - 74.5 * mm, (width + name_w) / 2.0, height - 74.5 * mm)
+    c.rect(10.5 * mm, 10.5 * mm, width - 21 * mm, height - 21 * mm)
     c.restoreState()
 
-    acad_text = f"Student of {it.get('degree', 'BCA')} ({it.get('branch', 'Computer Science')}) • {it.get('college_name', 'TechnoGlobe Institute of Information Technology')}"
-    c.setFont("Helvetica", 9.2)
-    c.setFillColor(DARK)
-    c.drawCentredString(width / 2.0, height - 81 * mm, acad_text)
+    # 2. Top Header Strip: Left Reg/Code, Right Mobile
+    reg_code = prof.get("auth_ref") or s.get("centre_code") or "Reg: TG/RAJ/BPT/2026"
+    mob_text = f"Mob. {prof.get('phone', '9414293370')}"
 
-    c.setFont("Helvetica", 10)
-    c.setFillColor(DARK)
-    c.drawCentredString(width / 2.0, height - 88 * mm, "has successfully completed a comprehensive 6-Week / 120-Hour Course-Based Industrial Internship in")
+    c.setFont("Helvetica-Bold", 8.5)
+    c.setFillColor(HEADER_BLUE)
+    c.drawString(14 * mm, height - 16 * mm, f"Center Code: {s.get('centre_code', 'TG-BPT-01')} | {reg_code}")
+    c.drawRightString(width - 14 * mm, height - 16 * mm, mob_text)
 
-    # Course Title
-    c.setFont("Helvetica-Bold", 13.5)
-    c.setFillColor(c_primary)
-    course_title_text = normalize_text(it.get('course_title') or it.get('course_name') or 'Data Analytics & Business Intelligence')
-    c.drawCentredString(width / 2.0, height - 95.5 * mm, course_title_text)
+    # 3. Organization Main Heading (Large Bold Italic Red)
+    c.setFont("Helvetica-BoldOblique", 25)
+    c.setFillColor(TITLE_RED)
+    c.drawCentredString(width / 2.0, height - 25.5 * mm, "TECHNOGLOBE, BHARATPUR")
 
-    # Narrative Paragraph
-    styles = getSampleStyleSheet()
-    body_style = ParagraphStyle(
-        'CertBody',
-        fontName='Helvetica',
-        fontSize=9.2,
-        leading=13.5,
-        textColor=DARK,
-        alignment=1
-    )
+    # 4. Address & Subheading Lines
+    c.setFont("Helvetica-Bold", 9.5)
+    c.setFillColor(SUB_BLUE)
+    c.drawCentredString(width / 2.0, height - 31 * mm, prof.get("address", "Near SP Office, Bharatpur (Raj.) 321001"))
+    c.drawCentredString(width / 2.0, height - 35.5 * mm, "MSME / IT Training & Development Center")
 
-    fmt_start = datetime.strptime(it['start_date'], '%Y-%m-%d').strftime('%d %B %Y') if '-' in str(it.get('start_date', '')) else str(it.get('start_date', ''))
-    fmt_end = datetime.strptime(it['end_date'], '%Y-%m-%d').strftime('%d %B %Y') if '-' in str(it.get('end_date', '')) else str(it.get('end_date', ''))
-
-    eval_record = ctx.get("evaluation", {})
-    score = eval_record.get("overall_score") or 92
-    if score >= 90:
-        grade = "A+ (Outstanding)"
-    elif score >= 80:
-        grade = "A (Excellent)"
-    elif score >= 70:
-        grade = "B+ (Very Good)"
-    else:
-        grade = "B (Good)"
-
-    cert_text = (
-        f"The training was conducted at <b>TechnoGlobe Bharatpur</b> from <b>{fmt_start}</b> to <b>{fmt_end}</b>. "
-        f"During this tenure, the candidate demonstrated outstanding analytical rigor, technical competence, and dedication across all practical project milestones. "
-        f"The final capstone evaluation was completed with an overall score of <b>{score}/100</b> (Grade: <b>{grade}</b>)."
-    )
-
-    p = Paragraph(cert_text, body_style)
-    p_w, p_h = p.wrap(width - 52 * mm, 30 * mm)
-    p.drawOn(c, 26 * mm, height - 101 * mm - p_h)
-
-    # 5. Metadata Bar (Certificate No, Issue Date, Verification Code)
-    meta_box_y = 53 * mm
+    # 5. Red Horizontal Divider Bar
     c.saveState()
-    c.setFillColor(colors.HexColor("#F8FAFC"))
-    c.setStrokeColor(colors.HexColor("#E2E8F0"))
-    c.setLineWidth(0.8)
-    c.roundRect(24 * mm, meta_box_y, width - 48 * mm, 9.5 * mm, 3, stroke=1, fill=1)
-
-    c.setFont("Helvetica-Bold", 7.8)
-    c.setFillColor(DARK)
-    c.drawString(28 * mm, meta_box_y + 3.2 * mm, f"Certificate No: {cert_num}")
-    c.drawCentredString(width / 2.0, meta_box_y + 3.2 * mm, f"Issue Date: {issue_date}")
-    c.drawRightString(width - 28 * mm, meta_box_y + 3.2 * mm, f"Verification Code: {ver_code}")
+    c.setStrokeColor(BORDER_RED)
+    c.setLineWidth(2.2)
+    c.line(14 * mm, height - 39.5 * mm, width - 14 * mm, height - 39.5 * mm)
     c.restoreState()
 
-    # 6. Bottom Row: Left QR Code | Middle Official Seal | Right Signatures
-    # Left: Cryptographic QR Code
-    qr_size = 25 * mm
-    qr_x = 24 * mm
-    qr_y = 19 * mm
-    
-    # Compute signature
-    hmac_sig = compute_certificate_signature(cert_num, it['student_name'], course_title_text, issue_date)
-    qr_url = f"https://technoglobe-certificates.onrender.com/verify?cert={cert_num}&name={it['student_name'].replace(' ', '+')}&course={it['course_code']}&sig={hmac_sig}"
+    # 6. Ref. No. & Date Line
+    c.setFont("Helvetica-Bold", 10)
+    c.setFillColor(BODY_BLACK)
+    c.drawString(15 * mm, height - 46.5 * mm, f"Ref. No.: TG/Training/2026/{it['id']:03d}")
+    c.drawRightString(width - 15 * mm, height - 46.5 * mm, f"Date: {issue_date}")
 
+    # 7. Document Titles (Purple, Bold, Underlined)
+    t1_text = "INTERNSHIP COMPLETION CERTIFICATE"
+    c.setFont("Helvetica-Bold", 13.5)
+    c.setFillColor(PURPLE_TITLE)
+    c.drawCentredString(width / 2.0, height - 56 * mm, t1_text)
+    t1_w = c.stringWidth(t1_text, "Helvetica-Bold", 13.5)
+    c.setStrokeColor(PURPLE_TITLE)
+    c.setLineWidth(1.0)
+    c.line((width - t1_w) / 2.0, height - 57.2 * mm, (width + t1_w) / 2.0, height - 57.2 * mm)
+
+    t2_text = "TO WHOM IT MAY CONCERN"
+    c.setFont("Helvetica-Bold", 12.5)
+    c.setFillColor(PURPLE_TITLE)
+    c.drawCentredString(width / 2.0, height - 63.5 * mm, t2_text)
+    t2_w = c.stringWidth(t2_text, "Helvetica-Bold", 12.5)
+    c.line((width - t2_w) / 2.0, height - 64.7 * mm, (width + t2_w) / 2.0, height - 64.7 * mm)
+
+    # 8. Certificate Body Text
+    styles = getSampleStyleSheet()
+    p_body = ParagraphStyle(
+        'ExactCertBody',
+        fontName='Helvetica',
+        fontSize=10.2,
+        leading=16.5,
+        textColor=BODY_BLACK,
+        alignment=4 # Justify
+    )
+    p_center = ParagraphStyle(
+        'ExactCertCenter',
+        fontName='Helvetica',
+        fontSize=10.2,
+        leading=16,
+        textColor=BODY_BLACK,
+        alignment=1 # Center
+    )
+
+    # Student metadata
+    s_name = it.get("student_name", "Student Name")
+    father = it.get("father_mother_name", "")
+    deg = it.get("degree", "BCA")
+    branch = it.get("branch", "Computer Science")
+    sem = it.get("semester_year", "6th Semester")
+    college = it.get("college_name", "TechnoGlobe Institute of Information Technology, Bharatpur")
+    hours = it.get("total_training_hours") or 120
+    if isinstance(hours, str) and not hours.isdigit():
+        hours = 120
+    session = it.get("academic_session", "2025-26")
+
+    roll_no = it.get("roll_no") or it.get("enrollment_roll_no") or f"TG-2026-{it['id']:03d}"
+    enrol_no = it.get("enrollment_no") or it.get("enrolment_no") or f"TG/MSBU/{it['id']:04d}"
+
+    try:
+        s_date = datetime.strptime(str(it['start_date'])[:10], '%Y-%m-%d').strftime('%d-%m-%Y')
+    except Exception:
+        s_date = str(it.get('start_date', '01-06-2026'))
+    try:
+        e_date = datetime.strptime(str(it['end_date'])[:10], '%Y-%m-%d').strftime('%d-%m-%Y')
+    except Exception:
+        e_date = str(it.get('end_date', '12-07-2026'))
+
+    parent_str = f" <b>S/o / D/o {father}</b>" if father and father != "Parent Name" else " <b>S/o / D/o ............................................</b>"
+    class_str = f"<b>{deg} ({branch}) {sem}</b>" if deg else "<b>B.A./B.Sc. Semester 6<sup>th</sup></b>"
+
+    # Paragraph 1
+    p1_html = (
+        f"This is to certify that <b>{s_name}</b>{parent_str} a student of Class "
+        f"{class_str} Roll No. <b>{roll_no}</b> Enrolment No. <b>{enrol_no}</b> at "
+        f"<b>{college}</b> has successfully completed the compulsory internship of <b>{hours} hours</b> "
+        f"during the academic <b>year {session}</b> in partial fulfilment of the requirements of the "
+        f"<b>NEP-2020 Undergraduate Curriculum of the Maharaja Surajmal Brij University, Bharatpur</b>."
+    )
+
+    # Paragraph 2
+    p2_html = (
+        f"The internship was carried out at <b>TechnoGlobe, Bharatpur</b> from <b>{s_date}</b> to <b>{e_date}</b>. "
+        f"During the internship period, the student was assigned duties and responsibilities relevant to the objectives of the internship "
+        f"and demonstrated sincerity, discipline, and satisfactory performance."
+    )
+
+    # Paragraph 3
+    p3_html = "We wish the student good luck in all future endeavours."
+
+    box_w = width - 30 * mm
+
+    # Draw Paragraph 1
+    p1 = Paragraph(p1_html, p_body)
+    p1_w, p1_h = p1.wrap(box_w, 45 * mm)
+    p1_y = height - 71 * mm - p1_h
+    p1.drawOn(c, 15 * mm, p1_y)
+
+    # Draw Paragraph 2
+    p2 = Paragraph(p2_html, p_body)
+    p2_w, p2_h = p2.wrap(box_w, 35 * mm)
+    p2_y = p1_y - 4 * mm - p2_h
+    p2.drawOn(c, 15 * mm, p2_y)
+
+    # Draw Paragraph 3
+    p3 = Paragraph(p3_html, p_center)
+    p3_w, p3_h = p3.wrap(box_w, 15 * mm)
+    p3_y = p2_y - 4 * mm - p3_h
+    p3.drawOn(c, 15 * mm, p3_y)
+
+    # 9. Signatures Block
+    sig_left_x = 18 * mm
+    sig_left_y = 36 * mm
+
+    c.setFont("Helvetica-Bold", 11)
+    c.setFillColor(BODY_BLACK)
+    c.drawString(sig_left_x, sig_left_y, "Authorized Signatory")
+
+    c.setFont("Helvetica", 9.5)
+    signatory_name = prof.get("signatory_name", "Nitin Agarwal")
+    signatory_desig = prof.get("signatory_designation", "Director / Center Head")
+    c.drawString(sig_left_x, sig_left_y - 7 * mm, f"Name: {signatory_name}")
+    c.drawString(sig_left_x, sig_left_y - 12.5 * mm, f"Designation: {signatory_desig}")
+
+    # Digital signature & stamp overlay
+    nitin_sign_path = os.path.join(os.path.dirname(__file__), "nitin_sign.png")
+    if os.path.exists(nitin_sign_path):
+        c.drawImage(nitin_sign_path, sig_left_x + 38 * mm, sig_left_y - 6 * mm, width=30 * mm, height=14 * mm, mask='auto', preserveAspectRatio=True)
+
+    stamp_path = os.path.join(os.path.dirname(__file__), "poddar_stamp.png")
+    if os.path.exists(stamp_path):
+        c.drawImage(stamp_path, 115 * mm, 14 * mm, width=28 * mm, height=28 * mm, mask='auto', preserveAspectRatio=True)
+
+    # Center QR Code for Verification
+    qr_size = 20 * mm
+    qr_x = 152 * mm
+    qr_y = 15 * mm
+    hmac_sig = compute_certificate_signature(cert_num, s_name, it.get('course_title', 'Course'), str(raw_issue)[:10])
+    qr_url = f"https://technoglobe-certificates.onrender.com/verify?cert={cert_num}&name={s_name.replace(' ', '+')}&course={it.get('course_code', 'DA')}&sig={hmac_sig}"
     qr_widget = QrCodeWidget(qr_url)
     qr_widget.barWidth = qr_size
     qr_widget.barHeight = qr_size
     qr_widget.qrVersion = 3
     d = Drawing(qr_size, qr_size)
     d.add(qr_widget)
-    renderPDF.draw(d, c, qr_x, qr_y + 2.5 * mm)
-
-    c.setFont("Helvetica-Bold", 6)
+    renderPDF.draw(d, c, qr_x, qr_y)
+    c.setFont("Helvetica", 6.5)
     c.setFillColor(colors.HexColor("#64748B"))
-    c.drawCentredString(qr_x + qr_size / 2.0, qr_y, "Scan to Verify Credential")
+    c.drawCentredString(qr_x + qr_size / 2.0, qr_y - 2.5 * mm, "Scan to Verify")
 
-    # Middle: Official Seal / Stamp
-    stamp_x = 100 * mm
-    stamp_y = 18 * mm
-    stamp_w = 28 * mm
-    stamp_h = 28 * mm
-    poddar_stamp_path = os.path.join(os.path.dirname(__file__), "poddar_stamp.png")
-    if os.path.exists(poddar_stamp_path):
-        c.drawImage(poddar_stamp_path, stamp_x, stamp_y + 1 * mm, width=stamp_w, height=stamp_h, mask='auto', preserveAspectRatio=True)
-    c.setFont("Helvetica-Bold", 6.5)
-    c.setFillColor(c_primary)
-    c.drawCentredString(stamp_x + stamp_w / 2.0, stamp_y, "OFFICIAL INSTITUTIONAL SEAL")
-
-    # Right: Signatures Section (Optional Faculty Handling)
+    # Right: TRAINER
     raw_mentor = it.get("mentor_name") or ""
-    has_faculty = bool(raw_mentor and raw_mentor.strip() and raw_mentor.strip().lower() not in ("none", "null", "", "undefined"))
-    trainer_name = raw_mentor.strip() if has_faculty else ""
-    trainer_desig = str(it.get("mentor_designation") or "Technical Trainer / Faculty Guide").strip()
-    authority_name = prof.get("signatory_name", "Nitin Agarwal")
-    authority_desig = prof.get("signatory_designation", "Director / Center Head")
+    trainer_name = raw_mentor.strip() if raw_mentor and raw_mentor.strip().lower() not in ("none", "null", "") else "MAHESH CHAND SAINI"
 
-    nitin_sign_path = os.path.join(os.path.dirname(__file__), "nitin_sign.png")
+    sig_right_x = width - 60 * mm
+    c.setFont("Helvetica-Bold", 11)
+    c.setFillColor(BODY_BLACK)
+    c.drawCentredString(sig_right_x, sig_left_y, "TRAINER")
 
-    if has_faculty:
-        # Dual Signatures: Faculty (Left) & Nitin Agarwal (Right)
-        sig1_x = 178 * mm
-        c.setFont("Helvetica-Bold", 9)
-        c.setFillColor(DARK)
-        c.drawCentredString(sig1_x, 34.5 * mm, trainer_name)
-        c.setFont("Helvetica", 8)
-        c.setFillColor(MUTED)
-        c.drawCentredString(sig1_x, 30.5 * mm, trainer_desig)
-        c.setStrokeColor(DARK)
-        c.setLineWidth(0.6)
-        c.line(sig1_x - 22*mm, 39 * mm, sig1_x + 22*mm, 39 * mm)
-        c.setFont("Helvetica-Oblique", 7.2)
-        c.drawCentredString(sig1_x, 23 * mm, "Trainer / Faculty Guide")
-
-        sig2_x = 246 * mm
-        if os.path.exists(nitin_sign_path):
-            c.drawImage(nitin_sign_path, sig2_x - 14 * mm, 38.5 * mm, width=28 * mm, height=14 * mm, mask='auto', preserveAspectRatio=True)
-
-        c.setFont("Helvetica-Bold", 9)
-        c.setFillColor(DARK)
-        c.drawCentredString(sig2_x, 34.5 * mm, authority_name)
-        c.setFont("Helvetica", 8)
-        c.setFillColor(MUTED)
-        c.drawCentredString(sig2_x, 30.5 * mm, authority_desig)
-        c.setStrokeColor(DARK)
-        c.setLineWidth(0.6)
-        c.line(sig2_x - 22*mm, 39 * mm, sig2_x + 22*mm, 39 * mm)
-        c.setFont("Helvetica-Oblique", 7.2)
-        c.drawCentredString(sig2_x, 23 * mm, "Director / Center Head")
-    else:
-        # Single Prominent Signatory for Nitin Agarwal
-        sig_x = 215 * mm
-        if os.path.exists(nitin_sign_path):
-            c.drawImage(nitin_sign_path, sig_x - 17 * mm, 38.5 * mm, width=34 * mm, height=17 * mm, mask='auto', preserveAspectRatio=True)
-
-        c.setFont("Helvetica-Bold", 10.5)
-        c.setFillColor(DARK)
-        c.drawCentredString(sig_x, 34.5 * mm, authority_name)
-        c.setFont("Helvetica-Bold", 8.5)
-        c.setFillColor(c_primary)
-        c.drawCentredString(sig_x, 30.0 * mm, authority_desig)
-        c.setStrokeColor(DARK)
-        c.setLineWidth(0.8)
-        c.line(sig_x - 28*mm, 39 * mm, sig_x + 28*mm, 39 * mm)
-        c.setFont("Helvetica-Oblique", 7.5)
-        c.drawCentredString(sig_x, 23 * mm, "Director & Authorized Signatory • TechnoGlobe Bharatpur")
+    c.setFont("Helvetica-Bold", 10)
+    c.drawCentredString(sig_right_x, sig_left_y - 7 * mm, trainer_name.upper())
 
     c.showPage()
     c.save()
